@@ -1,64 +1,62 @@
-import json
-from requests import get
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+import re
+import requests
+from langchain_community.document_loaders import WebBaseLoader
 
 class WebScrapper:
 
-    def fetch_content(self, url):
+    def fetch_documents(self, urls: list[str]):
         """
-        Given a URL, the function fetches the content of the webpage and returns it.
-        If the status code of the response is not 200, an exception is raised.
+        Fetch documents from given URLs.
+
+        This method takes a list of URLs, and uses the WebBaseLoader to fetch the documents from valid URLs. 
+        It then removes empty lines from the page content of each document and returns the list of documents.
+
+        Args:
+            urls (list[str]): List of URLs to fetch documents from.
+
+        Returns:
+            list[Document]: List of documents fetched from the URLs.
+        """
+        valid_urls = [url for url in urls if self.__url_exists(url)] # Consider only existing URLs         
+        web_loader = WebBaseLoader(valid_urls)
+        docs = web_loader.load()
        
+        for doc in docs:
+            if doc.page_content is not None:
+                doc.page_content = self.__remove_empty_lines(doc.page_content)
+        
+        return docs
+
+    def __remove_empty_lines(self, text):
+        """
+        Remove empty lines from given text.
+
+        This function takes a string as input and removes empty lines from it.
+        It does this by using a regular expression to find and remove empty lines.
+        The regular expression ``r'^\n+|\n+(?=\n)'`` will match any line that is
+        either only a newline character (``\n``) or a sequence of newline
+        characters that is followed by another newline character.
+
         Args:
-            url (str): The URL of the webpage the content of which should be fetched.
+            text (str): The text to remove empty lines from.
 
-        Returns
-            str: The content of the webpage.
+        Returns:
+            str: The text with empty lines removed.
         """
-        response = get(url)
-        response.raise_for_status() # If the status code is not 200, an exception is raised.
-        return response.content
+        return re.sub(r'^\n+|\n+(?=\n)', '', text)        
         
-    def parse_content(self, url, response_content):
+    def __url_exists(self, url):
         """
-        Given the content of a webpage, the function parses the content.
+        Private method to check if a URL exists or not.
 
         Args:
-            url (str): The URL of the webpage the content of which should be parsed.
-            response_content (str): The content of the webpage.
+            url (str): URL to check.
 
-        Returns
-            dict: A dictionary containing the title , the main content (paragraphs and headings) and a list of links.
+        Returns:
+            bool: True if URL exists, False otherwise.
         """
-        soup = BeautifulSoup(response_content, 'html.parser')
-        
-        main_section = soup.find('main') or soup.find('article') or soup.find('div', class_='content') or soup.find('body')
-        
-        content = []
-        links = []
-        for tag in main_section.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a']):
-            if tag.name == 'a':
-                href = tag.get('href')
-                if href:
-                    # Make sure the href is an absolute URL
-                    full_href = urljoin(url, href)
-                    links.append(full_href)
-            else:
-                text = tag.text.strip()
-                if text:
-                    if tag.name.startswith('h'):
-                        content.append(f"\n{tag.name.upper()}: {text}\n")
-                    else:
-                        content.append(text)
-        
-        full_content = "\n".join(content)
-        
-        parsed_content = {
-            "url": url,
-            "title": soup.title.string if soup.title else f"{url}", # If no title found use the url
-            "text": full_content,
-            "links": links
-        }
-        
-        return parsed_content
+        try:
+            response = requests.head(url, allow_redirects=True, timeout=3)
+            return response.status_code < 400
+        except requests.RequestException:
+            return False
