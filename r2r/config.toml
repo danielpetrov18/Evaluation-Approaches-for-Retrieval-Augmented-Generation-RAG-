@@ -5,6 +5,7 @@
 provider = "postgres" 
 
 # LLM 
+# Model: https://ollama.com/library/llama3.1
 [completion]
 provider = "litellm"
 concurrent_request_limit = 1
@@ -24,6 +25,7 @@ chunk_overlap = 20
 excluded_parsers = ["mp4"]
 
 # This describes how text chunks are converted into vector embeddings.
+# Model: https://ollama.com/library/nomic-embed-text
 [embedding]
 provider = "ollama"
 base_model = "nomic-embed-text"
