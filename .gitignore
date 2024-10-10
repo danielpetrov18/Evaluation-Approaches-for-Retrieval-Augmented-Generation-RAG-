@@ -1,0 +1,82 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+bin/
+obj/
+*.egg-info/
+.eggs/
+dist/
+build/
+wheels/
+
+# PyInstaller
+# Usually these files are written by a python script from a template
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+
+# Jupyter Notebook files
+.ipynb_checkpoints/
+
+# pyenv
+.python-version
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre
+.pyre/
+
+# Pylint
+.pylint.d/
+
+# VS Code settings
+.vscode/
+
+# MacOS files
+.DS_Store
+
+# Thumbnails
+._*
+
+# Virtual environments
+*.env
+*.venv
+
+# Editor files
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Other files
+*.log
+*.swp
+*~
