@@ -20,3 +20,15 @@ class R2RHelper:
         """    
         metadata_str = json.dumps(metadata) # If not converted this way I get 422 unprocessable entity.
         return self.__client.ingest_chunks(chunks=chunks, document_id=document_id, metadata=metadata_str)
+    
+    def documents_overview(self, documents_ids=None):
+        """
+        Get an overview of documents in the database.
+
+        Args:
+            documents_ids (list[str], optional): List of document IDs to get overview of. If not provided, overview of all documents is returned.
+
+        Returns:
+            list[dict]: List of dictionaries containing name, id, vector_size, num_docs, and date_created for each document.
+        """
+        return self.__client.documents_overview(documents_ids)["results"]
