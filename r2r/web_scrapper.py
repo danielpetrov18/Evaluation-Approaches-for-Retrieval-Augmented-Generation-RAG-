@@ -17,8 +17,15 @@ class WebScrapper:
         Returns:
             list[Document]: List of documents fetched from the URLs.
         """
-        valid_urls = [url for url in urls if self.__url_exists(url)] # Consider only existing URLs         
-        web_loader = WebBaseLoader(valid_urls)
+        valid_urls = [url for url in urls if self.__url_exists(url)] # Consider only existing URLs    
+             
+        web_loader = WebBaseLoader(        # https://www.comet.com/site/blog/langchain-document-loaders-for-web-data/
+            web_paths=urls,            # Where to scrape from
+            requests_per_second=5, 
+            default_parser="lxml",     # A more sophisticated parser (more flexible and efficient than html.parser)
+            raise_for_status=True,     # If something goes wrong an internal exception is raised
+            continue_on_failure=True,  # If a page cannot be scrapped it will be skipped
+        )
         docs = web_loader.load()
        
         for doc in docs:
