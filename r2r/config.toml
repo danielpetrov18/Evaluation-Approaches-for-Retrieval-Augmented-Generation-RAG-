@@ -20,8 +20,8 @@ add_generation_kwargs = {}
 [ingestion]
 provider = "r2r"
 chunking_strategy = "recursive"
-chunk_size = 1024
-chunk_overlap = 128
+chunk_size = 512 # https://arxiv.org/pdf/2407.01219 (Table 3)
+chunk_overlap = 20
 excluded_parsers = ["mp4"]
 
 # This describes how text chunks are converted into vector embeddings.

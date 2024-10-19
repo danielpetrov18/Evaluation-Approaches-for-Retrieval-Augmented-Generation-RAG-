@@ -1,57 +1,24 @@
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+import os
 
 class IOHelper:
-    
-    def split_docs(self, docs):
-        # Check out the config file of R2R (section: ingestion)
-        """
-        Split a list of documents into chunks.
 
-        The splitting process is done according to the RecursiveCharacterTextSplitter
-        algorithm from the langchain_text_splitters library. The chunk size and overlap
-        are set to the default values of 512 and 20, respectively.
+    def iterate_over_files(self, folder_path):
+        """
+        Iterate over all files in a given folder and its subfolders.
 
         Args:
-            docs (list[Document]): List of documents to split.
+            folder_path (str): Path to the folder to iterate over.
+
+        Yields:
+            str: Path to each file.
 
         Returns:
-            list[Document]: List of documents with each document split into chunks.
+            list[str]: List of all file names in the folder and its subfolders.
         """
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1024, 
-            chunk_overlap=128,
-            length_function=len,
-            is_separator_regex=False
-        )
-        
-        return splitter.split_documents(docs)
-    
-    def get_url_chunks(self, url, pieces):
-        """
-        Get chunks of a given URL from a list of document pieces.
-
-        Args:
-            url (str): URL to get chunks of.
-            pieces (list[Document]): List of document pieces to search in.
-
-        Returns:
-            list[str]: List of chunks of the given URL.
-        """
-        url_chunks = [piece.page_content for piece in pieces if piece.metadata["source"] == url] 
-        return url_chunks
-    
-    def get_url_metadata(self, url, pieces):
-        """
-        Get metadata of a given URL from a list of document pieces.
-
-        Args:
-            url (str): URL to get metadata of.
-            pieces (list[Document]): List of document pieces to search in.
-
-        Returns:
-            dict[str]: Metadata of the given URL, or None if not found.
-        """
-        for piece in pieces:
-            if piece.metadata["source"] == url:
-                return piece.metadata
-        return None
+        filenames = []
+        for root, dirs, files in os.walk(folder_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                yield file_path
+                filenames.append(file)
+        return filenames
