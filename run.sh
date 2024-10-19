@@ -7,12 +7,18 @@ docker compose up -d
 export R2R_POSTGRES_USER="r00t"
 export R2R_POSTGRES_PASSWORD="t00r"
 export R2R_POSTGRES_HOST="localhost"
-export R2R_POSTGRES_PORT=6666
+export R2R_POSTGRES_PORT=5432
 export R2R_POSTGRES_DBNAME="r2r"
 export R2R_PROJECT_NAME="vector_store"
 
-export R2R_HOSTNAME="http://localhost:7272"
+export R2R_HOSTNAME="http://localhost:7272"\
+
+export R2R_CONFIG_PATH="./r2r/config.toml"
+
+export TELEMETRY_ENABLED=false
+
+export OLLAMA_API_BASE="http://localhost:11434"
 
 # Run R2R locally
 # The RESTful API is accessible at:  http://localhost:7272 
-r2r serve --config-path=r2r/config.toml
+r2r serve

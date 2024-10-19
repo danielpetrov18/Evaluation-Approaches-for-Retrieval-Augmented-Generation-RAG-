@@ -129,6 +129,23 @@ class ServerHelper:
             except Exception as e:
                 print(e)
         return files_deleted
+
+    def rag(self, query: str): 
+        """
+        Get relevant answers from the database for a given query.
+
+        Args:
+            query (str): Query to get relevant answers for.
+
+        Returns:
+            list[dict]: List of dictionaries containing answer text, embeddings, etc.
+        """
+        try:
+            return self.__client.rag(query)["results"]
+        except R2RException as r2re:
+            print(self.__parse_r2r_error(r2re))
+        except Exception as e:
+            print(e)
                 
     def __parse_r2r_error(self, r2r_exc):
         parsed_err_msg = json.loads(r2r_exc.message)   

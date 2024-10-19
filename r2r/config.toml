@@ -9,14 +9,16 @@ provider = "postgres"
 [completion]
 provider = "litellm"
 concurrent_request_limit = 1
-model = "ollama/llama3.1"
-temperature = 0.1
-top_p = 1
-max_tokens_to_sample = 1_024
-stream = false
-add_generation_kwargs = {}
 
-# This describes how different file types like pdf, csv, text etc. will be processed and converted to text.
+    [completion.generation_config]
+    model = "ollama/llama3.1"
+    temperature = 0.1
+    top_p = 1
+    max_tokens_to_sample = 1_024
+    stream = false
+    add_generation_kwargs = {}
+
+# # This describes how different file types like pdf, csv, text etc. will be processed and converted to text.
 [ingestion]
 provider = "r2r"
 chunking_strategy = "recursive"
@@ -25,12 +27,10 @@ chunk_overlap = 20
 excluded_parsers = ["mp4"]
 
 # This describes how text chunks are converted into vector embeddings.
-# Model: https://ollama.com/library/nomic-embed-text
+# Model: https://ollama.com/library/mxbai-embed-large
 [embedding]
 provider = "ollama"
-base_model = "nomic-embed-text"
-base_dimension = 768
+base_model = "mxbai-embed-large"
+base_dimension = 1024
 batch_size = 32
 concurrent_request_limit = 32
-rerank_model = "None"
-add_title_as_prefix = true

@@ -1,4 +1,14 @@
 services:
+  ollama:
+    image: 'ollama/ollama:latest'
+    container_name: ollama
+    working_dir: "/app"
+    ports:
+      - '11434:11434'
+    volumes:
+      - ollama:/root/.ollama
+      - './ollama/initialize.sh:/app/initialize.sh' # Bind mount to preserve the file inside the container.
+    entrypoint: ["/bin/bash", "/app/initialize.sh"] # Use entrypoint to run the script.
   pgvector:
       image: 'pgvector/pgvector:pg16'
       container_name: pgvector
@@ -7,8 +17,9 @@ services:
         - 'POSTGRES_USER=r00t'
         - 'POSTGRES_PASSWORD=t00r'
       ports:
-        - '6666:5432'
+        - '5432:5432'
       volumes:
         - 'postgres_data:/var/lib/postgresql/data'
 volumes:
+  ollama:
   postgres_data:
