@@ -8,6 +8,17 @@ class ServerHelper:
     
     def __init__(self):
         self.__client = r2r.R2RClient(os.getenv("R2R_HOSTNAME", "http://localhost:7272"))
+        self.__vector_search_settings = {
+            'index_measure': 'cosine_distance'
+        }
+
+    def health(self): 
+        try:
+            return self.__client.health()["results"]
+        except R2RException as r2re:
+            print(self.__parse_r2r_error(r2re))
+        except Exception as e:
+            print(e)
 
     def ingest_files(self, filepaths: list[str]): 
         """
@@ -141,7 +152,17 @@ class ServerHelper:
             list[dict]: List of dictionaries containing answer text, embeddings, etc.
         """
         try:
-            return self.__client.rag(query)["results"]
+            return self.__client.rag(query, self.__vector_search_settings)["results"]
+        except R2RException as r2re:
+            print(self.__parse_r2r_error(r2re))
+        except Exception as e:
+            print(e)
+                
+    def clean_db(self):
+        try:
+            docs_metadata = self.documents_overview()
+            filters = [{"document_id": {"$eq": doc_metadata["document_id"]}} for doc_metadata in docs_metadata]
+            self.delete(filters)
         except R2RException as r2re:
             print(self.__parse_r2r_error(r2re))
         except Exception as e:

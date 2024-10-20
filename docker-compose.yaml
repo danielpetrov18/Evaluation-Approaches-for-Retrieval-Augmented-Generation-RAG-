@@ -20,6 +20,13 @@ services:
         - '5432:5432'
       volumes:
         - 'postgres_data:/var/lib/postgresql/data'
+  unstructured:
+    build:
+      context: "unstructured"
+      dockerfile: "Dockerfile"
+    container_name: unstructured
+    ports:
+      - "7275:7275"
 volumes:
   ollama:
   postgres_data:
