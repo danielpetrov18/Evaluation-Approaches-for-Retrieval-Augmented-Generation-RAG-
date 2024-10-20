@@ -26,7 +26,6 @@ max_characters = 1_024 # Absolute max characters in a single chunk.
 combine_under_n_chars = 128 # Combines elements from a section into a chunk until a section reaches a length of this many chars
 new_after_n_chars = 512 # Start a new chunk after this many characterrs.
 overlap = 20 # Number of characters to overlap between chunks.
-pdf_infer_table_structure = true
 split_pdf_concurrency_level = 10
 
 # This describes how text chunks are converted into vector embeddings.
@@ -37,3 +36,10 @@ base_model = "mxbai-embed-large"
 base_dimension = 1024
 batch_size = 32
 concurrent_request_limit = 32
+
+[vector_store]
+type = "pgvector"
+dimension = 1024
+
+[logging]
+level = "DEBUG"
