@@ -1,43 +1,26 @@
-import json
-from r2r import R2RException
-from prompt import PromptHelper
-
-class ServerHelper:
-    
-    def __init__(self, client):
-        self.__client = client
-        self.__prompt = PromptHelper(client)
-        self.__vector_search_settings = { 'index_measure': 'cosine_distance'}
-
-    def health(self): 
-        try:
-            return self.__client.health()["results"]
-        except R2RException as r2re:
-            print(self.__parse_r2r_error(r2re))
-        except Exception as e:
-            print(e)
+class DatabaseHelper:
 
     def ingest_files(self, filepaths: list[str]): 
-        """
-        Ingest files into postgres(pgvector). 
-        If a document with the same title is already present in the database, nothing gets embedded.
-        Invalid filepaths are ignored.
+            """
+            Ingest files into postgres(pgvector). 
+            If a document with the same title is already present in the database, nothing gets embedded.
+            Invalid filepaths are ignored.
 
-        Args:
-            file_paths (list[str]): List of file paths to ingest. Should be locally available.
-            
-        Returns:
-            None
-        """
-        for filepath in filepaths:
-            try:
-                self.__client.ingest_files(file_paths=[filepath])
-                print(f'Ingested: {filepath} ...')
-            except R2RException as r2re:
-                print(self.__parse_r2r_error(r2re))
-            except Exception as e:
-                print(e)
-    
+            Args:
+                file_paths (list[str]): List of file paths to ingest. Should be locally available.
+                
+            Returns:
+                None
+            """
+            for filepath in filepaths:
+                try:
+                    self.__client.ingest_files(file_paths=[filepath])
+                    print(f'Ingested: {filepath} ...')
+                except R2RException as r2re:
+                    print(self.__parse_r2r_error(r2re))
+                except Exception as e:
+                    print(e)
+        
     def ingest_chunks(self, chunks: list[dict], metadata: dict[str] = None):
         """
         Ingest chunks of a document into postgres(pgvector). 
@@ -137,29 +120,7 @@ class ServerHelper:
             except Exception as e:
                 print(e)
         return files_deleted
-
-    def rag(self, query: str, task_prompt_override: str = None): 
-        """
-        Get relevant answers from the database for a given query.
-
-        Args:
-            query (str): Query to get relevant answers for.
-
-        Returns:
-            list[dict]: List of dictionaries containing answer text, embeddings, etc.
-        """
-        try:
-            resp = self.__client.rag(
-                            query=query, 
-                            vector_search_settings=self.__vector_search_settings, 
-                            task_prompt_override=task_prompt_override
-            )
-            return resp['results']
-        except R2RException as r2re:
-            print(self.__parse_r2r_error(r2re))
-        except Exception as e:
-            print(e)
-                
+    
     def clean_db(self):
         try:
             docs_metadata = self.documents_overview()
@@ -169,7 +130,3 @@ class ServerHelper:
             print(self.__parse_r2r_error(r2re))
         except Exception as e:
             print(e)
-    
-    def __parse_r2r_error(self, r2r_exc):
-        parsed_err_msg = json.loads(r2r_exc.message)   
-        return parsed_err_msg['detail']['message']

@@ -18,14 +18,6 @@ concurrent_request_limit = 1
     stream = false
     add_generation_kwargs = {}
 
-# # This describes how different file types like pdf, csv, text etc. will be processed and converted to text.
-# [ingestion]
-# provider = "r2r"
-# chunking_strategy = "recursive"
-# chunk_size = 512 # https://arxiv.org/pdf/2407.01219 (Table 3)
-# chunk_overlap = 20
-# excluded_parsers = ["mp4"]
-
 [ingestion]
 provider = "unstructured_local"
 strategy = "auto" # If images or complex PDFs are used -> High res is used, otherwise Fast.
