@@ -6,7 +6,7 @@ if ! docker info > /dev/null 2>&1; then
   exit 1
 fi
 
-# Load environment variables from the .env file.
+# Load environment variables from the .env file if present. If not stop execution.
 if [ -f ".env" ]; then
   export $(grep -v '^#' .env | xargs)
 else
@@ -14,25 +14,27 @@ else
   exit 1
 fi
 
-# Start pgvector, ollama, and unstructured in detached mode
+# Start pgvector, ollama, and unstructured in detached mode.
 docker compose up -d --build
 
-# Run R2R locally
-# The RESTful API is accessible at:  http://localhost:7272 
+# Run R2R locally.
+# The RESTful API is accessible at:  http://localhost:7272.
+# However, one can use the /backend/r2r_backend.py for easier work.
 r2r serve &
 
-sleep 1
+sleep 2
 
-# Wait for R2R to be ready
+# Wait for R2R to be ready.
 while ! curl -s http://localhost:7272/health > /dev/null; do
   sleep 1 
 done
 
-sleep 8 # Wait for r2r to boot up
+# Wait for r2r to boot up.
+sleep 8 
 
 # Make create_index.py executable and run it
-chmod u+x create_index.py
-python3 create_index.py
+chmod u+x ./script/create_index.py
+python3 ./script/create_index.py
 
-# Bring back the r2r service to the foreground
+# Bring back the r2r service to the foreground. One can observe the logs in the terminal.
 fg
