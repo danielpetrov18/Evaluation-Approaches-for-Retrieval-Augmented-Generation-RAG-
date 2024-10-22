@@ -6,7 +6,7 @@ if ! docker info > /dev/null 2>&1; then
   exit 1
 fi
 
-# Load environment variables from the .env file
+# Load environment variables from the .env file.
 if [ -f ".env" ]; then
   export $(grep -v '^#' .env | xargs)
 else
@@ -21,7 +21,7 @@ docker compose up -d --build
 # The RESTful API is accessible at:  http://localhost:7272 
 r2r serve &
 
-R2R_PID=$!  # Capture the PID of the R2R process
+sleep 1
 
 # Wait for R2R to be ready
 while ! curl -s http://localhost:7272/health > /dev/null; do
@@ -34,4 +34,5 @@ sleep 8 # Wait for r2r to boot up
 chmod u+x create_index.py
 python3 create_index.py
 
+# Bring back the r2r service to the foreground
 fg
