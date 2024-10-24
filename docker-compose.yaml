@@ -1,17 +1,4 @@
 services:
-  ollama:
-    image: 'ollama/ollama:latest'
-    container_name: ollama
-    working_dir: "/app"
-    ports:
-      - '${OLLAMA_API_BASE_PORT:-11434}:11434'
-    volumes:
-      - ollama:/root/.ollama
-      - './bin/ollama_initialize.sh:/app/initialize.sh'
-    networks:
-      - r2r_network
-    restart: unless-stopped
-    entrypoint: ["/bin/bash", "/app/initialize.sh"] # Download models if not already available.
   pgvector:
     image: 'pgvector/pgvector:pg16'
     container_name: pgvector
@@ -33,7 +20,7 @@ services:
       retries: 5
   unstructured:
     build:
-      context: "res/unstructured"
+      context: "./res/unstructured"
       dockerfile: "Dockerfile"
     container_name: unstructured
     ports:
@@ -50,7 +37,6 @@ services:
       pgvector:
         condition: service_started
 volumes:
-  ollama:
   postgres_data:
 networks:
   r2r_network:

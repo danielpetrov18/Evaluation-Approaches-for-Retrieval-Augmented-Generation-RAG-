@@ -14,8 +14,20 @@ else
   exit 1
 fi
 
-# Start pgvector, ollama, and unstructured in detached mode.
+# Start pgvector and unstructured in detached mode.
 docker compose up -d --build
+
+# Check if Ollama is already installed
+if [ -f "/usr/local/bin/ollama" ]; then
+  echo "Ollama is already installed, skipping download"
+else
+  # Download Ollama
+  curl -fsSL https://ollama.com/install.sh | sh
+fi
+
+# Download required models for LLM and embeddings.
+ollama pull llama3.1
+ollama pull mxbai-embed-large
 
 # Run R2R locally.
 # The RESTful API is accessible at:  http://localhost:7272.

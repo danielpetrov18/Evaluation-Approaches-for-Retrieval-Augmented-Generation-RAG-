@@ -7,13 +7,14 @@ from helper.io_helper import load_prompt, parse_r2r_error
 
 class R2RBackend:
 
-    def __init__(self):
+    def __init__(self, config_path: str = './config/r2r.toml'):
         R2R_HOST = os.getenv("R2R_HOSTNAME", "http://localhost")
         R2R_PORT = os.getenv("R2R_PORT", "7272")
         self.__client = R2RClient(f'{R2R_HOST}:{R2R_PORT}')
         self.__logger = logging.getLogger(__name__)
         self.__vector_search_settings = { 'index_measure': 'cosine_distance' }
         self.__prompt_name = 'custom_rag' # Check out the chat_templates folder.
+        self.__config_path = config_path
         self.__set_custom_prompt_template()
 
     def health(self) -> dict: 
@@ -267,7 +268,7 @@ class R2RBackend:
             input_types = prompt_data['input_types']
             self.add_prompt(prompt_name=self.__prompt_name, template=template, input_types=input_types)
         
-        self.__app_config = R2RConfig.from_toml('./config/r2r.toml')
+        self.__app_config = R2RConfig.from_toml(self.__config_path)
         self.__app_config.prompt.default_task_name = self.__prompt_name # This sets the prompt to my one
             
     def __check_prompt_exists(self):

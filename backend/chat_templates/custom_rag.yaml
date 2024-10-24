@@ -27,6 +27,7 @@ custom_rag:
 
     ## Response Format:
     1. Brief summary of the query (1-2 sentences)
+    2. The relevant context numbered (e.g., [1], [2])
     2. Comprehensive answer with specific references to the context
     3. (If applicable) Clear statement of any aspects of the query that could not be addressed
     4. (Optional) Suggestions for further queries that could provide more complete information, based on the available context
