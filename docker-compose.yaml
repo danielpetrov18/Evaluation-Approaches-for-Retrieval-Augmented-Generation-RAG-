@@ -20,7 +20,7 @@ services:
       retries: 5
   unstructured:
     build:
-      context: "./res/unstructured"
+      context: "./docker"
       dockerfile: "Dockerfile"
     container_name: unstructured
     ports:
