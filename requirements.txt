@@ -5,5 +5,8 @@ html2text==2024.2.26
 langchain==0.3.4
 langchain-community==0.3.3
 langchain-text-splitters==0.3.0
-r2r==3.2.34
+r2r==3.2.16
+r2r[core] # Just in case 
+r2r[ingestion-bundle] # Just in case. Sometimes some external/extra packages are not installed.
 streamlit==1.39.0
+litellm==1.50.4

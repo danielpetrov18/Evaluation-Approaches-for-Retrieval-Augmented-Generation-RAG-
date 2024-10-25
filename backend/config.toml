@@ -7,9 +7,9 @@ concurrent_request_limit = 1
 
     [completion.generation_config]
     model = "ollama/llama3.1"
-    temperature = 0.4
+    temperature = 0.1
     top_p = 0.95
-    max_tokens_to_sample = 1_024
+    max_tokens_to_sample = 1024
     stream = false
     add_generation_kwargs = {}
 

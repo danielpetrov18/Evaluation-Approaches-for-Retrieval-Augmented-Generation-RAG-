@@ -1,35 +1,32 @@
 import os
-import json
 import logging
-from pathlib import Path
-from r2r import R2RException, R2RClient, R2RConfig
-from utility.file_utils import load_prompt, parse_r2r_error
+from r2r import R2RException, R2RClient
 
 class R2RBackend:
 
-    def __init__(self, config_path: str = './config/r2r.toml'):
+    def __init__(self, config_path: str = './config.toml'):
         R2R_HOST = os.getenv("R2R_HOSTNAME", "http://localhost")
         R2R_PORT = os.getenv("R2R_PORT", "7272")
         self.__client = R2RClient(f'{R2R_HOST}:{R2R_PORT}')
         self.__logger = logging.getLogger(__name__)
-        self.__vector_search_settings = { 'index_measure': 'cosine_distance' }
-        self.__prompt_name = 'custom_rag' # Check out the chat_templates folder.
-        self.__config_path = config_path
-        self.__set_custom_prompt_template()
+        self.__vector_search_settings = { 
+                                         'index_measure': 'cosine_distance',
+                                         'ef_search': '100' # Increases accuracy and decreases speed
+        }
 
     def health(self) -> dict: 
         """
         Check the health of the R2R service.
 
         Returns:
-            dict[str]: Dictionary containing information about the health of the service.
+            dict[str]: Dictionary containing information about the health of the service. Should contain OK.
         """
         try:
-            return self.__client.health()["results"]
+            health_resp = self.__client.health()
+            return health_resp['results']['response']
         except R2RException as r2re:
-            err_msg = parse_r2r_error(r2re)
-            self.__logger.error(err_msg)
-            raise Exception(err_msg)
+            self.__logger.error(r2re)
+            raise R2RException(r2re)
         except Exception as e:
             self.__logger.error(e)
             raise Exception(e)
@@ -49,14 +46,14 @@ class R2RBackend:
             for filepath in filepaths:
                 try:
                     self.__client.ingest_files(file_paths=[filepath])
-                    self.__logger.debug(f'Ingested: {filepath} ...')
+                    self.__logger.info(f'Ingested: {filepath}!')
                 except R2RException as r2re:
-                    err_msg = parse_r2r_error(r2re)
-                    self.__logger.error(err_msg)
-                    raise Exception(err_msg)
+                    err_msg = f'[{filepath}] has already been ingested!'
+                    # Just a warning because I don't want to stop the ingestion of all files.
+                    # If some fail one can retry later.
+                    self.__logger.warn(err_msg) 
                 except Exception as e:
-                    self.__logger.error(e)
-                    raise Exception(e)
+                    self.__logger.warn(e)
         
     def ingest_chunks(self, chunks: list[dict], metadata: dict[str] = None) -> list[dict]:
         """
@@ -73,9 +70,9 @@ class R2RBackend:
         try:
             return self.__client.ingest_chunks(chunks=chunks, metadata=metadata)['results']
         except R2RException as r2re:
-            err_msg = parse_r2r_error(r2re)
+            err_msg = f"Failed to ingest chunks for: [{metadata['source']}]!"
             self.__logger.error(err_msg)
-            raise Exception(err_msg)
+            raise R2RException(err_msg)
         except Exception as e:
             self.__logger.error(e)
             raise Exception(e)
@@ -103,12 +100,10 @@ class R2RBackend:
                 self.__client.update_files(filepaths, document_ids)    
                 files_updated += 1
             except R2RException as r2re:
-                err_msg = parse_r2r_error(r2re)
-                self.__logger.error(err_msg)
-                raise Exception(err_msg)
+                err_msg = f"Failed to update: [{filepath}]!"
+                self.__logger.warn(err_msg)
             except Exception as e:
-                self.__logger.error(e)
-                raise Exception(e)
+                self.__logger.warn(e)
             
         return files_updated
     
@@ -140,9 +135,9 @@ class R2RBackend:
         try:
             return self.__client.document_chunks(document_id)['results']
         except R2RException as r2re:
-            err_msg = parse_r2r_error(r2re)
+            err_msg = f'Coulndt get chunks for: [{document_id}]!'	
             self.__logger.error(err_msg)
-            raise Exception(err_msg)
+            raise R2RException(err_msg)
         except Exception as e:
             self.__logger.error(e)
             raise Exception(e)
@@ -163,12 +158,10 @@ class R2RBackend:
                 self.__client.delete(filter)
                 files_deleted += 1
             except R2RException as r2re:
-                err_msg = parse_r2r_error(r2re)
-                self.__logger.error(err_msg)
-                raise Exception(err_msg)
+                err_msg = f"Could not delete a file with following filter: {filter}!"
+                self.__logger.warn(err_msg)
             except Exception as e:
-                self.__logger.error(e)
-                raise Exception(e)
+                self.__logger.warn(e)
             
         return files_deleted
     
@@ -185,95 +178,34 @@ class R2RBackend:
             filters = [{"document_id": {"$eq": doc_metadata["document_id"]}} for doc_metadata in docs_metadata]
             self.delete(filters)
         except R2RException as r2re:
-            err_msg = parse_r2r_error(r2re)
-            self.__logger.error(err_msg)
-            raise Exception(err_msg)
+            self.__logger.warn(r2re)
         except Exception as e:
-            self.__logger.error(e)
-            raise Exception(e)        
+            self.__logger.warn(e)
         
-    def rag(self, query: str) -> dict: 
+    def rag(self, query: str, rag_generation_config: dict = None) -> str:
         """
-        Get relevant answers from the database for a given query.
+        Get relevant answers from the database for a given query, considering chat history if present.
 
         Args:
-            query (str): Query to get relevant answers for.
+            query (str): Current query to get relevant answers for.
+            rag_generation_config (dict, optional): Configuration for the LLM generation including:
+                - temperature: float between 0 and 1
+                - top_p: float between 0 and 1
+                - max_tokens: integer for maximum response length
 
         Returns:
-            list[dict]: List of dictionaries containing answer text, embeddings, etc.
+            dict: Response containing answer text, status, etc.
         """
         try:
             resp = self.__client.rag(
-                            query=query, 
-                            vector_search_settings=self.__vector_search_settings
-            )
-            return resp['results']
+                query=query,
+                vector_search_settings=self.__vector_search_settings,
+                rag_generation_config=rag_generation_config
+            )   
+            return resp['results']['completion']['choices'][0]['message']['content']
         except R2RException as r2re:
-            err_msg = parse_r2r_error(r2re)
-            self.__logger.error(err_msg)
-            raise Exception(err_msg)
+            self.__logger.error(r2re)
+            raise R2RException(r2re)
         except Exception as e:
             self.__logger.error(e)
             raise Exception(e)
-    
-    def add_prompt(self, prompt_name: str, template: str, input_types: dict) -> dict:
-        try:
-            return self.__client.add_prompt(name=prompt_name, template=template, input_types=input_types)['results']
-        except R2RException as r2re:
-            err_msg = parse_r2r_error(r2re)
-            self.__logger.error(err_msg)
-            raise Exception(err_msg)
-        except Exception as e:
-            self.__logger.error(e)
-            raise Exception(e)
-        
-    def get_all_prompts(self) -> list[dict]:
-        try:
-            return self.__client.get_all_prompts()['results']
-        except R2RException as r2re:
-            err_msg = parse_r2r_error(r2re)
-            self.__logger.error(err_msg)
-            raise Exception(err_msg)
-        except Exception as e:
-            self.__logger.error(e)
-            raise Exception(e)
-    
-    def update_prompt(self, name: str, template: str, input_types: dict) -> dict:
-        try:
-            return self.__client.update_prompt(name=prompt_name, template=template, input_types=input_types)    
-        except R2RException as r2re:
-            err_msg = parse_r2r_error(r2re)
-            self.__logger.error(err_msg)
-            raise Exception(err_msg)
-        except Exception as e:
-            self.__logger.error(e)
-            raise Exception(e)
-    
-    def delete_prompt(self, prompt_name: str):
-        try:
-            return self.__client.delete_prompt(prompt_name)
-        except R2RException as r2re:
-            err_msg = parse_r2r_error(r2re)
-            self.__logger.error(err_msg)
-            raise Exception(err_msg)
-        except Exception as e:
-            self.__logger.error(e)
-            raise Exception(e)
-        
-    def __set_custom_prompt_template(self):
-        is_prompt_present = self.__check_prompt_exists()
-        if not is_prompt_present:
-            prompt_data = load_prompt(Path('chat_templates'), self.__prompt_name)
-            template = prompt_data['template']
-            input_types = prompt_data['input_types']
-            self.add_prompt(prompt_name=self.__prompt_name, template=template, input_types=input_types)
-        
-        self.__app_config = R2RConfig.from_toml(self.__config_path)
-        self.__app_config.prompt.default_task_name = self.__prompt_name # This sets the prompt to my one
-            
-    def __check_prompt_exists(self):
-        prompts = self.get_all_prompts()['prompts']
-        for key, _ in prompts.items():
-            if key == self.__prompt_name:
-                return True
-        return False

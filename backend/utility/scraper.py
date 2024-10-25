@@ -2,7 +2,7 @@ import re
 import logging
 import requests
 import html2text
-from typing import List, Optional, Dict
+from typing import List, Optional
 from langchain.docstore.document import Document
 from langchain_community.document_loaders import WebBaseLoader
 
