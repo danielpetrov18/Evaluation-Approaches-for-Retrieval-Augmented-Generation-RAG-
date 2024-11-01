@@ -183,20 +183,25 @@ class R2RBackend:
         except Exception as e:
             self.__logger.warn(e)
         
-    def prompt_llm(self, query: str, rag_generation_config: dict = None):
+    def prompt_llm(self, query: str, message_history: list[dict], rag_generation_config: dict = None):
         """
-        Get relevant answers from the database for a given query, considering chat history if present.
+        Get relevant answers from the database for a given query, incorporating chat history context.
+        Formats the query to work with R2R's default RAG template structure.
 
         Args:
-            query str: Query of the user. 
-            rag_generation_config (dict, optional): Configuration for the LLM generation including:
-                - temperature: float between 0 and 1
-                - top_p: float between 0 and 1
-                - max_tokens: integer for maximum response length
-        """
+            query (str): Current user query
+            message_history (list[dict]): List of previous messages, each with 'role' and 'content'
+            rag_generation_config (dict, optional): Configuration for LLM generation
+
+        Returns:
+            str: LLM response
+        """           
+        # Construct enhanced query with history
+        enhanced_query = self.__construct_enhanced_query(query, message_history)
+        
         try:
             response = self.__client.rag(
-                query=query,
+                query=enhanced_query,
                 vector_search_settings=self.__vector_search_settings,
                 rag_generation_config=rag_generation_config
             )
@@ -207,3 +212,31 @@ class R2RBackend:
         except Exception as e:
             self.__logger.error(e)
             raise Exception(e)
+        
+    def __construct_enhanced_query(self, query: str, message_history: list[dict]) -> str:
+        """
+        Construct an enhanced query by incorporating recent message history into the context.
+
+        Args:
+            query (str): The current user query.
+            message_history (list[dict]): List of previous messages, each with 'role' and 'content'.
+
+        Returns:
+            str: An enhanced query string that includes the recent conversation history
+                formatted as numbered context items to provide context for the current query.
+        """
+        history_items = []
+        for i, msg in enumerate(message_history[-50:], 1):  # Only use last 50 messages
+            role = "Previous Human Question" if msg["role"] == "user" else "Previous Assistant Response"
+            history_items.append(f"{i}. [{role}]: {msg['content']}")
+            
+        # Construct enhanced query with history
+        enhanced_query = f"""
+        Previous conversation:
+        {chr(10).join(history_items)}
+
+        Current question: {query}
+
+        Please provide an answer to the current question, taking into account both the previous conversation and any relevant information from the provided context. When referencing specific information from the context, please use line item references [1], [2], etc."""
+        
+        return enhanced_query

@@ -29,7 +29,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Cached client connection (same as before)
-@st.cache_resource(show_spinner='Creating connection to backend ...')
+@st.cache_resource(show_spinner='Connecting to backend ...')
 def get_r2r_client():
     client = R2RBackend()
     resp = client.health()
@@ -38,8 +38,8 @@ def get_r2r_client():
     else:
         st.error(f"An error occurred while connecting to the backend: {resp}")
 
-def prompt_llm(query: str, rag_generation_config: dict):
-    return get_r2r_client().prompt_llm(query, rag_generation_config)
+def prompt_llm(query: str, messages: list[dict], rag_generation_config: dict):
+    return get_r2r_client().prompt_llm(query, messages, rag_generation_config)
 
 st.title("💬 Llama Chat")
 
@@ -113,11 +113,11 @@ if prompt:
                 "top_p": st.session_state.rag_parameters["top_p"],
                 "max_tokens": st.session_state.rag_parameters["max_length"]
             }
-            response = prompt_llm(prompt, rag_generation_config)
+            # Pass all previous messages as history without the last one / current one.
+            response = prompt_llm(prompt, st.session_state.messages[:-1], rag_generation_config)
             st.session_state.messages.append({"role": "assistant", "content": response})
             with st.chat_message("assistant", avatar="🦙"):
-                st.write(response)
-        
+                st.write(response)        
         except R2RException as r2re:
             st.error(f"An error occurred: {str(r2re)}")
         except Exception as e:
