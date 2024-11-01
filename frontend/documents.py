@@ -51,13 +51,62 @@ def display_documents():
                 "Source": metadata.get('source', 'N/A')
             })
 
-        st.markdown("<div class='document-table'>", unsafe_allow_html=True)
-        st.dataframe(
+        # Display documents with selection
+        event = st.dataframe(
             table_data, 
-            #use_container_width=True, 
-            #hide_index=True
+            key="documents_table",
+            on_select="rerun", 
+            selection_mode="single-row"
         )
-        st.markdown("</div>", unsafe_allow_html=True)
+
+        # Check if a document is selected
+        if event.selection.rows:
+            # Get the selected document ID
+            selected_row = event.selection.rows[0]
+            selected_doc_id = table_data[selected_row]["Document ID"]
+            
+            # Columns for actions
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # View Chunks Button
+                if st.button("View Document Chunks"):
+                    try:
+                        # Fetch document chunks
+                        chunks = client.document_chunks(selected_doc_id)
+                        
+                        st.subheader(f"Chunks for Document ID: {selected_doc_id}")
+                        chunk_data = [
+                            {
+                                "Chunk ID": chunk.get('chunk_id', 'N/A'), 
+                                "Text Preview": chunk.get('text', 'N/A')[:200] + '...'
+                            } 
+                            for chunk in chunks
+                        ]
+                        
+                        st.dataframe(chunk_data, use_container_width=True)
+                    except Exception as e:
+                        st.error(f"Could not retrieve document chunks: {e}")
+            
+            with col2:
+                # Delete Document Button
+                delete_confirm = st.checkbox(f"Confirm deletion of document {selected_doc_id}")
+                if delete_confirm and st.button("Delete Document"):
+                    try:
+                        # Prepare filter for deletion
+                        delete_filter = [{"document_id": {"$eq": selected_doc_id}}]
+                        
+                        # Attempt to delete the document
+                        deleted_count = client.delete(delete_filter)
+                        
+                        if deleted_count > 0:
+                            st.success(f"Document {selected_doc_id} deleted successfully!")
+                            st.experimental_rerun()  # Refresh the page
+                        else:
+                            st.warning("No document was deleted.")
+                    except Exception as e:
+                        st.error(f"Could not delete document: {e}")
+
     except R2RException as r2re:
         st.error(f"An error occurred while fetching documents: {r2re}")
     except Exception as e:
@@ -65,26 +114,5 @@ def display_documents():
 
 st.title("📄 Ingested Documents")
 
-# display_button = st.button("Display Documents")
-
-# if display_button:
+# Always display documents
 display_documents()
-
-    #st.subheader("View Document Details")
-    
-    #document_id = st.text_input("Enter Document ID to view details")
-    
-    # if document_id:
-    #     try:
-    #         # Fetch document chunks
-    #         chunks = backend_client.document_chunks(document_id)
-            
-    #         st.write(f"Chunks for Document ID: {document_id}")
-    #         st.dataframe(
-    #             [{"Chunk ID": chunk.get('chunk_id', 'N/A'), 
-    #                 "Text Preview": chunk.get('text', 'N/A')[:100] + '...'} 
-    #                 for chunk in chunks],
-    #             use_container_width=True
-    #         )
-    #     except Exception as e:
-    #         st.error(f"Could not retrieve document chunks: {e}")
