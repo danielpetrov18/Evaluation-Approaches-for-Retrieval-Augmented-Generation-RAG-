@@ -1,11 +1,9 @@
-import os
-import json
-import yaml
+from pathlib import Path
 from typing import Iterator
 
 def iterate_over_files(folder_path: str | Path) -> Iterator[str]:
     """
-    Iterate over all files in a given folder and its subfolders.
+    Iterate over all files in a given folder and its sub folders.
 
     Args:
         folder_path: Path to the folder to iterate over.

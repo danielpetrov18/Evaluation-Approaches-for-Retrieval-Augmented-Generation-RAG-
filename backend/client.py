@@ -4,9 +4,10 @@ from r2r import R2RException, R2RClient
 
 class R2RBackend:
 
-    def __init__(self, config_path: str = './config.toml'):
+    def __init__(self):
         R2R_HOST = os.getenv("R2R_HOSTNAME", "http://localhost")
         R2R_PORT = os.getenv("R2R_PORT", "7272")
+        
         self.__client = R2RClient(f'{R2R_HOST}:{R2R_PORT}')
         self.__logger = logging.getLogger(__name__)
         self.__vector_search_settings = { 
@@ -26,7 +27,7 @@ class R2RBackend:
             return health_resp['results']['response']
         except R2RException as r2re:
             self.__logger.error(r2re)
-            raise R2RException(r2re)
+            raise R2RException(r2re, 500)
         except Exception as e:
             self.__logger.error(e)
             raise Exception(e)
@@ -48,7 +49,7 @@ class R2RBackend:
                     self.__client.ingest_files(file_paths=[filepath])
                     self.__logger.info(f'Ingested: {filepath}!')
                 except R2RException as r2re:
-                    err_msg = f'[{filepath}] has already been ingested!'
+                    err_msg = f'[{filepath}] cannot be ingested! {r2re}'
                     # Just a warning because I don't want to stop the ingestion of all files.
                     # If some fail one can retry later.
                     self.__logger.warn(err_msg) 
@@ -70,9 +71,9 @@ class R2RBackend:
         try:
             return self.__client.ingest_chunks(chunks=chunks, metadata=metadata)['results']
         except R2RException as r2re:
-            err_msg = f"Failed to ingest chunks for: [{metadata['source']}]!"
+            err_msg = f"Failed to ingest chunks for: [{metadata['source']}]! {r2re}"
             self.__logger.error(err_msg)
-            raise R2RException(err_msg)
+            raise R2RException(err_msg, 500)
         except Exception as e:
             self.__logger.error(e)
             raise Exception(e)
@@ -100,7 +101,7 @@ class R2RBackend:
                 self.__client.update_files(filepaths, document_ids)    
                 files_updated += 1
             except R2RException as r2re:
-                err_msg = f"Failed to update: [{filepath}]!"
+                err_msg = f"Failed to update: [{filepath}]! {r2re}"
                 self.__logger.warn(err_msg)
             except Exception as e:
                 self.__logger.warn(e)
@@ -135,9 +136,9 @@ class R2RBackend:
         try:
             return self.__client.document_chunks(document_id)['results']
         except R2RException as r2re:
-            err_msg = f'Coulndt get chunks for: [{document_id}]!'	
+            err_msg = f"Couldn't get chunks for: [{document_id}]! {r2re}"	
             self.__logger.error(err_msg)
-            raise R2RException(err_msg)
+            raise R2RException(err_msg, 500)
         except Exception as e:
             self.__logger.error(e)
             raise Exception(e)
@@ -158,7 +159,7 @@ class R2RBackend:
                 self.__client.delete(filter)
                 files_deleted += 1
             except R2RException as r2re:
-                err_msg = f"Could not delete a file with following filter: {filter}!"
+                err_msg = f"Could not delete a file with following filter: {filter}! {r2re}"
                 self.__logger.warn(err_msg)
             except Exception as e:
                 self.__logger.warn(e)
@@ -175,37 +176,34 @@ class R2RBackend:
         """
         try:
             docs_metadata = self.documents_overview()
-            filters = [{"document_id": {"$eq": doc_metadata["document_id"]}} for doc_metadata in docs_metadata]
+            filters = [{"document_id": {"$eq": doc_metadata["id"]}} for doc_metadata in docs_metadata]
             self.delete(filters)
         except R2RException as r2re:
             self.__logger.warn(r2re)
         except Exception as e:
             self.__logger.warn(e)
         
-    def rag(self, query: str, rag_generation_config: dict = None) -> str:
+    def prompt_llm(self, query: str, rag_generation_config: dict = None):
         """
         Get relevant answers from the database for a given query, considering chat history if present.
 
         Args:
-            query (str): Current query to get relevant answers for.
+            query str: Query of the user. 
             rag_generation_config (dict, optional): Configuration for the LLM generation including:
                 - temperature: float between 0 and 1
                 - top_p: float between 0 and 1
                 - max_tokens: integer for maximum response length
-
-        Returns:
-            dict: Response containing answer text, status, etc.
         """
         try:
-            resp = self.__client.rag(
+            response = self.__client.rag(
                 query=query,
                 vector_search_settings=self.__vector_search_settings,
                 rag_generation_config=rag_generation_config
-            )   
-            return resp['results']['completion']['choices'][0]['message']['content']
+            )
+            return response['results']['completion']['choices'][0]['message']['content']
         except R2RException as r2re:
             self.__logger.error(r2re)
-            raise R2RException(r2re)
+            raise R2RException(r2re, 500)
         except Exception as e:
             self.__logger.error(e)
             raise Exception(e)
