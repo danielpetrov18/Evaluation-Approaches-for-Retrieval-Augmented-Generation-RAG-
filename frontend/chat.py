@@ -1,13 +1,6 @@
-import sys
 import streamlit as st
-from pathlib import Path
 from r2r import R2RException
-from datetime import timedelta
-
-# Add backend directory to path
-backend_dir = Path(__file__).parent.parent / 'backend'
-sys.path.append(str(backend_dir))
-from client import R2RBackend
+from app import connect_to_backend
 
 st.markdown("""
     <style>
@@ -28,20 +21,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Cached client connection (same as before)
-@st.cache_resource(show_spinner='Connecting to backend ...')
-def get_r2r_client():
-    client = R2RBackend()
-    resp = client.health()
-    if resp == 'ok':
-        return client
-    else:
-        st.error(f"An error occurred while connecting to the backend: {resp}")
-
 def prompt_llm(query: str, messages: list[dict], rag_generation_config: dict):
-    return get_r2r_client().prompt_llm(query, messages, rag_generation_config)
+    backend_client = connect_to_backend()
+    llm_response = backend_client.prompt_llm(query, messages, rag_generation_config)
+    return llm_response
 
-st.title("💬 Llama Chat")
+st.title("💬 Chat")
 
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "assistant", "content": "How can I help you today?"}]
@@ -54,9 +39,9 @@ if "rag_parameters" not in st.session_state:
     }
 
 with st.sidebar:
-    st.subheader('Choose LLM parameters')
+    st.subheader('Customize LLM parameters')
     
-    with st.form("llm_params_form"):
+    with st.form(key="rag_params"):
         temperature = st.slider(
             'Temperature', 
             min_value=0.0, 
@@ -96,17 +81,18 @@ with st.sidebar:
         st.session_state.messages = [{"role": "assistant", "content": "How can I help you today?"}]
         st.rerun()
 
+# Display all message up to now
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"], avatar="🦙" if msg["role"] == "assistant" else "👤"):
         st.write(msg["content"])
 
-prompt = st.chat_input(placeholder="Ask a question...")
+prompt = st.chat_input(placeholder="Please enter your question here...")
 if prompt:
     st.session_state.messages.append({"role": "user", "content": prompt}) 
     with st.chat_message("user", avatar="👤"):
         st.write(prompt)
 
-    with st.spinner('Thinking...'):
+    with st.spinner('Generating response ...'):
         try:
             rag_generation_config = {
                 "temperature": st.session_state.rag_parameters["temperature"],

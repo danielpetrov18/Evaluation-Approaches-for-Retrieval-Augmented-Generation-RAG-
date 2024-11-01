@@ -198,7 +198,6 @@ class R2RBackend:
         """           
         # Construct enhanced query with history
         enhanced_query = self.__construct_enhanced_query(query, message_history)
-        
         try:
             response = self.__client.rag(
                 query=enhanced_query,
@@ -237,6 +236,7 @@ class R2RBackend:
 
         Current question: {query}
 
+        Don't provide irrelevant information about the generation process to the user.
         Please provide an answer to the current question, taking into account both the previous conversation and any relevant information from the provided context. When referencing specific information from the context, please use line item references [1], [2], etc."""
         
         return enhanced_query
