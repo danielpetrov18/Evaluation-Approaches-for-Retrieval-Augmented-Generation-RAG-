@@ -1,4 +1,6 @@
+import sys
 import streamlit as st
+from pathlib import Path
 from r2r import R2RException
 from app import connect_to_backend
 
@@ -23,8 +25,13 @@ st.markdown("""
 
 def prompt_llm(query: str, messages: list[dict], rag_generation_config: dict):
     backend_client = connect_to_backend()
-    llm_response = backend_client.prompt_llm(query, messages, rag_generation_config)
-    return llm_response
+    stream = backend_client.prompt_llm(query, messages, rag_generation_config)
+    return stream
+
+backend_dir = Path(__file__).parent.parent / 'backend'
+sys.path.append(str(backend_dir)) 
+from stream_handler import R2RStreamHandler
+stream_handler = R2RStreamHandler()
 
 st.title("💬 Chat")
 
@@ -41,7 +48,7 @@ if "rag_parameters" not in st.session_state:
 with st.sidebar:
     st.subheader('Customize LLM parameters')
     
-    with st.form(key="par"):
+    with st.form(key="llm_params"):
         temperature = st.slider(
             'Temperature', 
             min_value=0.0, 
@@ -92,19 +99,21 @@ if prompt:
     with st.chat_message("user", avatar="👤"):
         st.write(prompt)
 
-    with st.spinner('Generating response ...'):
-        try:
-            rag_generation_config = {
-                "temperature": st.session_state.rag_parameters["temperature"],
-                "top_p": st.session_state.rag_parameters["top_p"],
-                "max_tokens": st.session_state.rag_parameters["max_length"]
-            }
+    rag_generation_config = {
+        "temperature": st.session_state.rag_parameters["temperature"],
+        "top_p": st.session_state.rag_parameters["top_p"],
+        "max_tokens": st.session_state.rag_parameters["max_length"]
+    }
+    
+    try:
+        with st.chat_message("assistant", avatar="🦙"):
             # Pass all previous messages as history without the last one / current one.
-            response = prompt_llm(prompt, st.session_state.messages[:-1], rag_generation_config)
-            st.session_state.messages.append({"role": "assistant", "content": response})
-            with st.chat_message("assistant", avatar="🦙"):
-                st.write(response)        
-        except R2RException as r2re:
-            st.error(f"An error occurred: {str(r2re)}")
-        except Exception as e:
-            st.error(f"An error occurred: {str(e)}")
+            stream = prompt_llm(prompt, st.session_state.messages[:-1], rag_generation_config)   
+            response = st.write_stream(stream_handler.process_stream(stream))
+    
+        st.session_state.messages.append({"role": "assistant", "content": response})
+    
+    except R2RException as r2re:
+        st.error(f"An error occurred: {str(r2re)}")
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
