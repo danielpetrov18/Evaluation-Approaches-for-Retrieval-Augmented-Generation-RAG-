@@ -2,9 +2,11 @@ import sys
 import streamlit as st
 from pathlib import Path
 
+# I do this because of the way that streamlit app is run. (streamlit run app.py). Relative paths don't work in that case.
 # Add backend directory to path
 backend_dir = Path(__file__).parent.parent / 'backend'
-sys.path.append(str(backend_dir))
+# When a package is being imported python first looks at the sys.builtins path first. Then this path.
+sys.path.append(str(backend_dir)) 
 from client import R2RBackend
 
 # All widgets and resources created here will be shared across all pages.

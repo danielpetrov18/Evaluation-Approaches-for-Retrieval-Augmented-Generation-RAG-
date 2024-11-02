@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 from r2r import R2RException, R2RClient
 
@@ -196,15 +197,16 @@ class R2RBackend:
         Returns:
             str: LLM response
         """           
-        # Construct enhanced query with history
-        enhanced_query = self.__construct_enhanced_query(query, message_history)
+        
+        rag_generation_config['stream'] = True
         try:
-            response = self.__client.rag(
+            enhanced_query = self.__construct_enhanced_query(query, message_history)
+            stream = self.__client.rag(
                 query=enhanced_query,
                 vector_search_settings=self.__vector_search_settings,
                 rag_generation_config=rag_generation_config
             )
-            return response['results']['completion']['choices'][0]['message']['content']
+            return stream   
         except R2RException as r2re:
             self.__logger.error(r2re)
             raise R2RException(r2re, 500)
@@ -235,8 +237,6 @@ class R2RBackend:
         {chr(10).join(history_items)}
 
         Current question: {query}
-
-        Don't provide irrelevant information about the generation process to the user.
-        Please provide an answer to the current question, taking into account both the previous conversation and any relevant information from the provided context. When referencing specific information from the context, please use line item references [1], [2], etc."""
+        """
         
         return enhanced_query
