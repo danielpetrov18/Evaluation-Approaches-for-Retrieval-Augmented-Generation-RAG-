@@ -13,16 +13,11 @@ from client import R2RBackend
 # https://docs.streamlit.io/develop/concepts/multipage-apps/overview
 @st.cache_resource(show_spinner='Connecting to backend ...')
 def connect_to_backend():
-    client = R2RBackend()
-    resp = client.health()
-    if resp == 'ok':
-        return client
-    else:
-        st.error(f"An error occurred while connecting to the backend: {resp}")
+    return R2RBackend()
 
 # Create pages
 pages = [
-    st.Page("chat.py", title="Chatbot", url_path="chat", icon=":material/chat:"),  
+    st.Page("chat.py", title="Chatbot", default=True, icon=":material/chat:"),  
     st.Page("uploads.py", title="Ingest files", url_path="uploads", icon=":material/upload:"),
     st.Page("documents.py", title="Documents Overview", url_path="documents", icon=":material/description:")
 ] 

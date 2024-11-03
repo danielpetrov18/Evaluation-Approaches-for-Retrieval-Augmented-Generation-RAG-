@@ -1,3 +1,4 @@
+import time
 import streamlit as st
 from r2r import R2RException
 from app import connect_to_backend
@@ -28,10 +29,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-def display_documents():
+def display_documents(client):
     try:        
-        client = connect_to_backend()
-        
         documents = client.documents_overview()
         if not documents:
             st.info("No documents found.")
@@ -55,7 +54,7 @@ def display_documents():
         event = st.dataframe(
             table_data, 
             key="documents_table",
-            on_select="rerun", 
+            on_select="rerun", # If one selects a row the script will rerun
             selection_mode="single-row"
         )
 
@@ -100,10 +99,10 @@ def display_documents():
                         deleted_count = client.delete(delete_filter)
                         
                         if deleted_count > 0:
-                            st.success(f"Document {selected_doc_id} deleted successfully!")
-                            st.experimental_rerun()  # Refresh the page
+                            st.success(f"Document {selected_doc_id} deleted successfully!", icon="✅")
+                            st.rerun()  # Refresh the page
                         else:
-                            st.warning("No document was deleted.")
+                            st.warning("No document was deleted.", icon="⚠️")
                     except Exception as e:
                         st.error(f"Could not delete document: {e}")
 
@@ -114,5 +113,30 @@ def display_documents():
 
 st.title("📄 Ingested Documents")
 
+client = connect_to_backend()
+
+with st.sidebar:
+    st.markdown("""
+    <style>
+    .sidebar-title {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    delete_btn = st.button("Delete all documents", type="primary", use_container_width=True, help="Delete all ingested data.")
+    if delete_btn:
+        try:
+            client.clean_db()
+            st.success("All documents deleted successfully!", icon="✅")
+            time.sleep(2)
+            st.rerun()
+        except R2RException as r2re:
+            st.warning(f"An error occurred while deleting documents: {r2re}", icon="⚠️")
+        except Exception as e:
+            st.warning(f"An error occurred while deleting documents: {e}", icon="⚠️")
+
 # Always display documents
-display_documents()
+display_documents(client)

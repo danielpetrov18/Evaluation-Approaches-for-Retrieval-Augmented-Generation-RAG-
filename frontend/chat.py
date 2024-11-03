@@ -45,8 +45,9 @@ if "rag_parameters" not in st.session_state:
         "max_length": 1024
     }
 
-with st.sidebar:    
-    with st.form(key="a"):
+@st.fragment
+def form():
+    with st.form("llm_params"):
         temperature = st.slider(
             'Temperature', 
             min_value=0.0, 
@@ -79,7 +80,10 @@ with st.sidebar:
             st.session_state.rag_parameters["temperature"] = temperature
             st.session_state.rag_parameters["top_p"] = top_p
             st.session_state.rag_parameters["max_length"] = max_length
-            st.success("Parameters updated successfully!")
+            st.success("Parameters updated successfully!", icon="✅")
+            
+with st.sidebar:   
+    form()
         
     clear_history_button = st.button("🗑️ Clear Conversation")
     if clear_history_button:
@@ -88,13 +92,13 @@ with st.sidebar:
 
 # Display all message up to now
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"], avatar="🦙" if msg["role"] == "assistant" else "👤"):
+    with st.chat_message(msg["role"], avatar="🤖" if msg["role"] == "assistant" else "😎"):
         st.write(msg["content"])
 
 prompt = st.chat_input(placeholder="Please enter your question here...")
 if prompt:
     st.session_state.messages.append({"role": "user", "content": prompt}) 
-    with st.chat_message("user", avatar="👤"):
+    with st.chat_message("user", avatar="😎"):
         st.write(prompt)
 
     rag_generation_config = {
@@ -104,7 +108,7 @@ if prompt:
     }
     
     try:
-        with st.chat_message("assistant", avatar="🦙"):
+        with st.chat_message("assistant", avatar="🤖"):
             # Pass all previous messages as history without the last one / current one.
             stream = prompt_llm(prompt, st.session_state.messages[:-1], rag_generation_config)   
             response = st.write_stream(stream_handler.process_stream(stream))

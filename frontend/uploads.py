@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 from pathlib import Path
 from r2r import R2RException
+from datetime import timedelta
 from app import connect_to_backend
 from langchain.docstore.document import Document
 
@@ -43,6 +44,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Cache the loading process of files to improve performance. 
+# In this case caching make sense, since if a user tries to upload the same file again, it would just be ignored.
+# So for updating a particular file, the user should use the TO BE IMPLEMENTED button.
+@st.cache_data(show_spinner=False, ttl=timedelta(minutes=60))
 def save_uploaded_files(uploaded_files):
     """
     Save uploaded files to a temporary directory and return their paths.
@@ -58,6 +63,7 @@ def save_uploaded_files(uploaded_files):
     
     return saved_paths
 
+# Makes no sense to use caching since this is a non-deterministic function.
 def ingest_files(file_paths):
     """
     Ingest files using the R2R backend client.
@@ -73,8 +79,13 @@ def ingest_files(file_paths):
     except Exception as e:
         st.error(f"Unexpected error: {str(e)}")
         return False
-    
+
+@st.cache_data(show_spinner=False, ttl=timedelta(minutes=60))
 def extract_urls(file) -> list[str]:
+    """
+    Extract URLs from a CSV file without caching to ensure we always process
+    the current file content.
+    """
     if file is not None:
         filename = str(file.name)
         file_extension = filename.split('.')[1] # So if I have a urls.csv, I would get the extension part.
@@ -87,16 +98,19 @@ def extract_urls(file) -> list[str]:
             raise ValueError(f"Unsupported or invalid file type: {file_extension}")
         
         return urls
-    
+
+@st.cache_data(show_spinner=False, ttl=timedelta(minutes=60))
 def fetch_data_from_urls(urls: list[str]) -> list[Document]:
     return st.session_state.scraper.fetch_documents(urls) 
 
+@st.cache_data(hash_funcs={Document: lambda x: x.metadata['source']}, show_spinner=False, ttl=timedelta(minutes=60))
 def split_documents(documents: list[Document]) -> list[Document]:
     return st.session_state.splitter.split_documents(documents)
 
 def ingest_chunks(urls: list[dict], split_documents: list[Document]):
     client = connect_to_backend()
     
+    placeholder = st.empty()
     for url in urls:
         chunks = [split_doc for split_doc in split_documents if split_doc.metadata['source'] == url]
         
@@ -108,13 +122,13 @@ def ingest_chunks(urls: list[dict], split_documents: list[Document]):
                 print(resp)
             except R2RException as r2re:
                 print(f"Failed to ingest chunks for: [{metadata['source']}]! {str(r2re)}")
-                st.warning(f"Failed to ingest chunks for: [{metadata['source']}]! {str(r2re)}")
+                placeholder = st.warning(f"Failed to ingest chunks for: [{metadata['source']}]! {str(r2re)}", icon="⚠️")
             except Exception as e:
                 print(f"Unexpected error: {str(e)}")
-                st.warning(f"Unexpected error: {str(e)}")
+                placeholder = st.warning(f"Unexpected error: {str(e)}", icon="⚠️")
         else:
             print(f"No chunks found for [{url}]!")
-            st.warning(f"No chunks found for [{url}]!")
+            placeholder = st.warning(f"No chunks found for [{url}]!", icon="⚠️")
             continue 
 
 st.title("📤 File Upload & Ingestion")
@@ -156,7 +170,7 @@ with upload_file_tab:
                 if st.button("Start Ingestion", type="primary", use_container_width=True):
                     file_paths = save_uploaded_files(uploaded_files)
                     if ingest_files(file_paths):
-                        st.success("🎉 Successful ingestion!")
+                        st.success("Successful ingestion!", icon="✅")
                         st.session_state.upload_key += 1
                         time.sleep(2)
                         st.rerun()
@@ -193,23 +207,26 @@ with upload_url_tab:
         
         if uploaded_url_file:
             if st.button("Ingest data from web pages", type="primary", use_container_width=True):
-                try:
-                    urls = extract_urls(uploaded_url_file)
-                except ValueError as ve:
-                    st.error(f"Error: {str(ve)}")
-                    st.session_state.upload_url_key += 1
-                    st.rerun()
-                documents = fetch_data_from_urls(urls)
-                split_documents = split_documents(documents)
-                
-                if split_documents:
-                    ingest_chunks(urls, split_documents)
-                    st.success("🎉 Successful ingestion!")
-                    st.session_state.upload_key += 1
-                    time.sleep(5)
-                    st.rerun()
-                else:
-                    st.warning("No data for ingestion found in the selected file! Make sure the URLs are valid!")
-                    st.session_state.upload_url_key += 1
-                    time.sleep(3)
-                    st.rerun()
+                with st.status(label="Processing ...", expanded=True):
+                    try:
+                        urls = extract_urls(uploaded_url_file)
+                    except ValueError as ve:
+                        st.error(f"Error: {str(ve)}")
+                        st.session_state.upload_url_key += 1
+                        st.rerun()
+                    st.write('Extracted URLs ...')
+                    documents = fetch_data_from_urls(urls)
+                    st.write('Fetched data ...')
+                    split_documents = split_documents(documents)
+                    st.write('Split data ...')
+                    if split_documents:
+                        ingest_chunks(urls, split_documents)
+                        st.success("Successful ingestion!", icon="✅")
+                        st.session_state.upload_key += 1
+                        time.sleep(5)
+                        st.rerun()
+                    else:
+                        st.warning("No data for ingestion found in the selected file! Make sure the URLs are valid!", icon="⚠️")
+                        st.session_state.upload_url_key += 1
+                        time.sleep(3)
+                        st.rerun()
