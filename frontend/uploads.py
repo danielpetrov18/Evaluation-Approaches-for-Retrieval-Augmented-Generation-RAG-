@@ -1,9 +1,18 @@
 import os
+import sys
+import time
 import tempfile
+import pandas as pd
 import streamlit as st
 from pathlib import Path
 from r2r import R2RException
 from app import connect_to_backend
+from langchain.docstore.document import Document
+
+utility_dir = Path(__file__).parent.parent / 'backend' / 'utility'
+sys.path.append(str(utility_dir)) 
+from scraper import Scraper
+from splitter import Splitter
 
 st.markdown("""
     <style>
@@ -64,61 +73,143 @@ def ingest_files(file_paths):
     except Exception as e:
         st.error(f"Unexpected error: {str(e)}")
         return False
+    
+def extract_urls(file) -> list[str]:
+    if file is not None:
+        filename = str(file.name)
+        file_extension = filename.split('.')[1] # So if I have a urls.csv, I would get the extension part.
+
+        if file_extension == 'csv':
+            dataframe = pd.read_csv(file, header=None)  # Read the CSV with no header
+            urls = dataframe.values.flatten()  # Flatten to get a 1D array of URLs
+            urls = [url.strip() for url in urls if isinstance(url, str)]  # Clean up whitespace and non-strings
+        else:
+            raise ValueError(f"Unsupported or invalid file type: {file_extension}")
+        
+        return urls
+    
+def fetch_data_from_urls(urls: list[str]) -> list[Document]:
+    return st.session_state.scraper.fetch_documents(urls) 
+
+def split_documents(documents: list[Document]) -> list[Document]:
+    return st.session_state.splitter.split_documents(documents)
+
+def ingest_chunks(urls: list[dict], split_documents: list[Document]):
+    client = connect_to_backend()
+    
+    for url in urls:
+        chunks = [split_doc for split_doc in split_documents if split_doc.metadata['source'] == url]
+        
+        if chunks:
+            metadata = chunks[0].metadata
+            chunks_text = [{"text": chunk.page_content} for chunk in chunks]
+            try:
+                resp = client.ingest_chunks(chunks_text, metadata)
+                print(resp)
+            except R2RException as r2re:
+                print(f"Failed to ingest chunks for: [{metadata['source']}]! {str(r2re)}")
+                st.warning(f"Failed to ingest chunks for: [{metadata['source']}]! {str(r2re)}")
+            except Exception as e:
+                print(f"Unexpected error: {str(e)}")
+                st.warning(f"Unexpected error: {str(e)}")
+        else:
+            print(f"No chunks found for [{url}]!")
+            st.warning(f"No chunks found for [{url}]!")
+            continue 
 
 st.title("📤 File Upload & Ingestion")
-    
-# Initialize session states
-if "upload_key" not in st.session_state:
-    st.session_state.upload_key = 0
-if "displayed_files" not in st.session_state:
-    st.session_state.displayed_files = []
 
-# File upload section
-with st.container():
-    st.markdown("### Upload Documents")
-    st.markdown("Select one or multiple files to upload for ingestion into the system.")
+upload_file_tab, upload_url_tab = st.tabs(["Upload files", "Upload URLs"])
     
-    # Use a dynamic key for the file uploader
-    uploaded_files = st.file_uploader(
-        "Choose files to upload",
-        accept_multiple_files=True,
-        type=["txt", "pdf", "doc", "docx", "md", "json", "html", "htm", "csv", "xlsx", "pptx"],
-        help="Supported formats: TXT, PDF, DOC, DOCX, MD, JSON, HTML, CSV, XLSX, PPTX",
-        key=f"file_uploader_{st.session_state.upload_key}"
-    )
-    
-    # Update displayed files only when there are uploaded files
-    if uploaded_files:
-        st.session_state.displayed_files = uploaded_files
+with upload_file_tab:
+    with st.expander("ℹ️ About File Ingestion"):
+        st.markdown("""
+        - Files are processed and text data is being extracted
+        - Files are then split into chunks for efficient retrieval
+        - Finally, files are converted into embeddings using pgvector
+        - Large files may take longer to process
+        - Supported file formats: TXT, JSON, HTML, PDF, DOCX, PPTX, XLSX, CSV, MD
+        - For best results, ensure documents are well-formatted
+        """)
+        # Initialize session states
+    if "upload_key" not in st.session_state:
+        st.session_state.upload_key = 0
+
+    # File upload section
+    with st.container():
+        st.markdown("### Upload Documents")
+        st.markdown("Select one or multiple files to upload for ingestion into the system.")
         
-        # Ingestion controls
-        col1, col2 = st.columns([1, 4])
-        with col1:
-            if st.button("Start Ingestion", type="primary", use_container_width=True):
-                file_paths = save_uploaded_files(uploaded_files)
-                if ingest_files(file_paths):
-                    st.success("🎉 All files have been successfully ingested!")
-                    # Clear both states
+        # Use a dynamic key for the file uploader
+        uploaded_files = st.file_uploader(
+            "Choose files to upload",
+            accept_multiple_files=True,
+            type=["txt", "pdf", "doc", "docx", "md", "json", "html", "htm", "csv", "xlsx", "pptx"],
+            help="Supported formats: TXT, PDF, DOC, DOCX, MD, JSON, HTML, CSV, XLSX, PPTX",
+            key=f"file_uploader_{st.session_state.upload_key}"
+        )
+        
+        # Update displayed files only when there are uploaded files
+        if uploaded_files:
+            col1, col2 = st.columns([1, 4])
+            with col1:
+                if st.button("Start Ingestion", type="primary", use_container_width=True):
+                    file_paths = save_uploaded_files(uploaded_files)
+                    if ingest_files(file_paths):
+                        st.success("🎉 Successful ingestion!")
+                        st.session_state.upload_key += 1
+                        time.sleep(2)
+                        st.rerun()
+            with col2:
+                if st.button("Clear All", use_container_width=True):
                     st.session_state.upload_key += 1
-                    #st.session_state.displayed_files = []
-                    #st.rerun()
-        
-        with col2:
-            if st.button("Clear All", use_container_width=True):
-                # Clear both states
-                st.session_state.upload_key += 1
-                st.session_state.displayed_files = []
-                st.rerun()
-    elif not uploaded_files and st.session_state.displayed_files:
-        # If there are no uploaded files but we have displayed files, clear them
-        st.session_state.displayed_files = []
+                    st.rerun()
 
-with st.expander("ℹ️ About File Ingestion"):
-    st.markdown("""
-    - Files are processed and text data is being extracted
-    - Files are then split into chunks for efficient retrieval
-    - Finally, files are converted into embeddings using pgvector
-    - Large files may take longer to process
-    - Supported file formats: TXT, JSON, HTML, PDF, DOCX, PPTX, XLSX, CSV, MD
-    - For best results, ensure documents are well-formatted
-    """)
+with upload_url_tab:
+    with st.expander("ℹ️ About URL Ingestion"):
+        st.markdown("""
+        - Provide a csv file with a list of URLs
+        - Make sure each URL is separated by a comma
+        - Upload the file and click "Ingest data from web pages"
+        """)
+        
+    if "upload_url_key" not in st.session_state:
+        st.session_state.upload_url_key = 0
+    if "scraper" not in st.session_state:
+        st.session_state.scraper = Scraper()
+    if "splitter" not in st.session_state:
+        st.session_state.splitter = Splitter()
+
+    with st.container():
+        st.markdown("### Upload File")
+        st.markdown("Select a single file containing URLs of web pages for ingestion.")
+        
+        uploaded_url_file = st.file_uploader(
+            "Choose file containing URLs",
+            type=["csv"],
+            help="Supported formats: CSV",
+            key=f"file_url_uploader_{st.session_state.upload_url_key}"
+        )
+        
+        if uploaded_url_file:
+            if st.button("Ingest data from web pages", type="primary", use_container_width=True):
+                try:
+                    urls = extract_urls(uploaded_url_file)
+                except ValueError as ve:
+                    st.error(f"Error: {str(ve)}")
+                    st.session_state.upload_url_key += 1
+                    st.rerun()
+                documents = fetch_data_from_urls(urls)
+                split_documents = split_documents(documents)
+                
+                if split_documents:
+                    ingest_chunks(urls, split_documents)
+                    st.success("🎉 Successful ingestion!")
+                    st.session_state.upload_key += 1
+                    time.sleep(5)
+                    st.rerun()
+                else:
+                    st.warning("No data for ingestion found in the selected file! Make sure the URLs are valid!")
+                    st.session_state.upload_url_key += 1
+                    time.sleep(3)
+                    st.rerun()

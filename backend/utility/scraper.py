@@ -93,7 +93,7 @@ class Scraper:
                 return response.status_code < 400 
             except requests.RequestException as e:
                 if attempt == self.max_retries - 1:
-                    self.logger.warning(f"Failed to validate URL {url} after {self.max_retries} attempts: {str(e)}")
+                    self.__logger.warning(f"Failed to validate URL {url} after {self.max_retries} attempts: {str(e)}")
                     return False
                 continue
         return False
@@ -105,7 +105,7 @@ class Scraper:
             doc.page_content = content                  # Update the page content
             return doc
         except Exception as e:
-            self.logger.error(f"Error processing document {doc.metadata['source']}: {str(e)}")
+            self.__logger.error(f"Error processing document {doc.metadata['source']}: {str(e)}")
             return None
 
     def __clean_content(self, content: str) -> str:

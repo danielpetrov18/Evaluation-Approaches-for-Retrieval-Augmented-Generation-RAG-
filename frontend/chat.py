@@ -46,7 +46,7 @@ if "rag_parameters" not in st.session_state:
     }
 
 with st.sidebar:    
-    with st.form(key="rag_params"):
+    with st.form(key="a"):
         temperature = st.slider(
             'Temperature', 
             min_value=0.0, 
