@@ -23,6 +23,7 @@ def connect_to_backend():
 # Create pages
 pages = [
     st.Page("chat.py", title="Chat", url_path="chat", icon=":material/chat:"),  
+    st.Page("uploads.py", title="Uploads", url_path="uploads", icon=":material/upload:"),
     st.Page("documents.py", title="Documents", url_path="documents", icon=":material/description:"),
     st.Page("settings.py", title="Settings", url_path="settings", icon=":material/settings:")
 ] 

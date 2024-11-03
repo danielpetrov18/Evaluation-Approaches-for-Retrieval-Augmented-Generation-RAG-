@@ -45,10 +45,8 @@ if "rag_parameters" not in st.session_state:
         "max_length": 1024
     }
 
-with st.sidebar:
-    st.subheader('Customize LLM parameters')
-    
-    with st.form(key="llm_params"):
+with st.sidebar:    
+    with st.form(key="rag_params"):
         temperature = st.slider(
             'Temperature', 
             min_value=0.0, 
