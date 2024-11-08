@@ -2,18 +2,18 @@ import sys
 import streamlit as st
 from pathlib import Path
 
-# I do this because of the way that streamlit app is run. (streamlit run app.py). Relative paths don't work in that case.
-# Add backend directory to path
-backend_dir = Path(__file__).parent.parent / 'backend'
-# When a package is being imported python first looks at the sys.builtins path first. Then this path.
-sys.path.append(str(backend_dir)) 
+backend_dir = Path(__file__).parent.parent / 'backend' # Add the path of the backend client.
+sys.path.append(str(backend_dir)) # When a package is being imported python first looks at the sys.builtins path first. Then this path.
 from client import R2RBackend
+from stream_handler import R2RStreamHandler
 
-# All widgets and resources created here will be shared across all pages.
-# https://docs.streamlit.io/develop/concepts/multipage-apps/overview
-@st.cache_resource(show_spinner='Connecting to backend ...')
-def connect_to_backend():
+@st.cache_resource
+def load_client():
     return R2RBackend()
+
+@st.cache_resource
+def stream_handler():
+    return R2RStreamHandler()
 
 # Create pages
 pages = [
@@ -21,8 +21,6 @@ pages = [
     st.Page("uploads.py", title="Ingest files", url_path="uploads", icon=":material/upload:"),
     st.Page("documents.py", title="Documents Overview", url_path="documents", icon=":material/description:")
 ] 
-
-# st.page_link()
 
 # Register pages. Creates the navigation menu for the application. 
 # This page is an entrypoint and as such serves as a page router.

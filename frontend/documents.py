@@ -1,7 +1,8 @@
 import time
 import streamlit as st
-from r2r import R2RException
-from app import connect_to_backend
+#from r2r import 
+
+from app import load_client
 
 st.markdown("""
     <style>
@@ -106,14 +107,14 @@ def display_documents(client):
                     except Exception as e:
                         st.error(f"Could not delete document: {e}")
 
-    except R2RException as r2re:
-        st.error(f"An error occurred while fetching documents: {r2re}")
+    #except R2RException as r2re:
+       # st.error(f"An error occurred while fetching documents: {r2re}")
     except Exception as e:
         st.error(f"An error occurred while fetching documents: {e}")
 
 st.title("📄 Ingested Documents")
 
-client = connect_to_backend()
+client = load_client()
 
 with st.sidebar:
     st.markdown("""
@@ -133,8 +134,8 @@ with st.sidebar:
             st.success("All documents deleted successfully!", icon="✅")
             time.sleep(2)
             st.rerun()
-        except R2RException as r2re:
-            st.warning(f"An error occurred while deleting documents: {r2re}", icon="⚠️")
+        #except R2RException as r2re:
+         #   st.warning(f"An error occurred while deleting documents: {r2re}", icon="⚠️")
         except Exception as e:
             st.warning(f"An error occurred while deleting documents: {e}", icon="⚠️")
 

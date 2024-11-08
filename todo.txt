@@ -1,0 +1,16 @@
+************************************************************************
+-> improve chat history
+    => Sliding history (characters/5000)
+    => Extract relevant part and formulate (additional prompt to the LLM)
+-> finish frontend
+-> test backend + frontend
+-> RAGAs
+    => Read paper
+    => go through documentation
+    => start evaluating the LLMs responses
+-> Check out instruction models for llama3.1 
+    => on the model page on Ollama scroll down
+-> Do research on further evaluation methods/frameworks
+    => implement
+-> Play around with chunk size, models, etc.
+***********************************************************************

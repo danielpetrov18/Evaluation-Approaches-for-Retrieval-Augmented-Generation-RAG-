@@ -23,7 +23,7 @@ RUN python -c "from unstructured.partition.model_init import initialize; initial
 
 RUN pip install gunicorn uvicorn fastapi httpx
 
-COPY main.py .
+COPY unstructured/main.py .
 
 EXPOSE 7275
 

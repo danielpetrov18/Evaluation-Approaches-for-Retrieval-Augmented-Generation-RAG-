@@ -5,10 +5,11 @@ import tempfile
 import pandas as pd
 import streamlit as st
 from pathlib import Path
-from r2r import R2RException
+# from r2r import R2RException
 from datetime import timedelta
-from app import connect_to_backend
 from langchain.docstore.document import Document
+from app import load_client
+
 
 utility_dir = Path(__file__).parent.parent / 'backend' / 'utility'
 sys.path.append(str(utility_dir)) 
@@ -64,18 +65,17 @@ def save_uploaded_files(uploaded_files):
     return saved_paths
 
 # Makes no sense to use caching since this is a non-deterministic function.
-def ingest_files(file_paths):
+def ingest_files(client, file_paths):
     """
     Ingest files using the R2R backend client.
     """
     try:
-        client = connect_to_backend()
         with st.spinner("Ingesting files..."):
             client.ingest_files(file_paths)
         return True
-    except R2RException as r2re:
-        st.error(f"Error during ingestion: {str(r2re)}")
-        return False
+    # except R2RException as r2re:
+    #     st.error(f"Error during ingestion: {str(r2re)}")
+    #     return False
     except Exception as e:
         st.error(f"Unexpected error: {str(e)}")
         return False
@@ -107,9 +107,7 @@ def fetch_data_from_urls(urls: list[str]) -> list[Document]:
 def split_documents(documents: list[Document]) -> list[Document]:
     return st.session_state.splitter.split_documents(documents)
 
-def ingest_chunks(urls: list[dict], split_documents: list[Document]):
-    client = connect_to_backend()
-    
+def ingest_chunks(client, urls: list[dict], split_documents: list[Document]):
     placeholder = st.empty()
     for url in urls:
         chunks = [split_doc for split_doc in split_documents if split_doc.metadata['source'] == url]
@@ -120,9 +118,9 @@ def ingest_chunks(urls: list[dict], split_documents: list[Document]):
             try:
                 resp = client.ingest_chunks(chunks_text, metadata)
                 print(resp)
-            except R2RException as r2re:
-                print(f"Failed to ingest chunks for: [{metadata['source']}]! {str(r2re)}")
-                placeholder = st.warning(f"Failed to ingest chunks for: [{metadata['source']}]! {str(r2re)}", icon="⚠️")
+            # except R2RException as r2re:
+            #     print(f"Failed to ingest chunks for: [{metadata['source']}]! {str(r2re)}")
+            #     placeholder = st.warning(f"Failed to ingest chunks for: [{metadata['source']}]! {str(r2re)}", icon="⚠️")
             except Exception as e:
                 print(f"Unexpected error: {str(e)}")
                 placeholder = st.warning(f"Unexpected error: {str(e)}", icon="⚠️")
@@ -132,6 +130,8 @@ def ingest_chunks(urls: list[dict], split_documents: list[Document]):
             continue 
 
 st.title("📤 File Upload & Ingestion")
+
+client = load_client()
 
 upload_file_tab, upload_url_tab = st.tabs(["Upload files", "Upload URLs"])
     
@@ -169,7 +169,7 @@ with upload_file_tab:
             with col1:
                 if st.button("Start Ingestion", type="primary", use_container_width=True):
                     file_paths = save_uploaded_files(uploaded_files)
-                    if ingest_files(file_paths):
+                    if ingest_files(client, file_paths):
                         st.success("Successful ingestion!", icon="✅")
                         st.session_state.upload_key += 1
                         time.sleep(2)
@@ -220,7 +220,7 @@ with upload_url_tab:
                     split_documents = split_documents(documents)
                     st.write('Split data ...')
                     if split_documents:
-                        ingest_chunks(urls, split_documents)
+                        ingest_chunks(client, urls, split_documents)
                         st.success("Successful ingestion!", icon="✅")
                         st.session_state.upload_key += 1
                         time.sleep(5)

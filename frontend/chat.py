@@ -1,8 +1,8 @@
 import sys
 import streamlit as st
 from pathlib import Path
-from r2r import R2RException
-from app import connect_to_backend
+#from r2r import R2RException
+from app import load_client, stream_handler
 
 st.markdown("""
     <style>
@@ -24,30 +24,19 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def prompt_llm(query: str, messages: list[dict], rag_generation_config: dict):
-    backend_client = connect_to_backend()
-    stream = backend_client.prompt_llm(query, messages, rag_generation_config)
+    client = load_client()
+    stream = client.prompt_llm(query, messages, rag_generation_config)
     return stream
-
-backend_dir = Path(__file__).parent.parent / 'backend'
-sys.path.append(str(backend_dir)) 
-from stream_handler import R2RStreamHandler
-stream_handler = R2RStreamHandler()
-
-st.title("💬 Chat")
-
-if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "How can I help you today?"}]
-
-if "rag_parameters" not in st.session_state:
-    st.session_state.rag_parameters = {
-        "temperature": 0.1,
-        "top_p": 0.95,
-        "max_length": 1024
-    }
 
 @st.fragment
 def form():
-    with st.form("llm_params"):
+    # Doing this to avoid errors on rerun. Duplicate form keys are not allowed
+    if "form_key" not in st.session_state:
+        st.session_state.form_key = 0
+    else:
+        st.session_state.form_key += 1
+    
+    with st.form(f"llm_params_{st.session_state.form_key}"):
         temperature = st.slider(
             'Temperature', 
             min_value=0.0, 
@@ -81,6 +70,19 @@ def form():
             st.session_state.rag_parameters["top_p"] = top_p
             st.session_state.rag_parameters["max_length"] = max_length
             st.success("Parameters updated successfully!", icon="✅")
+
+st.title("💬 Chat")
+
+if "messages" not in st.session_state:
+    st.session_state.messages = [{"role": "assistant", "content": "How can I help you today?"}]
+
+# Default parameters
+if "rag_parameters" not in st.session_state:
+    st.session_state.rag_parameters = {
+        "temperature": 0.1,
+        "top_p": 0.95,
+        "max_length": 1024
+    }
             
 with st.sidebar:   
     form()
@@ -90,7 +92,6 @@ with st.sidebar:
         st.session_state.messages = [{"role": "assistant", "content": "How can I help you today?"}]
         st.rerun()
 
-# Display all message up to now
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"], avatar="🤖" if msg["role"] == "assistant" else "😎"):
         st.write(msg["content"])
@@ -111,11 +112,14 @@ if prompt:
         with st.chat_message("assistant", avatar="🤖"):
             # Pass all previous messages as history without the last one / current one.
             stream = prompt_llm(prompt, st.session_state.messages[:-1], rag_generation_config)   
-            response = st.write_stream(stream_handler.process_stream(stream))
+            response = st.write_stream(stream_handler().process_stream(stream))
     
         st.session_state.messages.append({"role": "assistant", "content": response})
     
-    except R2RException as r2re:
-        st.error(f"An error occurred: {str(r2re)}")
+    # except R2RException as r2re:
+    #     st.warning(f"An error occurred: {str(r2re)}")
+    #     st.rerun()
+        
     except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
+        st.warning(f"An error occurred: {str(e)}")
+        st.rerun()

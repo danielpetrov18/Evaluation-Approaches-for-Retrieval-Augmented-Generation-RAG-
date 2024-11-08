@@ -1,13 +1,13 @@
+import os
 import logging
-from os import getenv
 from typing import List, Optional
 from langchain.docstore.document import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 class Splitter:
     def __init__(self):
-        CHUNK_SIZE = int(getenv("CHUNK_SIZE", 512))
-        CHUNK_OVERLAP = int(getenv("CHUNK_OVERLAP", 128))
+        CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", 1024))
+        CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", 256))
         separators = [
             "\n\n",  # Paragraphs
             "\n",    # Lines
@@ -19,7 +19,6 @@ class Splitter:
             ""       # Characters
         ]
                 
-        logging.basicConfig(level=logging.DEBUG)
         self.__logger = logging.getLogger(__name__)
         self.__recursive_splitter = RecursiveCharacterTextSplitter(
             chunk_size=CHUNK_SIZE, 
@@ -27,37 +26,32 @@ class Splitter:
             length_function=len,
             separators=separators
         )
-
+    
     def split_documents(self, documents: List[Document]) -> List[Document]:
         """
-        Split documents into chunks while preserving context and structure.
+        Splits a list of documents into smaller chunks using a recursive character-based text splitter.
         
         Args:
-            documents: List of documents to split
-            
+            documents (List[Document]): A list of Document objects to be split. Each Document should have a non-empty page_content.
+        
         Returns:
-            List of split documents with preserved metadata
+            List[Document]: A list of Document objects representing the chunks. Each chunk retains the metadata of the original document.
         """
         if not documents:
-            self.__logger.warning("No documents provided for splitting!")
+            self.__logger.warning("[-] No documents provided for splitting! [-]")
             return []
         
         processed_chunks = []
         for doc in documents:
             try:
                 if not doc.page_content or not doc.page_content.strip():
-                    self.__logger.warning(f"Empty document found: {doc.metadata.get('source', 'unknown source')}")
+                    self.__logger.warning(f"[-] Empty document found: {doc.metadata.get('source', 'unknown source')}! [-]")
                     continue
                 
                 chunks = self.__recursive_splitter.split_documents([doc])
                 processed_chunks.extend(chunks)           
             except Exception as e:
-                self.logger.error(f"Error splitting document {doc.metadata.get('source', 'unknown source')}: {str(e)}")
+                self.__logger.error(f"[-] Error splitting document {doc.metadata.get('source', 'unknown source')}: {str(e)} [-]")
                 continue
+            
         return processed_chunks
-
-    def __merge_metadata(self, original_metadata: dict, new_metadata: dict) -> dict:
-        """Merge original document metadata with new chunk metadata."""
-        metadata = original_metadata.copy()
-        metadata.update(new_metadata)
-        return metadata

@@ -1,7 +1,7 @@
 import os
 import re
 import logging
-from r2r import R2RException, R2RClient
+from r2r import R2RClient, R2RException 
 
 class R2RBackend:
 
@@ -11,29 +11,33 @@ class R2RBackend:
         
         self.__client = R2RClient(f'{R2R_HOST}:{R2R_PORT}')
         self.__logger = logging.getLogger(__name__)
-        self.__vector_search_settings = { 
-                                         'index_measure': 'cosine_distance',
-                                         'ef_search': '100' # Increases accuracy and decreases speed
-        }
+        self.__vector_search_settings = {'index_measure': 'cosine_distance', 'ef_search': '100'}
+        
+        self.__logger.info('[+] BACKEND CLIENT INITIALIZED [+]')
 
-    def health(self) -> dict: 
+    def health(self) -> str: 
         """
         Check the health of the R2R service.
 
         Returns:
-            dict[str]: Dictionary containing information about the health of the service. Should contain OK.
+            str: Returns OK if the service is healthy.
+            
+        Raises:
+            R2RException: If the service is not healthy.
+            Exception: If an unexpected error occurs.
         """
         try:
             health_resp = self.__client.health()
             return health_resp['results']['response']
         except R2RException as r2re:
-            self.__logger.error(r2re)
-            raise R2RException(r2re, 500)
+            err_msg = f'[-] Error while checking health: {r2re} [-]'
+            self.__logger.error(err_msg)
+            raise R2RException(err_msg, 500)
         except Exception as e:
-            self.__logger.error(e)
+            self.__logger.error(f'[-] Unexpected error while checking health: {e} [-]')
             raise Exception(e)
 
-    def ingest_files(self, filepaths: list[str]) -> None: 
+    def ingest_files(self, filepaths: list[str]): 
             """
             Ingest files into postgres(pgvector). 
             If a document with the same title is already present in the database, nothing gets embedded.
@@ -41,21 +45,15 @@ class R2RBackend:
 
             Args:
                 file_paths (list[str]): List of file paths to ingest. Should be locally available.
-                
-            Returns:
-                None
             """
             for filepath in filepaths:
                 try:
                     self.__client.ingest_files(file_paths=[filepath])
-                    self.__logger.info(f'Ingested: {filepath}!')
+                    self.__logger.info(f'[+] Ingested: {filepath}! [+]')
                 except R2RException as r2re:
-                    err_msg = f'[{filepath}] cannot be ingested! {r2re}'
-                    # Just a warning because I don't want to stop the ingestion of all files.
-                    # If some fail one can retry later.
-                    self.__logger.warn(err_msg) 
+                    self.__logger.warning(f'[-] [{filepath}] cannot be ingested! {r2re} [-]') 
                 except Exception as e:
-                    self.__logger.warn(e)
+                    self.__logger.warning(f'[-] Unexpected error when ingesting [{filepath}]: {e} [-]')
         
     def ingest_chunks(self, chunks: list[dict], metadata: dict[str] = None) -> list[dict]:
         """
@@ -66,20 +64,25 @@ class R2RBackend:
             chunks (list[str]): List of document pieces to ingest.
             metadata Optional(dict[str]): Dictionary of metadata to associate with the document.
 
+        Raises:
+            R2RException: If the ingestion fails.
+            Exception: If an unexpected error occurs.
+
         Returns:
             list[dict]: Ingestion results containing message, task_id and a document_id.
         """    
         try:
             return self.__client.ingest_chunks(chunks=chunks, metadata=metadata)['results']
         except R2RException as r2re:
-            err_msg = f"Failed to ingest chunks for: [{metadata['source']}]! {r2re}"
+            err_msg = f"[-] Failed to ingest chunks for: [{metadata['source']}]! {r2re} [-]"
             self.__logger.error(err_msg)
             raise R2RException(err_msg, 500)
         except Exception as e:
-            self.__logger.error(e)
-            raise Exception(e)
+            err_msg = f'[-] Unexpected error when ingesting chunks for [{metadata["source"]}]! {e} [-]'
+            self.__logger.error(err_msg)
+            raise Exception(err_msg)
     
-    def update_files(self, filepaths: list[str], document_ids: list[str]) -> int:    
+    def update_files(self, filepaths: list[str], document_ids: list[str]):    
         """
         Update files in the database. If a document with the same title is already present in the database, it gets updated.
 
@@ -94,20 +97,16 @@ class R2RBackend:
             int: Files updated.
         """
         if len(filepaths) != len(document_ids):
-            raise ValueError("Filepaths and document_ids must have the same length!")
+            raise ValueError("[-] Filepaths and document_ids must have the same length! [-]")
         
-        files_updated = 0
         for filepath, document_id in zip(filepaths, document_ids):
             try:
-                self.__client.update_files(filepaths, document_ids)    
-                files_updated += 1
+                self.__client.update_files(file_paths=[filepath], document_ids=[document_id])    
+                self.__logger.info(f'Updated: {filepath}!')
             except R2RException as r2re:
-                err_msg = f"Failed to update: [{filepath}]! {r2re}"
-                self.__logger.warn(err_msg)
+                self.__logger.warning(f"[-] Failed to update: [{filepath}]! {r2re} [-]")        
             except Exception as e:
-                self.__logger.warn(e)
-            
-        return files_updated
+                self.__logger.warning(f'[-] Unexpected error when updating file: [{filepath}] - {e} [-]')
     
     def documents_overview(self, documents_ids: list[str] = None, offset: int = 0, limit: int = 100) -> list[dict]:
         """
@@ -131,58 +130,54 @@ class R2RBackend:
             limit Optional(int): Maximum number of chunks to return. Defaults to 100.
             include_vectors Optional(bool): Whether to include embeddings in the returned chunks. Defaults to False.
 
+        Raises:
+            R2RException: If the request fails.
+            Exception: If an unexpected error occurs.
+
         Returns:
             list[dict]: List of dictionaries containing chunk_id, text, embeddings, etc.
         """
         try:
-            return self.__client.document_chunks(document_id)['results']
+            return self.__client.document_chunks(document_id)['results'] 
         except R2RException as r2re:
-            err_msg = f"Couldn't get chunks for: [{document_id}]! {r2re}"	
+            err_msg = f"[-] Couldn't get chunks for: [{document_id}]! {r2re} [-]"	
             self.__logger.error(err_msg)
             raise R2RException(err_msg, 500)
         except Exception as e:
-            self.__logger.error(e)
-            raise Exception(e)
+            err_msg = f'[-] Unexpected error when getting chunks for [{document_id}]! {e} [-]'
+            self.__logger.error(err_msg)
+            raise Exception(err_msg)
             
-    def delete(self, filters: list[dict]) -> None:
+    def delete(self, filters: list[dict]):
         """
         Delete documents from the database based on filters.
 
         Args:
             filters (list[dict]): List of dictionaries containing filter criteria.
             Example: "document_id": {"$eq": "9fbe403b-c11c-5aae-8ade-ef22980c3ad1"}
-        Returns:
-            None
         """    
-        files_deleted = 0
         for filter in filters:
             try:
                 self.__client.delete(filter)
-                files_deleted += 1
+                self.__logger.info(f"[+] Deleted a file with following filter: [{filter}]! [+]")
             except R2RException as r2re:
-                err_msg = f"Could not delete a file with following filter: {filter}! {r2re}"
-                self.__logger.warn(err_msg)
+                self.__logger.warning(f"[-] Could not delete a file with following filter: [{filter}]! {r2re} [-]")
             except Exception as e:
-                self.__logger.warn(e)
-            
-        return files_deleted
-    
-    def clean_db(self) -> None:    
+                self.__logger.warning(f"[-] Unexpected error when deleting using filter: [{filter}] - {e} [-]")     
+       
+    def clean_db(self):    
         """
         Clean the database by deleting all documents in it.
         NOTE: This is irreversible! Before doing so think about replicating the database.
-
-        Returns:
-            None
         """
         try:
             docs_metadata = self.documents_overview()
             filters = [{"document_id": {"$eq": doc_metadata["id"]}} for doc_metadata in docs_metadata]
             self.delete(filters)
         except R2RException as r2re:
-            self.__logger.warn(r2re)
+            self.__logger.warning(f'[-] Error while clearing all files: {r2re} [-]')
         except Exception as e:
-            self.__logger.warn(e)
+            self.__logger.warning(f'[-] Unexpected error while clearing all files: {e} [-]s')
         
     def prompt_llm(self, query: str, message_history: list[dict], rag_generation_config: dict = None):
         """
@@ -197,8 +192,6 @@ class R2RBackend:
         Returns:
             str: LLM response
         """           
-        
-        rag_generation_config['stream'] = True
         try:
             enhanced_query = self.__construct_enhanced_query(query, message_history)
             stream = self.__client.rag(
@@ -208,12 +201,14 @@ class R2RBackend:
             )
             return stream   
         except R2RException as r2re:
-            self.__logger.error(r2re)
+            self.__logger.error(f'[-] Error when prompting LLM: {r2re} [-]')
             raise R2RException(r2re, 500)
         except Exception as e:
-            self.__logger.error(e)
-            raise Exception(e)
+            err_msg = f'[-] Unexpected error when prompting LLM: {e} [-]'
+            self.__logger.error(err_msg)
+            raise Exception(err_msg)
         
+    # TODO: Refactor
     def __construct_enhanced_query(self, query: str, message_history: list[dict]) -> str:
         """
         Construct an enhanced query by incorporating recent message history into the context.
@@ -227,7 +222,7 @@ class R2RBackend:
                 formatted as numbered context items to provide context for the current query.
         """
         history_items = []
-        for i, msg in enumerate(message_history[-50:], 1):  # Only use last 50 messages
+        for i, msg in enumerate(message_history[-30:], 1):  # Only use last 30 messages
             role = "Previous Human Question" if msg["role"] == "user" else "Previous Assistant Response"
             history_items.append(f"{i}. [{role}]: {msg['content']}")
             
