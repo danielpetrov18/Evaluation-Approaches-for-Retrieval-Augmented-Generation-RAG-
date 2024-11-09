@@ -73,12 +73,19 @@ from utility.splitter import Splitter
 
 import ollama
 from message import Message 
+from history import ChatHistory
 
-embedding_response = ollama.embed(model='mxbai-embed-large', input='Hello world')
-embedding_response2 = ollama.embed(model='mxbai-embed-large', input='Good day')
+#embedding_response = ollama.embed(model='mxbai-embed-large', input='Hello world')
+#embedding_response2 = ollama.embed(model='mxbai-embed-large', input='Good day')
 
 # Fetching the item on 0th index since the response is a list of lists
-m1 = Message(role='user', content='Hello world', embedding=embedding_response['embeddings'][0])
-m2 = Message(role='assistant', content='Good day', embedding=embedding_response2['embeddings'][0])	
-print(m1)
-print(m2)
+# m1 = Message(role='user', content='Hello world', embedding=[0.0]*1024)
+# m2 = Message(role='assistant', content='Good day', embedding=[0.0]*1024)	
+
+import time
+history = ChatHistory(max_size=10)
+for i in range(11):
+    time.sleep(1)
+    history.add_message(Message(role='user', content='Hello world', embedding=[0.0]*1024))
+    
+[print(msg.timestamp) for msg in history.get_all_messages()]

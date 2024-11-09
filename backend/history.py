@@ -1,195 +1,121 @@
-import ollama
-import logging
-import numpy as np
+from uuid import UUID
+from message import Message
 from collections import deque
-from typing import List, Dict, Optional, Tuple
+from typing import Dict, List, Optional, Iterator
 
-class ChatClient:
+class ChatHistory:
+    """
+    Manages a collection of chat messages with efficient search and retrieval capabilities.
     
-    def __init__(
-        self, 
-        chat_model: str, 
-        embedding_model: str, 
-        max_history: int = 30, 
-        similarity_threshold: float = 0.65, 
-        max_context_items: int = 5
-    ):
-        """
-        Args:
-            chat_model: Model name for chat completion
-            embedding_model: Model name for computing embeddings
-            max_history: Maximum number of messages to keep in history
-            similarity_threshold: Minimum similarity score to consider a message relevant
-            max_context_items: Maximum number of relevant history items to include
-        """
-        self.__chat_model = chat_model
-        self.__embedding_model = embedding_model
-        self.__max_history = max_history
-        self.__similarity_threshold = similarity_threshold
-        self.__max_context_items = max_context_items
-        self.__message_history: deque = deque(maxlen=max_history)
-        self.__logger = logging.getLogger(__name__)
+    The ChatHistory class provides operations for managing message history
+    with constant-time access to messages by ID and efficient iteration over messages
+    in chronological order.
+    
+    Attributes:
+        max_size (int): Maximum number of messages to store in history
         
-        self.__logger.info(f'[+] Chat client created with chat model: {chat_model}, embedding model: {embedding_model}, max history: {max_history}, similarity threshold: {similarity_threshold}, max context items: {max_context_items} [+]')
-
-    def _compute_embeddings(self, text: str) -> List[float]:  
+    Example:
+        >>> history = ChatHistory(max_size=100)
+        >>> msg = Message(role="user", content="Hello", embedding=[0.1]*1024)
+        >>> history.add_message(msg)
+        >>> retrieved = history.get_message(msg.id)
+    """
+    
+    def __init__(self, max_size: int) -> None:
         """
-        Compute embeddings for a given text using the embedding model.
-
+        Initialize a new ChatHistory instance.
+        
         Args:
-            text: The text to compute embeddings for
-
-        Returns:
-            A list of floats representing the computed embeddings
-
+            max_size: Maximum number of messages to retain in history
+            
         Raises:
-            ollama.ResponseError: If there is an issue with the response from the embedding model
-            Exception: If there is an unexpected issue computing embeddings
+            ValueError: If max_size is less than 1
         """
-        try:
-            response = ollama.embed(model=self.__chat_model, input=text)
-            return response['embeddings']
-        except ollama.ResponseError as oe:
-            self.logger.error(f"Error computing embeddings: {oe}")
-            raise
-        except Exception as e:
-            self.logger.error(f"Unexpected error computing embeddings: {e}")
-            raise
-
-    def _compute_similarity(self, embedding1: List[float], embedding2: List[float]) -> float:
+        if max_size < 1:
+            raise ValueError("History max size must be at least 1!")
+            
+        self._messages: deque[Message] = deque(maxlen=max_size)
+        self._message_index: Dict[UUID, Message] = {}
+        self._max_size = max_size
+    
+    def add_message(self, message: Message) -> None:
         """
-        Calculate the cosine similarity between two embeddings.
+        Add a message to the history, maintaining the size limit.
         
-        https://datastax.medium.com/how-to-implement-cosine-similarity-in-python-505e8ec1d823
-
+        If the history has reached its maximum size, the oldest message will be
+        removed before adding the new one.
+        
         Args:
-            embedding1: First list of float numbers representing the first embedding.
-            embedding2: Second list of float numbers representing the second embedding.
-
-        Returns:
-            A float representing the cosine similarity between the two embeddings.
-            If both vectors are identical and have the same direction then the cosine similarity will be 1.
-            If both vectors are completely different and perpendicular to each other then the cosine similarity will be 0.
-            If both vectors are dissimilar and have the opposite direction then the cosine similarity will be -1.
-
+            message: Message instance to add
+            
         Raises:
-            ValueError: If the lengths of the two embeddings are not the same.
+            TypeError: If message is not an instance of Message
         """
-        if len(embedding1) != len(embedding2):
-            raise ValueError("Embeddings must have the same length.")
-        
-        vec1 = np.array(embedding1)
-        vec2 = np.array(embedding2)
-        return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-
-    def _find_relevant_history(self, query: str) -> List[Dict]:
-        """
-        Find relevant messages from history based on semantic similarity.
-        
-        Args:
-            query: Current user query
+        if not isinstance(message, Message):
+            raise TypeError("message must be an instance of Message")
             
-        Returns:
-            List of relevant messages with their similarity scores
+        if len(self._messages) == self._max_size:
+            oldest = self._messages[0]
+            del self._message_index[oldest.id]
+            
+        self._messages.append(message)
+        self._message_index[message.id] = message
+        print(f'Adding: {message.timestamp}')
+    
+    def remove_message(self, message_id: UUID) -> None:
         """
-        if not self.message_history:
-            return []
-
-        query_embedding = self._compute_embeddings(query)
-        relevant_messages = []
-
-        for message in self.message_history:
-            # Skip computing embeddings for system messages
-            if message['role'] == 'system':
-                continue
-
-            # Compute similarity with message content
-            message_embedding = self._compute_embeddings(message['content'])
-            similarity = self._compute_similarity(query_embedding, message_embedding)
-
-            if similarity >= self.similarity_threshold:
-                relevant_messages.append({
-                    'message': message,
-                    'similarity': similarity
-                })
-
-        # Sort by similarity and take top k most relevant
-        relevant_messages.sort(key=lambda x: x['similarity'], reverse=True)
-        return relevant_messages[:self.max_context_items]
-
-    def _construct_augmented_prompt(self, query: str, relevant_history: List[Dict]) -> str:
-        """
-        Construct an augmented prompt that includes relevant historical context.
+        Remove a message from history by its ID.
         
         Args:
-            query: Current user query
-            relevant_history: List of relevant historical messages
-            
-        Returns:
-            Augmented prompt string
+            message_id: UUID of the message to remove     
         """
-        prompt_parts = []
-
-        if relevant_history:
-            prompt_parts.append("Relevant conversation history:")
-            for i, item in enumerate(relevant_history, 1):
-                message = item['message']
-                similarity = item['similarity']
-                role = "Human" if message['role'] == 'user' else "Assistant"
-                prompt_parts.append(
-                    f"{i}. [{role} message (similarity: {similarity:.2f})]: {message['content']}"
-                )
-            prompt_parts.append("\nGiven this context, please answer the following question:")
-
-        prompt_parts.append(f"Current question: {query}")
-        
-        return "\n".join(prompt_parts)
-
-    async def chat(self, query: str, system_prompt: Optional[str] = None) -> Tuple[str, List[Dict]]:
+        if message_id in self._message_index:    
+            message = self._message_index[message_id]
+            self._messages.remove(message)
+            del self._message_index[message_id]
+    
+    def get_message(self, message_id: UUID) -> Optional[Message]:
         """
-        Process a chat query with semantic search augmentation.
+        Retrieve a message by its ID.
         
         Args:
-            query: User's question
-            system_prompt: Optional system prompt to guide the model
+            message_id: UUID of the message to retrieve
             
         Returns:
-            Tuple of (response text, relevant history items used)
+            The Message instance or None if not found
         """
-        try:
-            # Find relevant historical context
-            relevant_history = self._find_relevant_history(query)
+        return self._message_index.get(message_id)
+    
+    def get_messages_by_role(self, role: str) -> List[Message]:
+        """
+        Retrieve all messages with a specific role.
+        
+        Args:
+            role: Role to filter messages by (e.g., 'user', 'assistant')
             
-            # Construct the augmented prompt
-            augmented_prompt = self._construct_augmented_prompt(query, relevant_history)
-            
-            # Prepare messages for the chat
-            messages = []
-            if system_prompt:
-                messages.append({'role': 'system', 'content': system_prompt})
-            messages.append({'role': 'user', 'content': augmented_prompt})
-
-            # Get response from Ollama
-            response = ollama.chat(
-                model=self.model_name,
-                messages=messages
-            )
-
-            # Extract the response content
-            response_content = response['message']['content']
-
-            # Update message history
-            self.message_history.append({'role': 'user', 'content': query})
-            self.message_history.append({'role': 'assistant', 'content': response_content})
-
-            return response_content, relevant_history
-
-        except Exception as e:
-            self.logger.error(f"Error in chat processing: {e}")
-            raise
-
-    def get_message_history(self) -> List[Dict]:
-        return list(self.message_history)
-
-    def clear_history(self):
-        self.message_history.clear()
+        Returns:
+            List of messages with the specified role in chronological order
+        """
+        return [msg for msg in self._messages if msg.role == role]
+     
+    def get_all_messages(self) -> List[Message]:
+        """
+        Retrieve all messages in chronological order.
+        
+        Returns:
+            List of all messages in the history
+        """
+        return list(self._messages)
+    
+    def clear(self) -> None:
+        """Remove all messages from the history."""
+        self._messages.clear()
+        self._message_index.clear()
+    
+    def __len__(self) -> int:
+        """Return the current number of messages in the history."""
+        return len(self._messages)
+    
+    def __iter__(self) -> Iterator[Message]:
+        """Return an iterator over all messages in chronological order."""
+        return iter(self._messages)
