@@ -1,6 +1,8 @@
 import os
 import re
 import logging
+from pathlib import Path
+from typing import Iterator, Union
 from r2r import R2RClient, R2RException 
 
 class R2RBackend:
@@ -37,15 +39,27 @@ class R2RBackend:
             self.__logger.error(f'[-] Unexpected error while checking health: {e} [-]')
             raise Exception(e)
 
-    def ingest_files(self, filepaths: list[str]): 
+    def ingest_files(self, folder_path: Union[str, Path]): 
             """
             Ingest files into postgres(pgvector). 
             If a document with the same title is already present in the database, nothing gets embedded.
             Invalid filepaths are ignored.
 
             Args:
-                file_paths (list[str]): List of file paths to ingest. Should be locally available.
+                folder_path: Path to the folder containing the files to ingest.
+            
+            Raises:
+                ValueError: If the path is not a directory.
             """
+            try:
+                filepaths = list(self._iterate_over_files(folder_path))            
+            except ValueError as ve:
+                self.__logger.warning(ve)
+                return
+            
+            if len(filepaths) == 0:
+                self.__logger.warning(f'[-] No files found in [{folder_path}]! [-]')
+            
             for filepath in filepaths:
                 try:
                     self.__client.ingest_files(file_paths=[filepath])
@@ -54,6 +68,28 @@ class R2RBackend:
                     self.__logger.warning(f'[-] [{filepath}] cannot be ingested! {r2re} [-]') 
                 except Exception as e:
                     self.__logger.warning(f'[-] Unexpected error when ingesting [{filepath}]: {e} [-]')
+        
+    def _iterate_over_files(self, folder_path: str | Path) -> Iterator[str]:
+        """
+        Iterate over all files in a given folder and its sub folders.
+
+        Args:
+            folder_path: Path to the folder to iterate over.
+
+        Yields:
+            Path to each file.
+
+        Returns:
+            Iterator of file paths.
+        """
+        is_directory = os.path.isdir(folder_path)
+        if is_directory is False:
+            raise ValueError(f'[-] [{folder_path}] is not a directory! [-]')
+        
+        if isinstance(folder_path, str):
+            folder_path = Path(folder_path)
+        
+        return (str(file_path) for file_path in folder_path.rglob('*') if file_path.is_file())
         
     def ingest_chunks(self, chunks: list[dict], metadata: dict[str] = None) -> list[dict]:
         """
@@ -108,6 +144,7 @@ class R2RBackend:
             except Exception as e:
                 self.__logger.warning(f'[-] Unexpected error when updating file: [{filepath}] - {e} [-]')
     
+    # Note: Even if one provides non-existing IDs the function doesn't throw an error. It returns a 200 OK.
     def documents_overview(self, documents_ids: list[str] = None, offset: int = 0, limit: int = 100) -> list[dict]:
         """
         Get an overview of documents in the database.
@@ -138,7 +175,7 @@ class R2RBackend:
             list[dict]: List of dictionaries containing chunk_id, text, embeddings, etc.
         """
         try:
-            return self.__client.document_chunks(document_id)['results'] 
+            return self.__client.document_chunks(document_id, offset, limit, include_vectors)['results'] 
         except R2RException as r2re:
             err_msg = f"[-] Couldn't get chunks for: [{document_id}]! {r2re} [-]"	
             self.__logger.error(err_msg)
@@ -174,6 +211,7 @@ class R2RBackend:
             docs_metadata = self.documents_overview()
             filters = [{"document_id": {"$eq": doc_metadata["id"]}} for doc_metadata in docs_metadata]
             self.delete(filters)
+            self.__logger.info(f"[+] Deleted all files! [+]")
         except R2RException as r2re:
             self.__logger.warning(f'[-] Error while clearing all files: {r2re} [-]')
         except Exception as e:

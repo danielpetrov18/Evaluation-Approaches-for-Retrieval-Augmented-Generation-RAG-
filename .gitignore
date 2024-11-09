@@ -85,3 +85,5 @@ dmypy.json
 local.sqlite
 
 *.pdf
+
+backend/config.toml

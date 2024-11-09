@@ -5,19 +5,6 @@ if ! docker info > /dev/null 2>&1; then
   exit 1
 fi
 
-if which ollama >/dev/null 2>&1; then
-  echo "Ollama is already installed, skipping download."
-else
-  curl -fsSL https://ollama.com/install.sh | sh
-fi
-
-echo "Pulling OLLAMA models ..."
-
-ollama pull llama3.1
-ollama pull mxbai-embed-large
-
-echo "[+] OLLAMA IS READY [+]"
-
 if [ -f ".env" ]; then
   export $(grep -v '^#' .env | xargs)
 else
@@ -27,8 +14,24 @@ fi
 
 echo "[+] ENVIRONMENT VARIABLES EXPORTED [+]"
 
+if which ollama >/dev/null 2>&1; then
+  echo "Ollama is already installed, skipping download."
+else
+  curl -fsSL https://ollama.com/install.sh | sh
+fi
+
+echo "Pulling OLLAMA models ..."
+ollama pull "$OLLAMA_CHAT_MODEL"
+ollama pull "$OLLAMA_EMBEDDING_MODEL"
+
+echo "[+] OLLAMA IS READY [+]"
+
 docker compose up -d
 
-echo "[+] DOCKER CONTAINERS STARTED [+]"
+python3 ./backend/config_processor.py
+if [ $? -ne 0 ]; then
+  echo "Error processing config template. Please check your environment variables."
+  exit 1
+fi
 
 r2r serve

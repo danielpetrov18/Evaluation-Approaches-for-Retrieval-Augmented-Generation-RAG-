@@ -1,4 +1,6 @@
+tomli==2.0.2
 pyyaml==6.0.2
+tomli_w==1.1.0 
 litellm==1.50.4
 requests==2.32.3
 langchain==0.3.4

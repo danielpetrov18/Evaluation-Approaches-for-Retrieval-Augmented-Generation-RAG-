@@ -1,37 +1,40 @@
 [database]
-provider = "postgres" 
+provider = "postgres"
 
 [completion]
 provider = "litellm"
 concurrent_request_limit = 1
 
-    [completion.generation_config]
-    model = "ollama/llama3.1"
-    temperature = 0.1
-    top_p = 0.95
-    max_tokens_to_sample = 1_024
-    stream = true
-    add_generation_kwargs = {}
+[completion.generation_config]
+model = "ollama/llama3.1"
+temperature = 0.1
+top_p = 0.95
+max_tokens_to_sample = 1024
+stream = true
+
+[completion.generation_config.add_generation_kwargs]
 
 [ingestion]
 provider = "unstructured_local"
 strategy = "auto"
 chunking_strategy = "by_title"
 new_after_n_chars = 512
-max_characters = 1_024
+max_characters = 1024
 combine_under_n_chars = 128
-chunk_size = 1_024
-overlap = 256
-similarity_threshold = 0.70
-excluded_parsers = [ "mp4" ]
+chunk_size = "1024"
+overlap = "256"
+similarity_threshold = 0.7
+excluded_parsers = [
+    "mp4",
+]
 
-    [ingestion.extra_parsers]
-    pdf = "zerox"
+[ingestion.extra_parsers]
+pdf = "zerox"
 
 [embedding]
 provider = "ollama"
 base_model = "mxbai-embed-large"
-base_dimension = 1024
+base_dimension = "1024"
 batch_size = 32
 add_title_as_prefix = true
 concurrent_request_limit = 32

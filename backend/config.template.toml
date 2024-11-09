@@ -1,0 +1,40 @@
+[database]
+provider = "postgres" 
+
+[completion]
+provider = "litellm"
+concurrent_request_limit = 1
+
+    [completion.generation_config]
+    model = "ollama/${OLLAMA_CHAT_MODEL}"
+    temperature = 0.1
+    top_p = 0.95
+    max_tokens_to_sample = 1_024
+    stream = true
+    add_generation_kwargs = {}
+
+[ingestion]
+provider = "unstructured_local"
+strategy = "auto"
+chunking_strategy = "by_title"
+new_after_n_chars = 512
+max_characters = 1_024
+combine_under_n_chars = 128
+chunk_size = "${CHUNK_SIZE}"
+overlap = "${CHUNK_OVERLAP}"
+similarity_threshold = 0.70
+excluded_parsers = [ "mp4" ]
+
+    [ingestion.extra_parsers]
+    pdf = "zerox"
+
+[embedding]
+provider = "ollama"
+base_model = "${OLLAMA_EMBEDDING_MODEL}"
+base_dimension = "${OLLAMA_EMBEDDING_MODEL_DIMENSION}"
+batch_size = 32
+add_title_as_prefix = true
+concurrent_request_limit = 32
+
+[logging]
+level = "DEBUG"
