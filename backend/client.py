@@ -1,21 +1,28 @@
 import os
-import re
 import logging
 from pathlib import Path
-from typing import Iterator, Union
+from message import Message
+from history import ChatHistory
+from ollama_helper import OllamaHelper
 from r2r import R2RClient, R2RException 
+from typing import Iterator, Union, Optional, List
 
 class R2RBackend:
 
     def __init__(self):
         R2R_HOST = os.getenv("R2R_HOSTNAME", "http://localhost")
         R2R_PORT = os.getenv("R2R_PORT", "7272")
+        CHAT_MODEL = os.getenv("OLLAMA_CHAT_MODEL", "llama3.1")
+        EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "mxbai-embed-large")
+        SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", 0.7))
+        MAX_HISTORY_SIZE = int(os.getenv("MAX_HISTORY_SIZE", 30))
+        MAX_RELEVANT_HISTORY_MESSAGES = int(os.getenv("MAX_RELEVANT_HISTORY_MESSAGES"))
         
         self.__client = R2RClient(f'{R2R_HOST}:{R2R_PORT}')
         self.__logger = logging.getLogger(__name__)
         self.__vector_search_settings = {'index_measure': 'cosine_distance', 'ef_search': '100'}
-        
-        self.__logger.info('[+] BACKEND CLIENT INITIALIZED [+]')
+        self.__history = ChatHistory(max_size=MAX_HISTORY_SIZE)
+        self.__ollama_helper = OllamaHelper(CHAT_MODEL, EMBEDDING_MODEL, SIMILARITY_THRESHOLD, MAX_RELEVANT_HISTORY_MESSAGES)
 
     def health(self) -> str: 
         """
@@ -39,26 +46,21 @@ class R2RBackend:
             self.__logger.error(f'[-] Unexpected error while checking health: {e} [-]')
             raise Exception(e)
 
-    def ingest_files(self, folder_path: Union[str, Path]): 
+    def ingest_files(self, filepaths: List[str]): 
             """
             Ingest files into postgres(pgvector). 
             If a document with the same title is already present in the database, nothing gets embedded.
             Invalid filepaths are ignored.
 
             Args:
-                folder_path: Path to the folder containing the files to ingest.
+                filepaths: Filepaths to ingest.
             
             Raises:
                 ValueError: If the path is not a directory.
             """
-            try:
-                filepaths = list(self._iterate_over_files(folder_path))            
-            except ValueError as ve:
-                self.__logger.warning(ve)
-                return
-            
             if len(filepaths) == 0:
                 self.__logger.warning(f'[-] No files found in [{folder_path}]! [-]')
+                return
             
             for filepath in filepaths:
                 try:
@@ -91,7 +93,7 @@ class R2RBackend:
         
         return (str(file_path) for file_path in folder_path.rglob('*') if file_path.is_file())
         
-    def ingest_chunks(self, chunks: list[dict], metadata: dict[str] = None) -> list[dict]:
+    def ingest_chunks(self, chunks: List[dict], metadata: dict[str] = None) -> List[dict]:
         """
         Ingest chunks of a document into postgres(pgvector). 
         If a document with the same title is already present in the database, nothing gets embedded.
@@ -118,7 +120,7 @@ class R2RBackend:
             self.__logger.error(err_msg)
             raise Exception(err_msg)
     
-    def update_files(self, filepaths: list[str], document_ids: list[str]):    
+    def update_files(self, filepaths: List[str], document_ids: List[str]):    
         """
         Update files in the database. If a document with the same title is already present in the database, it gets updated.
 
@@ -145,7 +147,7 @@ class R2RBackend:
                 self.__logger.warning(f'[-] Unexpected error when updating file: [{filepath}] - {e} [-]')
     
     # Note: Even if one provides non-existing IDs the function doesn't throw an error. It returns a 200 OK.
-    def documents_overview(self, documents_ids: list[str] = None, offset: int = 0, limit: int = 100) -> list[dict]:
+    def documents_overview(self, documents_ids: List[str] = None, offset: int = 0, limit: int = 100) -> List[dict]:
         """
         Get an overview of documents in the database.
 
@@ -185,7 +187,7 @@ class R2RBackend:
             self.__logger.error(err_msg)
             raise Exception(err_msg)
             
-    def delete(self, filters: list[dict]):
+    def delete(self, filters: List[dict]):
         """
         Delete documents from the database based on filters.
 
@@ -217,27 +219,85 @@ class R2RBackend:
         except Exception as e:
             self.__logger.warning(f'[-] Unexpected error while clearing all files: {e} [-]s')
         
-    def prompt_llm(self, query: str, message_history: list[dict], rag_generation_config: dict = None):
+    def _create_message(self, role: str, content: str) -> Message:
+        """
+        Create a new message with computed embedding.
+        
+        Args:
+            role: Role of the message sender ('user' or 'assistant')
+            content: Content of the message
+            
+        Returns:
+            Message object with computed embedding
+        """
+        embedding = self.__ollama_helper.compute_embedding(content)
+        return Message(role=role, content=content, embedding=embedding)
+        
+    def _get_enhanced_query(self, query: str) -> str:
+        """
+        Enhance the query with relevant historical context.
+        
+        Args:
+            query: Original user query
+            
+        Returns:
+            Enhanced query with relevant context
+        """
+        # Create newest message (from current user query)
+        newest_message = self._create_message(role='user', content=query)
+        
+        # Get all messages from history
+        history_messages = self.__history.get_all_messages()
+        
+        # Also save the latest user query as a new message. We don't want to consider it in the context summary
+        self.__history.add_message(newest_message) 
+        
+        # Find relevant messages based on semantic similarity
+        relevant_messages = self.__ollama_helper.get_relevant_messages(
+            newest_message.embedding, 
+            history=history_messages
+        )
+        
+        if not relevant_messages:
+            return query
+            
+        # Construct prompt for summarizing relevant history
+        history_summary_prompt = self.__ollama_helper.construct_history_summary_prompt(
+            query=query,
+            relevant_history=relevant_messages
+        )
+        
+        # Get summary of relevant context
+        context_summary = self.__ollama_helper.summarize_context(history_summary_prompt)
+        
+        # Enhance query with context
+        return self.__ollama_helper.enhance_user_query(query, context_summary)
+        
+    def prompt_llm(self, query: str, rag_generation_config: dict = None):
         """
         Get relevant answers from the database for a given query, incorporating chat history context.
         Formats the query to work with R2R's default RAG template structure.
 
         Args:
             query (str): Current user query
-            message_history (list[dict]): List of previous messages, each with 'role' and 'content'
             rag_generation_config (dict, optional): Configuration for LLM generation
 
         Returns:
             str: LLM response
         """           
         try:
-            enhanced_query = self.__construct_enhanced_query(query, message_history)
-            stream = self.__client.rag(
+            enhanced_query = self._get_enhanced_query(query)        
+            response = self.__client.rag(
                 query=enhanced_query,
                 vector_search_settings=self.__vector_search_settings,
                 rag_generation_config=rag_generation_config
             )
-            return stream   
+            
+            data = response['results']['completion']['choices'][0]['message']['content']    
+            self.__history.add_message(
+                self._create_message(role='assistant', content=data)
+            )   
+            return data
         except R2RException as r2re:
             self.__logger.error(f'[-] Error when prompting LLM: {r2re} [-]')
             raise R2RException(r2re, 500)
@@ -246,30 +306,6 @@ class R2RBackend:
             self.__logger.error(err_msg)
             raise Exception(err_msg)
         
-    # TODO: Refactor
-    def __construct_enhanced_query(self, query: str, message_history: list[dict]) -> str:
-        """
-        Construct an enhanced query by incorporating recent message history into the context.
-
-        Args:
-            query (str): The current user query.
-            message_history (list[dict]): List of previous messages, each with 'role' and 'content'.
-
-        Returns:
-            str: An enhanced query string that includes the recent conversation history
-                formatted as numbered context items to provide context for the current query.
-        """
-        history_items = []
-        for i, msg in enumerate(message_history[-30:], 1):  # Only use last 30 messages
-            role = "Previous Human Question" if msg["role"] == "user" else "Previous Assistant Response"
-            history_items.append(f"{i}. [{role}]: {msg['content']}")
-            
-        # Construct enhanced query with history
-        enhanced_query = f"""
-        Previous conversation:
-        {chr(10).join(history_items)}
-
-        Current question: {query}
-        """
-        
-        return enhanced_query
+    def clear_history(self):
+        self.__logger.info('[-] Clearing chat history! [-]')
+        self.__history.clear()

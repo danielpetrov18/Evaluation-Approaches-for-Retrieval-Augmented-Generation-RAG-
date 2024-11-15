@@ -10,7 +10,6 @@ concurrent_request_limit = 1
     temperature = 0.1
     top_p = 0.95
     max_tokens_to_sample = 1_024
-    stream = true
     add_generation_kwargs = {}
 
 [ingestion]

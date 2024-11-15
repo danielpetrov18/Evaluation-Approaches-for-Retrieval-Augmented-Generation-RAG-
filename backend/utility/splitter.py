@@ -5,6 +5,7 @@ from langchain.docstore.document import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 class Splitter:
+    
     def __init__(self):
         CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", 1024))
         CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", 256))

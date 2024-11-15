@@ -87,3 +87,4 @@ local.sqlite
 *.pdf
 
 backend/config.toml
+config.toml

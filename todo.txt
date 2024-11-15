@@ -1,12 +1,4 @@
 ************************************************************************
--> improve chat history
-    2. ChatHistory
-    3. ChatClient
-    4. OllamaHelper
-    => Sliding history (characters/5000)
-    => Extract relevant part and formulate (additional prompt to the LLM)
--> finish frontend
--> test backend + frontend
 -> RAGAs
     => Read paper
     => go through documentation

@@ -1,18 +1,20 @@
-import os
 import sys
 import time
-import tempfile
 import pandas as pd
 import streamlit as st
 from pathlib import Path
-# from r2r import R2RException
+from logging import info
+from app import load_client
+from r2r import R2RException
 from datetime import timedelta
 from langchain.docstore.document import Document
-from app import load_client
-
 
 utility_dir = Path(__file__).parent.parent / 'backend' / 'utility'
 sys.path.append(str(utility_dir)) 
+
+data_dir = Path(__file__).parent.parent / 'backend' / 'data'
+sys.path.append(str(utility_dir)) 
+
 from scraper import Scraper
 from splitter import Splitter
 
@@ -45,37 +47,44 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+@st.cache_resource
+def load_scraper():
+    return Scraper()
+
+@st.cache_resource
+def load_splitter():
+    return Splitter()
+
 # Cache the loading process of files to improve performance. 
 # In this case caching make sense, since if a user tries to upload the same file again, it would just be ignored.
-# So for updating a particular file, the user should use the TO BE IMPLEMENTED button.
+# So for updating a particular file, the user should use the TO BE IMPLEMENTED update button.
 @st.cache_data(show_spinner=False, ttl=timedelta(minutes=60))
-def save_uploaded_files(uploaded_files):
+def save_uploaded_files(uploaded_files) -> list[str]:
     """
     Save uploaded files to a temporary directory and return their paths.
     """
-    temp_dir = tempfile.mkdtemp()
     saved_paths = []
-    
     for uploaded_file in uploaded_files:
-        file_path = os.path.join(temp_dir, uploaded_file.name)
+        file_path = data_dir / uploaded_file.name
         with open(file_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
         saved_paths.append(file_path)
+        info(f"[+] Uploaded file for ingestion: {file_path} [+]")
     
-    return saved_paths
+    return [str(saved_path) for saved_path in saved_paths]
 
 # Makes no sense to use caching since this is a non-deterministic function.
-def ingest_files(client, file_paths):
+def ingest_files(client, file_paths) -> None:
     """
     Ingest files using the R2R backend client.
     """
     try:
-        with st.spinner("Ingesting files..."):
+        with st.spinner("Ingesting files ..."):
             client.ingest_files(file_paths)
         return True
-    # except R2RException as r2re:
-    #     st.error(f"Error during ingestion: {str(r2re)}")
-    #     return False
+    except R2RException as r2re:
+        st.error(f"Error during ingestion: {str(r2re)}")
+        return False
     except Exception as e:
         st.error(f"Unexpected error: {str(e)}")
         return False
@@ -98,17 +107,22 @@ def extract_urls(file) -> list[str]:
             raise ValueError(f"Unsupported or invalid file type: {file_extension}")
         
         return urls
+    else:
+        return []
 
 @st.cache_data(show_spinner=False, ttl=timedelta(minutes=60))
 def fetch_data_from_urls(urls: list[str]) -> list[Document]:
-    return st.session_state.scraper.fetch_documents(urls) 
+    scraper = load_scraper()
+    return scraper.fetch_documents(urls) 
 
 @st.cache_data(hash_funcs={Document: lambda x: x.metadata['source']}, show_spinner=False, ttl=timedelta(minutes=60))
 def split_documents(documents: list[Document]) -> list[Document]:
-    return st.session_state.splitter.split_documents(documents)
+    splitter = load_splitter()
+    return splitter.split_documents(documents)
 
-def ingest_chunks(client, urls: list[dict], split_documents: list[Document]):
-    placeholder = st.empty()
+def ingest_chunks(client, urls: list[str], split_documents: list[Document]):
+    st.placeholder = st.empty()
+    
     for url in urls:
         chunks = [split_doc for split_doc in split_documents if split_doc.metadata['source'] == url]
         
@@ -117,17 +131,15 @@ def ingest_chunks(client, urls: list[dict], split_documents: list[Document]):
             chunks_text = [{"text": chunk.page_content} for chunk in chunks]
             try:
                 resp = client.ingest_chunks(chunks_text, metadata)
-                print(resp)
-            # except R2RException as r2re:
-            #     print(f"Failed to ingest chunks for: [{metadata['source']}]! {str(r2re)}")
-            #     placeholder = st.warning(f"Failed to ingest chunks for: [{metadata['source']}]! {str(r2re)}", icon="⚠️")
+            except R2RException as r2re:
+                print(f"Failed to ingest chunks for: [{metadata['source']}]! {str(r2re)}")
+                placeholder = st.warning(f"Failed to ingest chunks for: [{metadata['source']}]! {str(r2re)}", icon="⚠️")
             except Exception as e:
                 print(f"Unexpected error: {str(e)}")
                 placeholder = st.warning(f"Unexpected error: {str(e)}", icon="⚠️")
         else:
             print(f"No chunks found for [{url}]!")
-            placeholder = st.warning(f"No chunks found for [{url}]!", icon="⚠️")
-            continue 
+            placeholder = st.warning(f"No chunks found for [{url}]!", icon="⚠️") 
 
 st.title("📤 File Upload & Ingestion")
 
@@ -145,7 +157,7 @@ with upload_file_tab:
         - Supported file formats: TXT, JSON, HTML, PDF, DOCX, PPTX, XLSX, CSV, MD
         - For best results, ensure documents are well-formatted
         """)
-        # Initialize session states
+
     if "upload_key" not in st.session_state:
         st.session_state.upload_key = 0
 
@@ -189,10 +201,6 @@ with upload_url_tab:
         
     if "upload_url_key" not in st.session_state:
         st.session_state.upload_url_key = 0
-    if "scraper" not in st.session_state:
-        st.session_state.scraper = Scraper()
-    if "splitter" not in st.session_state:
-        st.session_state.splitter = Splitter()
 
     with st.container():
         st.markdown("### Upload File")

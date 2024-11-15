@@ -10,7 +10,6 @@ model = "ollama/llama3.1"
 temperature = 0.1
 top_p = 0.95
 max_tokens_to_sample = 1024
-stream = true
 
 [completion.generation_config.add_generation_kwargs]
 

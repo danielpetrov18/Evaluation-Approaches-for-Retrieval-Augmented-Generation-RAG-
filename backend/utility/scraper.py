@@ -66,7 +66,6 @@ class Scraper:
         valid_urls = set()
         
         valid_urls = [url for url in unique_urls if self.__validate_url(url)]
-        [self.__logger.info(f"[+] Valid URL: {url}! [+]") for url in valid_urls]
         
         # Fetch and process documents but only the valid ones.
         self.__loader.web_paths = list(valid_urls)

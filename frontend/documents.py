@@ -1,8 +1,7 @@
 import time
 import streamlit as st
-#from r2r import 
-
 from app import load_client
+from r2r import R2RException
 
 st.markdown("""
     <style>
@@ -35,6 +34,7 @@ def display_documents(client):
         documents = client.documents_overview()
         if not documents:
             st.info("No documents found.")
+            time.sleep(3)
             return
 
         # Prepare data for display
@@ -78,8 +78,7 @@ def display_documents(client):
                         st.subheader(f"Chunks for Document ID: {selected_doc_id}")
                         chunk_data = [
                             {
-                                "Chunk ID": chunk.get('chunk_id', 'N/A'), 
-                                "Text Preview": chunk.get('text', 'N/A')[:200] + '...'
+                                "Text Preview": chunk.get('text', 'N/A')[:50] + '...'
                             } 
                             for chunk in chunks
                         ]
@@ -87,6 +86,8 @@ def display_documents(client):
                         st.dataframe(chunk_data, use_container_width=True)
                     except Exception as e:
                         st.error(f"Could not retrieve document chunks: {e}")
+                        time.sleep(3)
+                        st.rerun()
             
             with col2:
                 # Delete Document Button
@@ -97,20 +98,23 @@ def display_documents(client):
                         delete_filter = [{"document_id": {"$eq": selected_doc_id}}]
                         
                         # Attempt to delete the document
-                        deleted_count = client.delete(delete_filter)
-                        
-                        if deleted_count > 0:
-                            st.success(f"Document {selected_doc_id} deleted successfully!", icon="✅")
-                            st.rerun()  # Refresh the page
-                        else:
-                            st.warning("No document was deleted.", icon="⚠️")
+                        client.delete(delete_filter)
+                        st.success(f"Document {selected_doc_id} deleted successfully!", icon="✅")
+                        time.sleep(3)
+                        st.rerun()
                     except Exception as e:
                         st.error(f"Could not delete document: {e}")
+                        time.sleep(3)
+                        st.rerun()
 
-    #except R2RException as r2re:
-       # st.error(f"An error occurred while fetching documents: {r2re}")
+    except R2RException as r2re:
+        st.error(f"An error occurred while fetching documents: {r2re}")
+        time.sleep(3)
+        st.rerun()
     except Exception as e:
         st.error(f"An error occurred while fetching documents: {e}")
+        time.sleep(3)
+        st.rerun()
 
 st.title("📄 Ingested Documents")
 
@@ -134,10 +138,14 @@ with st.sidebar:
             st.success("All documents deleted successfully!", icon="✅")
             time.sleep(2)
             st.rerun()
-        #except R2RException as r2re:
-         #   st.warning(f"An error occurred while deleting documents: {r2re}", icon="⚠️")
+        except R2RException as r2re:
+            st.warning(f"An error occurred while deleting documents: {r2re}", icon="⚠️")
+            time.sleep(2)
+            st.rerun()
         except Exception as e:
             st.warning(f"An error occurred while deleting documents: {e}", icon="⚠️")
+            time.sleep(2)
+            st.rerun()
 
 # Always display documents
 display_documents(client)

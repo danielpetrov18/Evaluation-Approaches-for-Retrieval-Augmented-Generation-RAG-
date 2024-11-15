@@ -3,6 +3,11 @@ import tomli
 import tomli_w
 from string import Template
 
+"""
+    Since toml doesn't support environment variables, this method is used in the script 'run.sh' 
+    to override the environment variables in the config.template.toml file.
+"""
+
 def process_config_template(template_path, output_path):
     """Process the TOML config template and substitute environment variables."""
     with open(template_path, 'r') as f:
