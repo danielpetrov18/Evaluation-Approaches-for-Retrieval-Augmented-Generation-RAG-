@@ -1,7 +1,5 @@
 ************************************************************************
 -> RAGAs
-    => Read paper
-    => go through documentation
     => start evaluating the LLMs responses
 -> Check out instruction models for llama3.1 
     => on the model page on Ollama scroll down
