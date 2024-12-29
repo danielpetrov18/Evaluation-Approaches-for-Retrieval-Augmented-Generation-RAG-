@@ -1,15 +1,15 @@
-tomli==2.0.2
-ragas==0.2.7
+tomli==2.2.1
+ragas==0.2.9
 pyyaml==6.0.2
-tomli_w==1.1.0 
-litellm==1.50.4
+tomli_w==1.1.0
+litellm==1.54.1
 requests==2.32.3
-streamlit==1.39.0
+streamlit==1.41.0
 html2text==2024.2.26
 beautifulsoup4==4.12.3
-langchain==0.3.4
-langchain-ollama==0.2.0
-langchain-community==0.3.3
-langchain-text-splitters==0.3.0
-unstructured[all-docs, pdf]==0.16.5
-r2r[core, ingestion-bundle]==3.2.16
+langchain==0.3.11
+langchain-ollama==0.2.1
+langchain-community==0.3.11
+langchain-text-splitters==0.3.2
+r2r[core, ingestion-bundle]==3.3.13
+unstructured[all-docs, pdf]==0.16.11

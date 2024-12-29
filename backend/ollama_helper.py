@@ -1,17 +1,16 @@
-import os
 import ollama
+import logging
 import numpy as np
 from message import Message
 from typing import List, Dict
-from logging import error, info
 
 class OllamaHelper:
 
-    def __init__(self, chat_model: str, embedding_model: str, similarity_threshold: float = 0.5, max_relevant_messages: int = 5):
+    def __init__(self, chat_model: str, embedding_model: str, similarity_threshold: float = 0.7, max_relevant_messages: int = 5):
         """
         This class serves as a helper to enhance the history context of the  rag-based system.
         The idea is to fetch relevant messages based on the current query of the user.
-        If relevant messages have been discovered they get ordered by similarity and the 5 most relevant
+        If relevant messages have been discovered they get ordered by similarity and the n most relevant
             messages are used by Ollama to generate a summary of the relevant history.
         
         Args:
@@ -20,16 +19,16 @@ class OllamaHelper:
             similarity_threshold: Minimum similarity score to consider a message relevant
             max_relevant_messages: Maximum number of relevant messages to return
         """
+        self._logger = logging.getLogger(__name__)
+        self._logger.setLevel(logging.DEBUG)
         self._chat_model = chat_model
         self._embedding_model = embedding_model
         self._similarity_threshold = similarity_threshold
         self._max_relevant_messages = max_relevant_messages
-        self._embedding_model_dimension = int(os.getenv("OLLAMA_EMBEDDING_MODEL_DIMENSION"))
 
     def compute_embedding(self, text: str) -> List[float]: 
         """
         Compute the vector embedding of a given text using the selected Ollama model.
-        By default it uses the 'mxbai-embed-large' embedding model.
         
         Args:
             text: Text to compute the embedding for the text input
@@ -43,13 +42,17 @@ class OllamaHelper:
         """
         try:
             # Since this function can be used for batch processing, it returns a list of embeddings. We only one the first one.
-            return ollama.embed(model=self._embedding_model, input=text)['embeddings'][0]
+            response = ollama.embed(
+                model=self._embedding_model, 
+                input=text
+            )
+            return response['embeddings'][0]
         except ollama.ResponseError as oe:
-            error(f"[-] Ollama error computing embeddings: {oe.error} [-]")
-            raise Exception(oe.error)
+            self._logger.error(f"[-] Ollama error computing embeddings: {oe.error} [-]")
+            raise Exception(oe.error) from oe
         except Exception as e:
-            error(f"[-] Unexpected error computing embeddings: {e} [-]")
-            raise Exception(e)
+            self._logger.error(f"[-] Unexpected error computing embeddings: {e} [-]")
+            raise Exception(str(e)) from e
 
     def _compute_similarity(self, embedding1: List[float], embedding2: List[float]) -> float:
         """
@@ -68,9 +71,6 @@ class OllamaHelper:
         """
         if len(embedding1) != len(embedding2):
             raise ValueError("Embeddings must have the same length!")
-        
-        if len(embedding1) != self._embedding_model_dimension:
-            raise ValueError(f"Embeddings must have a length of {self._embedding_model_dimension}! Refer to the ollama documentation for {self._embedding_model}!")
         
         vec1 = np.array(embedding1)
         vec2 = np.array(embedding2)
@@ -92,7 +92,10 @@ class OllamaHelper:
         
         relevant_messages = []
         for message in history:
-            similarity = self._compute_similarity(query_embedding, message.embedding)
+            similarity = self._compute_similarity(
+                embedding1=query_embedding, 
+                embedding2=message.embedding
+            )
             if similarity >= self._similarity_threshold:
                 relevant_messages.append({
                     'content': message.content,
@@ -130,7 +133,7 @@ class OllamaHelper:
                 similarity = item['similarity']
                 role = "User" if item['role'] == 'user' else "Assistant"
                 prompt_parts.append(
-                    f"{i+1}. [{role} message (similarity: {similarity:.2f})]: {item['content']}"
+                    f"{i+1}. [{role} message (similarity: {similarity:.2f})]: {content}"
                 )
             prompt_parts.append("\nPlease summarize the history context concisely which is relevant to the current question:")
 

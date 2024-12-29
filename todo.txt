@@ -6,4 +6,7 @@
 -> Do research on further evaluation methods/frameworks
     => implement
 -> Play around with chunk size, models, etc.
+-> testset, that makes sense for all metrics
+-> use metrics that are the same across frameworks 
+-> use metrics that are unique to a framework 
 ***********************************************************************

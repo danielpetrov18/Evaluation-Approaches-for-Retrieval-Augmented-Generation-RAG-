@@ -15,7 +15,7 @@ class Scraper:
             max_retries: Maximum number of retry attempts for failed requests
             timeout: Request timeout in seconds
         """
-        self.__loader = WebBaseLoader(
+        self._loader = WebBaseLoader(
             requests_per_second=requests_per_second,
             default_parser="lxml",
             raise_for_status=True,
@@ -43,7 +43,8 @@ class Scraper:
         self.h2t.open_quote = '"'
         self.h2t.close_quote = '"'
         
-        self.__logger = logging.getLogger(__name__)
+        self._logger = logging.getLogger(__name__)
+        self._logger.setLevel(logging.DEBUG)
         
     def fetch_documents(self, urls: List[str]) -> List[Document]:        
         """
@@ -59,54 +60,53 @@ class Scraper:
         Invalid URLs or errors during processing are logged.
         """
         if not urls:
-            self.__logger.warning("[-] No URLs provided for web-scraping! [-]")
+            self._logger.warning("[-] No URLs provided for web-scraping! [-]")
             return []
         
         unique_urls = set(urls) # Avoiding duplicates first, so that fewer URLs are validated.
         valid_urls = set()
         
-        valid_urls = [url for url in unique_urls if self.__validate_url(url)]
+        valid_urls = [url for url in unique_urls if self._validate_url(url)]
         
         # Fetch and process documents but only the valid ones.
-        self.__loader.web_paths = list(valid_urls)
+        self._loader.web_paths = list(valid_urls)
         docs = []
         
-        raw_docs = self.__loader.load() # Scrape the data from the URLs. Messy format.
+        raw_docs = self._loader.load() # Scrape the data from the URLs. Messy format.
         for doc in raw_docs:
             if doc.page_content:
                 try:
-                    processed_doc = self.__process_document(doc) # Clean and structure the document
+                    processed_doc = self._process_document(doc) # Clean and structure the document
                     if processed_doc:
-                        self.__logger.info(f"[+] Document loaded: {str(doc.metadata['source'])}! Start of doc: {doc.page_content[:20]} ... [+]")
+                        self._logger.info(f"[+] Document loaded: {str(doc.metadata['source'])}! Start of doc: {doc.page_content[:20]} ... [+]")
                         docs.append(processed_doc)
                 except Exception as e:
-                    self.__logger.error(f"[-] Error loading document: {str(doc.metadata['source'])}! [-]")
-
+                    self._logger.error(f"[-] Error loading document: {str(doc.metadata['source'])}! [-]")
         return docs
 
-    def __validate_url(self, url: str) -> bool:
+    def _validate_url(self, url: str) -> bool:
         for attempt in range(self.max_retries):
             try:
                 response = requests.head(url, allow_redirects=True, timeout=self.timeout)
                 return response.status_code < 400 
             except requests.RequestException as e:
                 if attempt == self.max_retries - 1:
-                    self.__logger.warning(f"[-] Failed to validate URL {url} after {self.max_retries} attempts: {str(e)}! [-]")
+                    self._logger.warning(f"[-] Failed to validate URL {url} after {self.max_retries} attempts: {str(e)}! [-]")
                     return False
                 continue
         return False
 
-    def __process_document(self, doc: Document) -> Optional[Document]:
+    def _process_document(self, doc: Document) -> Optional[Document]:
         try:
             content = self.h2t.handle(doc.page_content) # Convert HTML to markdown-like text
-            content = self.__clean_content(content)     # Remove whitespaces and newlines
+            content = self._clean_content(content)     # Remove whitespaces and newlines
             doc.page_content = content                  # Update the page content
             return doc
         except Exception as e:
-            self.__logger.error(f"[-] Error processing document {doc.metadata['source']}: {str(e)}! [-]")
+            self._logger.error(f"[-] Error processing document {doc.metadata['source']}: {str(e)}! [-]")
             return None
 
-    def __clean_content(self, content: str) -> str:
+    def _clean_content(self, content: str) -> str:
         content = re.sub(r'\s+', ' ', content) # Remove excessive whitespace
         content = re.sub(r'^\s*$\n', '', content, flags=re.MULTILINE) # Remove empty lines
         return content.strip()

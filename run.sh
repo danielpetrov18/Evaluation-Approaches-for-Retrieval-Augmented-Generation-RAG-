@@ -28,7 +28,7 @@ echo "[+] OLLAMA IS READY [+]"
 
 docker compose up -d
 
-python3 ./backend/config_processor.py
+python3 backend/config.py
 if [ $? -ne 0 ]; then
   echo "Error processing config template. Please check your environment variables."
   exit 1

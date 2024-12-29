@@ -1,24 +1,17 @@
-import os
-import sys
 import streamlit as st
-from pathlib import Path
-from dotenv import load_dotenv
+from r2r import R2RAsyncClient
 
-backend_dir = Path(__file__).parent.parent / 'backend' # Add the path of the backend client.
-sys.path.append(str(backend_dir)) # When a package is being imported python first looks at the sys.builtins path first. Then this path.
-from client import R2RBackend
-
-load_dotenv()
-
-@st.cache_resource
-def load_client():
-    return R2RBackend()
-
+def load_client() -> R2RAsyncClient:
+    return R2RAsyncClient('http://localhost:7272')
+    
 # Create pages
 pages = [
-    st.Page("chat.py", title="Chatbot", default=True, icon=":material/chat:"),  
-    st.Page("uploads.py", title="Ingest files", url_path="uploads", icon=":material/upload:"),
-    st.Page("documents.py", title="Documents Overview", url_path="documents", icon=":material/description:")
+    st.Page("st_welcome.py", title="Welcome page", url_path="welcome", icon=":material/home:"),
+    st.Page("st_storage.py", title="Document management", url_path="documents", icon=":material/docs:"),
+    st.Page("st_settings.py", title="Settings", url_path="settings", icon=":material/settings:"),
+    st.Page("st_chat.py", title="Chatbot", icon=":material/chat:"),  
+    st.Page("st_prompt.py", title="Prompts", url_path="prompts", icon=":material/notes:"),
+    st.Page("st_index.py", title="Index Management", url_path="index", icon=":material/description:"),
 ] 
 
 # Register pages. Creates the navigation menu for the application. 

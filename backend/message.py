@@ -17,7 +17,7 @@ class Message(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     role: str = Field(..., min_length=1)  # ... means required/not nullable
     content: str = Field(..., min_length=1)  # min_length=1 ensures non-empty string
-    embedding: List[float] = Field(..., max_length=1024, min_length=1024)
+    embedding: List[float] = Field(...)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
     # https://docs.pydantic.dev/1.10/usage/model_config/
