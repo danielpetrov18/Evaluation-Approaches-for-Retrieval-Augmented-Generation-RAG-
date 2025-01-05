@@ -148,7 +148,7 @@ class LLMHandler:
                 limit, 
                 stream=False
             )
-            return rag_response['results']['completion']['choices'][0]['message']['content']
+            return rag_response['results']#['completion']['choices'][0]['message']['content']
         except R2RException as r2re:
             err_msg = f'[-] Error while searching: {r2re} [-]'
             self._logger.error(err_msg)
@@ -170,7 +170,7 @@ class LLMHandler:
         rag_generation_config = {
             "temperature": temperature,
             "top_p": top_p,
-            "max_tokens_to_sample": max_tokens_to_sample,
+            "max_tokens_to_sample": max_tokens_to_sample
         }
 
         if stream:
