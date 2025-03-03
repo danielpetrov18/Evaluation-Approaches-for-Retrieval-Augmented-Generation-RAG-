@@ -1,5 +1,3 @@
-# Taken from: https://github.com/SciPhi-AI/R2R/blob/main/services/unstructured/Dockerfile.unstructured
-
 FROM python:3.12-slim AS builder
 
 # Install system dependencies (including those needed for Unstructured and OpenCV)
@@ -17,13 +15,18 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir unstructured "unstructured[all-docs]" "unstructured[pdf]"
+RUN pip install --no-cache-dir unstructured "unstructured[all-docs]"
+
+
+ENV NLTK_DATA=/usr/share/nltk_data
+RUN mkdir -p ${NLTK_DATA}
+RUN python -m nltk.downloader -d ${NLTK_DATA} punkt_tab averaged_perceptron_tagger_eng
 
 RUN python -c "from unstructured.partition.model_init import initialize; initialize()"
 
 RUN pip install gunicorn uvicorn fastapi httpx
 
-COPY unstructured/main.py .
+COPY main.py .
 
 EXPOSE 7275
 

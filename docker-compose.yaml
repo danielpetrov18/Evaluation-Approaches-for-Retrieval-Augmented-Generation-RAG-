@@ -1,13 +1,11 @@
 services:
   pgvector:
     image: 'pgvector/pgvector:pg16'
-    container_name: pgvector
-    environment:
-      - POSTGRES_DB=${R2R_POSTGRES_DBNAME}
-      - POSTGRES_USER=${R2R_POSTGRES_USER}
-      - POSTGRES_PASSWORD=${R2R_POSTGRES_PASSWORD}
+    container_name: pgvector-db
+    env_file:
+      - ./env/pgvector-db.env
     ports:
-      - '${R2R_POSTGRES_PORT:-5432}:5432'
+      - '5432:5432'
     restart: unless-stopped
     volumes:
       - 'postgres_data:/var/lib/postgresql/data'
@@ -15,11 +13,11 @@ services:
       - r2r_network
   unstructured:
     build:
-      context: "./docker"
+      context: "./services/unstructured"
       dockerfile: "Dockerfile"
     container_name: unstructured
     ports:
-      - "${UNSTRUCTURED_LOCAL_PORT:-7275}:7275"
+      - "7275:7275"
     networks:
       - r2r_network
     restart: unless-stopped
