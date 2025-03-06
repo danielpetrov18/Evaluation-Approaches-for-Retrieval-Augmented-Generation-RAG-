@@ -84,13 +84,13 @@ class StorageHandler:
             self._logger.error('[-] Unexpected error while ingesting document: %s [-]', e)
             raise
 
-    async def ingest_chunks(self, chunks: list[str], metadata: dict):
+    async def ingest_chunks(self, chunks: list[str], metadata: dict = None):
         """
         Ingests a list of text chunks into the R2R service. 
 
         Args:
             chunks (list[str]): List of text chunks to ingest.
-            metadata (dict): Metadata to associate with the ingested document.
+            metadata (dict, optional): Metadata to associate with the ingested document.
 
         Returns:
             WrappedIngestionResponse: Ingestion result.

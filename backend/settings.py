@@ -1,102 +1,82 @@
+"""
+This module provides the user with the ability to interact with the system. 
+One can load logs, check out the status and check out the current settings.
+"""
+
 import logging
-from typing import Optional, List
 from r2r import R2RAsyncClient, R2RException
 
 class SystemHandler:
-    
+    """
+    This class encapsulates the system endpoints of the R2R service.
+    """
+
     def __init__(self, client: R2RAsyncClient):
         self._client = client
         self._logger = logging.getLogger(__name__)
         self._logger.setLevel(logging.DEBUG)
-        
-    async def health(self) -> str:   
+
+    async def health(self):
         """
         Check the health of the R2R service.
 
         Returns:
-            str: Returns OK if the service is healthy.
+            WrappedGenericMessageResponse: Returns OK if the service is healthy.
             
         Raises:
             R2RException: If the service is not healthy.
             Exception: If an unexpected error occurs.
         """
         try:
-            health = await self._client.system.health()
-            return health['results']['message']
+            health_resp = await self._client.system.health()
+            return health_resp
         except R2RException as r2re:
-            err_msg = f'[-] Error while checking health: {r2re} [-]'
-            self._logger.error(err_msg)
-            raise R2RException(err_msg, 500) from r2re
+            self._logger.error(str(r2re))
+            raise R2RException(str(r2re), 500) from r2re
         except Exception as e:
-            self._logger.error(f'[-] Unexpected error while checking health: {e} [-]')
-            raise Exception(str(e)) from e
-    
-    async def settings(self) -> dict: 
+            self._logger.error('[-] Unexpected error while checking health: %s [-]', e)
+            raise
+
+    async def settings(self):
         """
-        Get the current R2R settings. The settings are the ones set in the config file (with toml extension in the /backend folder).
+        Get the current R2R settings. 
+        The settings are the ones set in the config file (.toml extension).
 
         Returns:
-            dict: Settings from R2R service.
+            WrappedSettingsResponse: Settings from R2R service.
 
         Raises:
             R2RException: If the service encounters an error while getting the settings.
             Exception: If an unexpected error occurs.
         """
         try:
-            settings = await self._client.system.settings()
-            return settings['results']['config']
+            settings_resp = await self._client.system.settings()
+            return settings_resp
         except R2RException as r2re:
-            err_msg = f'[-] Error while getting settings: {r2re} [-]'
-            self._logger.error(err_msg)
-            raise R2RException(err_msg, 500) from r2re
+            self._logger.error(str(r2re))
+            raise R2RException(str(r2re), 500) from r2re
         except Exception as e:
-            self._logger.error(f'[-] Unexpected error while getting settings: {e} [-]')
-            raise Exception(str(e)) from e
-        
-    async def status(self) -> dict: 
+            self._logger.error('[-] Unexpected error while getting settings: %s [-]', e)
+            raise
+
+    async def status(self):
         """
-        Get the current R2R status. The status includes information such as the start time, uptime, CPU usage, 
-        memory usage, run ID, run type, entries, and timestamp.
+        Get the current R2R status. 
+        The status includes information such as the start time, uptime, CPU usage and so on.
 
         Returns:
-            dict: Status from R2R service.
+            WrappedServerStatsResponse: Status from R2R service.
 
         Raises:
             R2RException: If the service encounters an error while getting the status.
             Exception: If an unexpected error occurs.
         """
         try:
-            status = await self._client.system.status()
-            return status['results']
+            status_resp = await self._client.system.status()
+            return status_resp
         except R2RException as r2re:
-            err_msg = f'[-] Error while getting status: {r2re} [-]'
-            self._logger.error(err_msg)
-            raise R2RException(err_msg, 500) from r2re
+            self._logger.error(str(r2re))
+            raise R2RException(str(r2re), 500) from r2re
         except Exception as e:
-            self._logger.error(f'[-] Unexpected error while getting status: {e} [-]')
-            raise Exception(str(e)) from e
-    
-    async def logs(self, offset: Optional[int] = 0, limit: Optional[int] = 100) -> List[dict]:     
-        """
-        Retrieve logs from the R2R service.
-
-        Returns:
-            dict: Logs from the R2R service.
-
-        Raises:
-            R2RException: If there is an error while fetching logs.
-            Exception: If an unexpected error occurs.
-        """
-        try:
-            logs = await self._client.system.logs(
-                offset=offset, 
-                limit=limit
-            ) 
-            return logs['results']
-        except R2RException as r2re:
-            err_msg = f'[-] Error while getting logs: {r2re} [-]'
-            self._logger.error(err_msg)
-            raise R2RException(err_msg, 500) from r2re
-        except Exception as e:
-            self._logger.error(f'[-] Unexpected error while getting logs: {e} [-]')
-            raise Exception(str(e)) from e
+            self._logger.error('[-] Unexpected error while getting status: %s [-]', e)
+            raise
