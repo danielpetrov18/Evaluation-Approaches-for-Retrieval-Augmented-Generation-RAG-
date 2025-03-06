@@ -108,6 +108,7 @@ class IndexHandler:
         index_arguments: dict
     ) -> dict:
         # https://medium.com/@emreks/comparing-ivfflat-and-hnsw-with-pgvector-performance-analysis-on-diverse-datasets-e1626505bc9a
+        # https://towardsdatascience.com/similarity-search-part-4-hierarchical-navigable-small-world-hnsw-2aad4fe87d37/
 
         if index_method not in ('hnsw', 'ivf_flat'):
             raise ValueError('[-] Invalid index method, only hnsw and ivf_flat are supported! [-]')

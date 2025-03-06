@@ -1,0 +1,44 @@
+chunk_summary:
+  template: >
+    ## Task:
+
+    Summarize the given chunk of text while maintaining its independence and precision.
+
+    ## Context:
+    Document Summary: {document_summary}
+    Preceding Chunks: {preceding_chunks}
+    Succeeding Chunks: {succeeding_chunks}
+
+    ## Input Chunk:
+    {chunk}
+
+    ## Summary Guidelines:
+    1. **Conciseness**:
+       - Remove redundant or unnecessary details
+       - Keep the summary focused on key points
+
+    2. **Clarity**:
+       - Ensure the summary is clear and easy to understand
+       - Use precise language
+
+    3. **Context Preservation**:
+       - Retain key relationships and dependencies
+       - Ensure it remains meaningful without external references
+
+    ## Output Requirements:
+    1. The summary should be independently meaningful
+    2. Maintain the most relevant information
+    3. Preserve original context and relationships
+    4. Maximum length: {chunk_size} characters
+
+    Output the summarized chunk only.
+
+    ## Summarized Chunk:
+
+  input_types:
+    document_summary: str
+    chunk: str
+    preceding_chunks: str
+    succeeding_chunks: str
+    chunk_size: int
+  overwrite_on_diff: true
