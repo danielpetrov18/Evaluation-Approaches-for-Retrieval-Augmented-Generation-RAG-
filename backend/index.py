@@ -1,47 +1,57 @@
+"""
+This module enables users to create and or interact with indices.
+"""
+
 import logging
-from typing import Optional, List
 from r2r import R2RAsyncClient, R2RException
 
 class IndexHandler:
-    
+    """One can create, list, remove and refer to a given index."""
+
     def __init__(self, client: R2RAsyncClient):
         self._client = client
         self._logger = logging.getLogger(__name__)
         self._logger.setLevel(logging.DEBUG)
-        
-    async def list_indices(self, filters: Optional[dict] = None, offset: Optional[int] = 0, limit: Optional[int] = 100) -> List[dict]:   
+
+    async def list_indices(self, filters: dict = None, offset: int = 0, limit: int = 100):
         """
-        Retrieve a list of indices from the R2R service. Filters can be applied to the list of indices to narrow down the results.
-        For example one can filter based on index name, table name or index method (cosine_distance, l2_distance, ip_distance).
+        Retrieve a list of indices from the R2R service. 
+        Filters can be applied to the list of indices to narrow down the results.
+        For example one can filter based on index name or table name.
 
         Args:
-            filters: Optional filters to apply to the list of indices.
-            offset: Optional offset for pagination.
-            limit: Optional limit for pagination.
+            filters (dict, optional): Filters to apply to the list of indices.
+            offset (int, optional): Offset for pagination.
+            limit (int, optional): Limit for pagination.
 
         Returns:
-            List of index metadata from the R2R service.
+            WrappedVectorIndicesResponse: Index metadata from the R2R service.
 
         Raises:
             R2RException: If there is an error while listing the indices.
             Exception: If an unexpected error occurs.
         """
         try:
-            indices = await self._client.indices.list(
-                filters=filters, 
-                offset=offset, 
+            indices_resp = await self._client.indices.list(
+                filters=filters,
+                offset=offset,
                 limit=limit
             )
-            return indices['results']['indices']
+            return indices_resp
         except R2RException as r2re:
-            err_msg = f'[-] Error while listing indices: {r2re} [-]'
-            self._logger.error(err_msg)
-            raise R2RException(err_msg, 500) from r2re
+            self._logger.error(str(r2re))
+            raise R2RException(str(r2re), 500) from r2re
         except Exception as e:
-            self._logger.error(f'[-] Unexpected error while listing indices: {e} [-]')
-            raise Exception(str(e)) from e
-        
-    async def create_index(self, index_method: str, index_name: str, index_measure: str, index_arguments: Optional[dict] = None, concurrently: bool = True) -> str:   
+            self._logger.error('[-] Unexpected error while listing indices: %s [-]', e)
+            raise
+
+    async def create_index(
+        self,
+        index_method: str,
+        index_name: str,
+        index_measure: str,
+        index_arguments: dict = None
+    ):
         """
         Create a new index in the R2R service.
 
@@ -55,11 +65,10 @@ class IndexHandler:
               concurrently: true
 
         Args:
-            index_method: Index method to use for the index. Only [hnsw and ivf_flat] are supported.
+            index_method: Only hnsw and ivf_flat are supported.
             index_name: Name of the index.
-            index_measure: Measure to use for the index. Only [ip_distance, l2_distance and cosine_distance] are supported.
+            index_measure: Only [ip_distance, l2_distance and cosine_distance] are supported.
             index_arguments: Optional arguments to pass to the index method.
-            concurrently: Optional flag to indicate whether to create the index concurrently. Defaults to True.
 
         Returns:
             A message indicating the result of the index creation.
@@ -70,74 +79,85 @@ class IndexHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            config = self._construct_index_config(index_method, index_name, index_measure, index_arguments, concurrently)
-            index_result = await self._client.indices.create(
-                config=config, 
-                run_with_orchestration=False
+            config = self._construct_index_config(
+                index_method,
+                index_name,
+                index_measure,
+                index_arguments
             )
-            return index_result['results']['message']
+            index_result = await self._client.indices.create(
+                config=config,
+                run_with_orchestration=True
+            )
+            return index_result
         except R2RException as r2re:
-            err_msg = f'[-] Error while creating index: {r2re} [-]'
-            self._logger.error(err_msg)
-            raise R2RException(err_msg, 500) from r2re
+            self._logger.error(str(r2re))
+            raise R2RException(str(r2re), 500) from r2re
         except ValueError as ve:
-            err_msg = f'[-] Invalid index arguments: {ve} [-]'
-            self._logger.error(err_msg)
-            raise R2RException(err_msg, 500) from ve
+            self._logger.error(str(ve))
+            raise ValueError(str(ve)) from ve
         except Exception as e:
-            self._logger.error(f'[-] Unexpected error while creating index: {e} [-]')
-            raise Exception(str(e)) from e
-        
-    def _construct_index_config(self, index_method: str, index_name: str, index_measure: str, index_arguments: dict, concurrently: bool = True) -> dict:
-        if index_method not in {'hnsw', 'ivf_flat'}:
-            raise ValueError(f'[-] Invalid index method: {index_method} [-]! Only [hnsw and ivf_flat] are supported!')
+            self._logger.error('[-] Unexpected error while creating index: %s [-]', e)
+            raise
 
-        if index_measure not in {'ip_distance', 'l2_distance', 'cosine_distance'}:
-            raise ValueError(f'[-] Invalid index measure: {index_measure} [-]! Only [ip_distance, l2_distance and cosine_distance] are supported!')
-        
+    def _construct_index_config(
+        self,
+        index_method: str,
+        index_name: str,
+        index_measure: str,
+        index_arguments: dict
+    ) -> dict:
+        # https://medium.com/@emreks/comparing-ivfflat-and-hnsw-with-pgvector-performance-analysis-on-diverse-datasets-e1626505bc9a
+
+        if index_method not in ('hnsw', 'ivf_flat'):
+            raise ValueError('[-] Invalid index method, only hnsw and ivf_flat are supported! [-]')
+
+        if index_measure not in ('ip_distance', 'l2_distance', 'cosine_distance'):
+            raise ValueError('[-] Only ip_distance, l2_distance and cosine_distance are supported!')
+
         config = {
-            # According to the documentation it should be vectors. However, it doesn't work. 
+            # According to the documentation it should be vectors. However, it doesn't work.
             'table_name': 'chunks',
             'index_method': index_method,
             'index_measure': index_measure,
             'index_arguments': index_arguments,
             'index_name': index_name,
-            # According documentaition it should be 'embedding', however it doesn't work. 
-            # I've established connection to the pgvector container and found out the table structure. It should be 'vec'.
+            # According documentaition it should be 'embedding', however it doesn't work.
+            # I've established connection to the pgvector container. It should be 'vec'.
             'index_column': 'vec', 
-            'concurrently': concurrently
+            'concurrently': True
         }
         return config
-        
-    async def get_index_details(self, index_name: str) -> dict: 
+
+    async def get_index_details(self, index_name: str):
         """
-        Retrieve details of an index in the R2R service. Information like performance statistics can be retrieved.
+        Retrieve details of an index in the R2R service. 
+        Information like performance statistics can be retrieved.
 
         Args:
             index_name: Name of the index to retrieve details for.
 
         Returns:
-            Index metadata from the R2R service.
+            WrappedVectorIndexResponse: Index metadata from the R2R service.
 
         Raises:
             R2RException: If there is an error while retrieving the index details.
             Exception: If an unexpected error occurs.
         """
         try:
-            index = await self._client.indices.retrieve(
+            index_resp = await self._client.indices.retrieve(
                 index_name=index_name,
                 table_name="chunks"
             )
-            return index['results']
+            return index_resp
         except R2RException as r2re:
-            err_msg = f'[-] Error while retrieving index details: {r2re} [-]'
-            self._logger.error(err_msg)
-            raise R2RException(err_msg, 404) from r2re
+            self._logger.error(str(r2re))
+            raise R2RException(str(r2re), 404) from r2re
         except Exception as e:
-            self._logger.error(f'[-] Unexpected error while retrieving index details: {e} [-]')
-            raise Exception(str(e)) from e
-     
-    async def delete_index_by_name(self, index_name: str) -> str: 
+            self._logger.error('[-] Unexpected error while retrieving index details: %s [-]', e)
+            raise
+
+    async def delete_index_by_name(self, index_name: str):
         """
         Delete an index in the R2R service.
 
@@ -145,7 +165,7 @@ class IndexHandler:
             index_name: Name of the index to delete.
 
         Returns:
-            A message indicating the result of the index deletion. 
+            WrappedGenericMessageResponse: A message indicating the result of the index deletion. 
 
         Raises:
             R2RException: If there is an error while deleting the index.
@@ -156,11 +176,10 @@ class IndexHandler:
                 index_name=index_name,
                 table_name="chunks"
             )
-            return index['results']['message']
+            return index
         except R2RException as r2re:
-            err_msg = f'[-] Error while deleting index: {r2re} [-]'
-            self._logger.error(err_msg)
-            raise R2RException(err_msg, 404) from r2re
+            self._logger.error(str(r2re))
+            raise R2RException(str(r2re), 404) from r2re
         except Exception as e:
-            self._logger.error(f'[-] Unexpected error while deleting index: {e} [-]')
-            raise Exception(str(e)) from e
+            self._logger.error('[-] Unexpected error while deleting index: %s [-]', e)
+            raise

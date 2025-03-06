@@ -74,7 +74,7 @@ class StorageHandler:
                 file_path=filepath,
                 ingestion_mode=ingestion_mode,
                 metadata=metadata,
-                run_with_orchestration=False
+                run_with_orchestration=True
             )
             return ingestion_result
         except R2RException as r2re:

@@ -4,3 +4,4 @@
 3. From observations the chunk enrichment is not worth it since it takes a lot of time and it usually
     leads to a timeout.
 4. Timeout option for ingestion (r2r) increase/modify.
+5. When ingesting data make use of run_with_orchestration=True to avoid timeout errors.
