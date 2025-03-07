@@ -2,10 +2,12 @@
 This modules helps the user to keep track of conversations and manage them.
 """
 
+import os
 import logging
 from pathlib import Path
 from datetime import datetime
 import requests
+from dotenv import load_dotenv
 from r2r import R2RAsyncClient, R2RException
 
 class ConversationHandler:
@@ -17,7 +19,9 @@ class ConversationHandler:
         self._client = client
         self._logger = logging.getLogger(__name__)
         self._logger.setLevel(logging.DEBUG)
-        self._export_dir = Path("exports")
+        load_dotenv()
+        self._export_dir = Path(os.getenv("EXPORT_DIRECTORY"))
+        self._export_dir.mkdir(parents=True, exist_ok=True)
 
     async def list_conversations(self, ids: list[str] = None, offset: int = 0, limit: int = 100):
         """
@@ -54,7 +58,8 @@ class ConversationHandler:
         Create a new conversation in the R2R service.
 
         Args:
-            name (str, optional): The name of the conversation.
+            name (str): The name of the conversation.
+            bearer_token (str): The bearer token for authorization.
 
         Raises:
             R2RException: If there is an error while creating the conversation.
@@ -84,7 +89,6 @@ class ConversationHandler:
         self,
         bearer_token: str,
         out: str,
-        columns: list[str] = None,
         filters: dict = None
     ):
         """
@@ -97,7 +101,6 @@ class ConversationHandler:
         Args:
             bearer_token (str): The bearer token for authorization.
             out (str): The output filename for the exported CSV.
-            columns (list[str], optional): List of columns to include in the CSV. 
             filters (dict, optional): Filters to apply to the exported conversations. 
 
         Raises:
@@ -112,47 +115,82 @@ class ConversationHandler:
                 'Accept': 'text/csv'
             }
 
-            if columns is None:
-                columns = [
-                    'id',
-                    'type', # This doesn't work with document_type
-                    'metadata',
-                    'title',
-                    'ingestion_status',
-                    'created_at',
-                    'summary'
-                ]
-
             payload = {
-                'columns': columns,
+                'columns': [
+                    'id',
+                    'created_at',
+                    'name'
+                ],
                 'include_header': 'true'
             }
 
             if filters is not None:
                 payload['filters'] = filters
 
-            url = 'http://127.0.0.1:7272/v3/documents/export'
-
             response = requests.post(
-                url,
+                url='http://127.0.0.1:7272/v3/conversations/export',
                 headers=headers,
                 json=payload,
                 timeout=5
             )
 
-            if response.status_code == 200:
-                out = Path(
-                    self._export_dir,
-                    f'{out}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv'
-                )
-                with open(out, 'wb') as file:
-                    file.write(response.content)
-            else:
+            if response.status_code != 200:
                 self._logger.error('[-] Error exporting conversation: %s [-]', response.text)
                 raise R2RException(response.text, response.status_code)
 
+            out = Path(
+                self._export_dir,
+                f'{out}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv'
+            )
+            with open(out, 'wb') as file:
+                file.write(response.content)
+
         except Exception as e:
             self._logger.error('[-] Unexpected error while exporting conversation: %s [-]', e)
+            raise
+
+    async def export_messages_to_csv(
+        self,
+        bearer_token: str,
+        out: str,
+        filters: dict = None
+    ):
+        
+        try:
+            payload = {
+                 "include_header": "true",
+                 "columns": [
+                     "id",
+                 ]
+            }
+
+            if filters:
+                payload['filters'] = filters
+
+            response = requests.post(
+                url='http://127.0.0.1:7272/v3/conversations/export_messages',
+                headers={
+                    'Authorization': f'Bearer {bearer_token}',
+                    "Content-Type": "application/json",
+                    "Accept": "text/csv"
+                },
+                json=payload,
+                timeout=5
+            )
+
+            if response.status_code != 200:
+                self._logger.error('[-] Error exporting messages: %s [-]', response.text)
+                raise R2RException(response.text, response.status_code)
+
+            out = Path(
+                self._export_dir,
+                f'{out}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv'
+            )
+            with open(out, 'wb') as file:
+                file.write(response.content)
+        
+        except Exception as e:
+            self._logger.error('[-] Unexpected error while exporting messages: %s [-]', e)
             raise
 
     async def get_conversation(self, conversation_id: str):
@@ -202,4 +240,46 @@ class ConversationHandler:
             raise R2RException(str(r2re), 500) from r2re
         except Exception as e:
             self._logger.error('[-] Unexpected error while deleting conversation: %s [-]', e)
+            raise
+
+    async def add_message(
+        self,
+        conversation_id: str,
+        role: str,
+        content: str,
+        parent_id: str = None,
+        metadata: dict = None
+    ):
+        """
+        Add a message to a conversation in the R2R service.
+
+        Args:
+            conversation_id (str): The ID of the conversation to which the message will be added.
+            role (str): The role of the message sender (e.g., 'user', 'assistant').
+            content (str): The content of the message.
+            parent_id (str, optional): The ID of the parent message, if applicable.
+            metadata (dict, optional): Additional metadata associated with the message.
+
+        Returns:
+            WrappedMessageResponse: The response containing the added message.
+
+        Raises:
+            R2RException: If there is an error while adding the message.
+            Exception: If an unexpected error occurs.
+        """
+
+        try:
+            response = self._client.conversations.add_message(
+                id=conversation_id,
+                content=content,
+                role=role,
+                metadata=metadata,
+                parent_id=parent_id
+            )
+            return response
+        except R2RException as r2re:
+            self._logger.error(str(r2re))
+            raise R2RException(str(r2re), 500) from r2re
+        except Exception as e:
+            self._logger.error('[-] Unexpected error while adding message: %s [-]', e)
             raise
