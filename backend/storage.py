@@ -7,6 +7,8 @@ Documents are an abstraction that holds the actual data, metadata, might contain
 import os
 import logging
 from pathlib import Path
+from datetime import datetime
+import requests
 from dotenv import load_dotenv
 from r2r import R2RException, R2RAsyncClient
 
@@ -22,7 +24,9 @@ class StorageHandler:
         self._logger.setLevel(logging.DEBUG)
         load_dotenv()
         self._file_dir = Path(os.getenv("FILES_DIRECTORY"))
-        self._similarity_threshold = float(os.getenv("SIMILARITY_THRESHOLD"))
+        self._export_dir = Path(os.getenv("EXPORT_DIRECTORY"))
+        self._file_dir.mkdir(parents=True, exist_ok=True)
+        self._export_dir.mkdir(parents=True, exist_ok=True)
 
     async def list_documents(self, ids: list[str] = None, offset: int = 0, limit: int = 10):
         """
@@ -104,7 +108,7 @@ class StorageHandler:
                 chunks=chunks,
                 ingestion_mode='fast',
                 metadata=metadata,
-                run_with_orchestration=False
+                run_with_orchestration=True
             )
             return ingestion_result
         except R2RException as r2re:
@@ -112,6 +116,142 @@ class StorageHandler:
             raise R2RException(str(r2re), 500) from r2re
         except Exception as e:
             self._logger.error('[-] Unexpected error while ingesting chunks: %s [-]', e)
+            raise
+
+    async def export_documents_to_csv(
+        self,
+        out_path: str|Path,
+        bearer_token: str,
+        columns: list[str] = None
+    ):
+        """
+        Retrieve a document from the R2R service by its id. This doesn't return the actual
+        content of the ingested file (assuming it exists). It just gives metadata.
+
+        Args:
+            out_path (str|Path): Filepath to export the documents to.
+            bearer_token (str): The bearer token for authorization.
+            columns (list[str], optional): List of columns to include in the CSV.
+            
+        Raises:
+            R2RException: If there is during exporting.
+            Exception: If an unexpected error occurs.
+        """
+        try:
+            headers = {
+                "Authorization": f"Bearer {bearer_token}",
+                "Content-Type": "application/json",
+                "Accept": "text/csv"
+            }
+
+            payload = {
+                "include_header": "true"
+            }
+
+            if columns:
+                payload['columns'] = columns
+            else:
+                payload['columns'] = [
+                    "id",
+                    "type",
+                    "metadata",
+                    "title",
+                    "ingestion_status",
+                    "created_at",
+                    "updated_at",
+                    "summary"
+                ]
+
+            response = requests.post(
+                url="http://localhost:7272/v3/documents/export",
+                json=payload,
+                headers=headers,
+                timeout=5
+            )
+
+            if response.status_code != 200:
+                self._logger.error('[-] Failed to export documents: %s [-]', response.text)
+                raise R2RException(response.text, response.status_code)
+
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            out_path = Path(self._export_dir) / f"{out_path}_{timestamp}.csv"
+            with open(out_path, 'wb') as f:
+                f.write(response.content)
+
+        except Exception as e:
+            self._logger.error('[-] Unexpected error while exporting documents: %s [-]', e)
+            raise
+
+    async def export_documents_to_zip(
+        self,
+        *,
+        out_path: str|Path,
+        bearer_token: str,
+        document_ids: list[str] = None,
+        start_date: datetime = None,
+        end_date: datetime = None
+    ):
+        """
+        Export documents to a zip archive.
+
+        Example:
+            from datetime import datetime
+
+            Attributes: year, month, day, hour, minute, second, microsecond,
+            start_date = datetime(2025, 3, 7, 10, 0, 0, 0)
+            end_date = datetime(2025, 3, 7, 17, 0, 0, 0)
+
+            await storage_handler.export_documents_to_zip(
+                out_path="testing",
+                bearer_token=bearer_token,
+                document_ids=None,
+                start_date=start_date,
+                end_date=end_date
+            )
+
+        Args:
+            out_path (str|Path): Filepath to export the documents to.
+            bearer_token (str): The bearer token for authorization.
+            document_ids (list[str], optional): List of document IDs to include in the export.
+            start_date (datetime, optional): Start date of the export time range.
+            end_date (datetime, optional): End date of the export time range.
+
+        Raises:
+            R2RException: If there is an error while exporting the documents.
+            Exception: If an unexpected error occurs.
+        """
+        try:
+            headers = {
+                "Authorization": f"Bearer {bearer_token}"
+            }
+
+            params = {}
+            if document_ids:
+                params['document_ids'] = document_ids
+            if start_date:
+                params['start_date'] = start_date
+            if end_date:
+                params['end_date'] = end_date
+
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            out_path = Path(self._export_dir) / f"{out_path}_{timestamp}.zip"
+
+            response = requests.get(
+                url="http://localhost:7272/v3/documents/download_zip",
+                headers=headers,
+                params=params,
+                timeout=30
+            )
+
+            if response.status_code != 200:
+                self._logger.error('[-] Failed to export documents: %s [-]', response.text)
+                raise R2RException(response.text, response.status_code)
+
+            with open(out_path, 'wb') as f:
+                f.write(response.content)
+
+        except Exception as e:
+            self._logger.error('[-] Unexpected error while exporting documents to zip: %s [-]', e)
             raise
 
     async def get_document_metadata_by_id(self, doc_id: str):
@@ -200,12 +340,14 @@ class StorageHandler:
         Downloads the original file content of a document.
         For uploaded files, returns the original file with its proper MIME type. 
         For text-only documents, returns the content as plain text.
+        Use this if you have ingested a file, you can't get the chunks of a file
+        you ingested. You can only get the original file content.
         
         Args:
             doc_id (str): The id of the document to download.
 
         Returns:
-            Union[BytesIO|str]: The downloaded document content.
+            BytesIO: The downloaded document content.
 
         Raises:
             R2RException: If there is an error while downloading the document.
@@ -225,7 +367,7 @@ class StorageHandler:
         """
         Delete documents based on provided filters. 
 
-        (Assuming you are using r2r version 3.4.3)
+        (Assuming you are using r2r version 3.4.4)
         # class FilterOperator:
         #     EQ = "$eq"
         #     NE = "$ne"
@@ -421,29 +563,61 @@ class StorageHandler:
             self._logger.error('[-] Unexpected error while deleting a chunk: %s [-]', e)
             raise
 
-    async def list_chunks(self, metadata_filter: dict, filters: dict, include_vect: bool = False):
+    async def list_chunks(
+        self,
+        metadata_filters: dict = None,
+        offset: int = 0,
+        limit: int = 100,
+        filters: dict = None
+    ):
         """
-        Retrieve a list of chunks from the R2R service. 
-        The chunks are filtered based on the provided metadata filter and filters.
+        Retrieve a list of chunks from the R2R service.
 
         Args:
-            metadata_filter (dict): Filter criteria for the metadata of the chunks.
-            filters (dict): Filter criteria in JSON format.
-            include_vectors (bool, optional): If True, the embeddings will be included.
-
+            metadata_filters (dict, optional): Filter to apply based on chunk metadata.
+            filters (dict, optional): Additional filters for chunk retrieval.
+            offset (int, optional): The starting point for fetching chunks.
+            limit (int, optional): The maximum number of chunks to fetch.
+            filters (dict, optional): Additional filters for chunk retrieval.
+            
         Returns:
-            WrappedChunksResponse: List of chunks in the R2R service.
+            list: A list of chunks retrieved from the R2R service.
 
         Raises:
+            ValueError: If the filter is not document_id.
             R2RException: If there is an error while listing the chunks.
             Exception: If an unexpected error occurs.
         """
+
         try:
             response = await self._client.chunks.list(
-                include_vectors=include_vect,
-                metadata_filter=metadata_filter,
-                filters=filters
+                include_vectors=False,
+                offset=offset,
+                limit=limit,
             )
+
+            # Since the frameworks filtering doesn't work properly.
+            if filters is not None:
+                if filters.keys() != {"document_id"}: # Set matching
+                    raise ValueError("Only [document_id] filter is supported!")
+                original = response.results
+                filtered = [c for c in original if str(c.document_id) == filters["document_id"]]
+                if not filtered:
+                    self._logger.debug("Invalid filter! Not filtered!")
+                response.results = filtered
+
+            # Filter based on metadata
+            if metadata_filters is not None:
+                original = response.results
+                # Go over all the filters and check if they match
+                filtered = [
+                    c for c in original
+                    if all(c.metadata.get(key) == value for key, value in metadata_filters.items())
+                ]
+                if not filtered:
+                    self._logger.debug("Invalid metadata filter! Not filtered!")
+                response.results = filtered
+
             return response
         except R2RException as r2re:
             self._logger.error(str(r2re))
@@ -459,7 +633,7 @@ class StorageHandler:
         This function retrieves the metadata for all documents, extracts their ids,
         and deletes each document by its id.
 
-        NOTE: This is irreversible! Before doing so think about replicating the database.
+        NOTE: This is irreversible! Before doing so think about extracting the data.
     
         Raises:
             R2RException: If there is an error while deleting any document.
@@ -468,10 +642,10 @@ class StorageHandler:
 
         try:
             docs_metadata = await self.list_documents()
-            doc_ids = [doc_metadata["id"] for doc_metadata in docs_metadata]
+            doc_ids = [doc_metadata.id for doc_metadata in docs_metadata.results]
             for doc_id in doc_ids:
                 await self.delete_document_by_id(doc_id)
-            self._logger.info("[+] Deleted all files! [+]")
+            self._logger.debug("[+] Deleted all files! [+]")
         except R2RException as r2re:
             self._logger.error(str(r2re))
             raise R2RException(str(r2re), 500) from r2re
