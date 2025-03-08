@@ -3,6 +3,7 @@ This module holds the logic for interacting with the underlying LLM.
 """
 
 import logging
+from datetime import datetime
 from r2r import R2RAsyncClient, R2RException
 from shared.abstractions.search import SearchMode
 
@@ -142,38 +143,68 @@ class RetrievalHandler:
     async def rag_agent(
         self,
         query: str,
+        conversation_id: str,
         filters: dict = None,
         limit: int = 10,
         offset: int = 0,
         ef_search: int = 100,
         probes: int = 10
     ):
+        """
+        Perform a RAG agent query. Allows the user to interact with an agent who keeps track
+            of previous interactions and context. One can ask follow-up questions.
+
+        Args:
+            query (str): The query to search for.
+            conversation_id (str): The ID of the conversation to query.
+            filters (dict, optional): Filters to apply to the search results.
+            limit (int, optional): The maximum number of results to return. Defaults to 10.
+            offset (int, optional): The offset for pagination. Defaults to 0.
+            ef_search (int, optional): Size of the dynamic candidate list for HNSW index search. 
+                Higher increases accuracy but decreases speed.
+            probes (int, optional): Number of ivfflat index lists to query. 
+                Higher increases accuracy but decreases speed.
+
+        Returns:
+            WrappedAgentResponse: The search response containing the results.
+
+        Raises:
+            R2RException: If there is an error while performing the search.
+            Exception: If an unexpected error occurs.
+        """
         try:
             message = {
                 "role": "user",
-                "content": query
+                "content": query,
+                "metadata": {
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
             }
 
             search_settings = {
                 "use_semantic_search": True,
-                "limit": 10,
-                "offset": 0,
-                "include_metadatas": True,
+                "limit": limit,
+                "offset": offset,
+                #"include_metadatas": True,
                 "include_scores": True,
                 "search_strategy": "vanilla",
                 "chunk_settings": {
                     "index_measure": "cosine_distance",
-                    "probes": 10,
-                    "ef_search": 100,
+                    "probes": probes,
+                    "ef_search": ef_search,
                     "enabled": True
                 }
             }
+
+            if filters:
+                search_settings["filters"] = filters
 
             agent_resp = self._client.retrieval.agent(
                 message=message,
                 search_mode=SearchMode.custom,
                 search_settings=search_settings,
                 include_title_if_available=True,
+                conversation_id=conversation_id
             )
             return agent_resp
         except R2RException as r2re:
