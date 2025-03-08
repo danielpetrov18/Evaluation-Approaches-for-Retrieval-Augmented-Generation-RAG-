@@ -2,17 +2,21 @@
 This modules helps the user to keep track of conversations and manage them.
 """
 
+import io
 import os
+import json
 import logging
 from pathlib import Path
 from datetime import datetime
 import requests
+import pandas as pd
 from dotenv import load_dotenv
 from r2r import R2RAsyncClient, R2RException
 
 class ConversationHandler:
     """
     This class supports functionality for creating, listing conversations and their metadata.
+    One can also export messages and or conversations.
     """
 
     def __init__(self, client: R2RAsyncClient):
@@ -116,12 +120,12 @@ class ConversationHandler:
             }
 
             payload = {
+                'include_header': 'true',
                 'columns': [
                     'id',
                     'created_at',
                     'name'
-                ],
-                'include_header': 'true'
+                ]
             }
 
             if filters is not None:
@@ -138,13 +142,19 @@ class ConversationHandler:
                 self._logger.error('[-] Error exporting conversation: %s [-]', response.text)
                 raise R2RException(response.text, response.status_code)
 
+            df = pd.read_csv(io.BytesIO(response.content))
+            if df.shape[0] == 0: # If the dataframe is empty (no rows)
+                raise R2RException('No conversations found', 404)
+
             out = Path(
                 self._export_dir,
                 f'{out}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv'
             )
-            with open(out, 'wb') as file:
-                file.write(response.content)
+            df.to_csv(out, index=False)
 
+        except R2RException as r2re:
+            self._logger.error(str(r2re))
+            raise R2RException(str(r2re), 500) from r2re
         except Exception as e:
             self._logger.error('[-] Unexpected error while exporting conversation: %s [-]', e)
             raise
@@ -155,13 +165,25 @@ class ConversationHandler:
         out: str,
         filters: dict = None
     ):
-        
+        """
+        Export messages to a CSV file.
+
+        This function sends a request to the R2R service to export messages, 
+        filters them based on the provided criteria, and writes the resulting CSV 
+        data to a file.
+
+        Args:
+            bearer_token (str): The bearer token for authorization.
+            out (str): The output filename for the exported CSV.
+            filters (dict, optional): Filters to apply to the exported messages. 
+
+        Raises:
+            R2RException: If there is an error while exporting the messages.
+            Exception: If an unexpected error occurs.
+        """
         try:
             payload = {
-                 "include_header": "true",
-                 "columns": [
-                     "id",
-                 ]
+                 "include_header": "true"
             }
 
             if filters:
@@ -182,13 +204,40 @@ class ConversationHandler:
                 self._logger.error('[-] Error exporting messages: %s [-]', response.text)
                 raise R2RException(response.text, response.status_code)
 
+            df = pd.read_csv(io.BytesIO(response.content))
+            if df.shape[0] == 0: # If the dataframe is empty (no rows)
+                raise R2RException('No messages found', 404)
+
+            df['content'] = df['content'].apply(json.loads)
+            df['metadata'] = df['metadata'].apply(json.loads)
+
+            # Extract useful fields from JSON columns
+            df['role'] = df['content'].apply(lambda x: x.get('role', None))
+            df['message'] = df['content'].apply(lambda x: x.get('content', None))
+            df['timestamp'] = df['metadata'].apply(lambda x: x.get('timestamp', None))
+
+            # Select relevant columns
+            df = df[
+                [
+                    'id', 
+                    'conversation_id', 
+                    'created_at', 
+                    'parent_id', 
+                    'role', 
+                    'message', 
+                    'timestamp'
+                ]
+            ]
+
             out = Path(
                 self._export_dir,
                 f'{out}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv'
             )
-            with open(out, 'wb') as file:
-                file.write(response.content)
-        
+            df.to_csv(out, index=False)
+
+        except R2RException as r2re:
+            self._logger.error(str(r2re))
+            raise R2RException(str(r2re), r2re.status_code) from r2re
         except Exception as e:
             self._logger.error('[-] Unexpected error while exporting messages: %s [-]', e)
             raise
@@ -282,4 +331,35 @@ class ConversationHandler:
             raise R2RException(str(r2re), 500) from r2re
         except Exception as e:
             self._logger.error('[-] Unexpected error while adding message: %s [-]', e)
+            raise
+
+    async def update_message(self, conversation_id: str, message_id: str, metadata: dict):
+        """
+        Update a message's metadata in a conversation in the R2R service.
+
+        Args:
+            conversation_id (str): The ID of the conversation containing the message.
+            message_id (str): The ID of the message to update.
+            metadata (dict): The new metadata for the message.
+
+        Returns:
+            WrappedMessageResponse: The response containing the updated message.
+
+        Raises:
+            R2RException: If there is an error while updating the message.
+            Exception: If an unexpected error occurs.
+        """
+
+        try:
+            response = self._client.conversations.update_message(
+                id=conversation_id,
+                message_id=message_id,
+                metadata=metadata
+            )
+            return response
+        except R2RException as r2re:
+            self._logger.error(str(r2re))
+            raise R2RException(str(r2re), 500) from r2re
+        except Exception as e:
+            self._logger.error('[-] Unexpected error while updating message: %s [-]', e)
             raise
