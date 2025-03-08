@@ -4,11 +4,14 @@ Ingestion of files/chunks results into so called Documents.
 Documents are an abstraction that holds the actual data, metadata, might contain summary and so on.
 """
 
+import io
 import os
 import logging
 from pathlib import Path
 from datetime import datetime
+import json
 import requests
+import pandas as pd
 from dotenv import load_dotenv
 from r2r import R2RException, R2RAsyncClient
 
@@ -159,7 +162,8 @@ class StorageHandler:
                     "ingestion_status",
                     "created_at",
                     "updated_at",
-                    "summary"
+                    "summary",
+                    "total_tokens"
                 ]
 
             response = requests.post(
@@ -173,11 +177,20 @@ class StorageHandler:
                 self._logger.error('[-] Failed to export documents: %s [-]', response.text)
                 raise R2RException(response.text, response.status_code)
 
+            df = pd.read_csv(io.StringIO(response.text))
+            if df.shape[0] == 0: # If the dataframe is empty (no rows)
+                raise R2RException('No messages found', 404)
+
+            df['metadata'] = df['metadata'].apply(json.loads)
+
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             out_path = Path(self._export_dir) / f"{out_path}_{timestamp}.csv"
-            with open(out_path, 'wb') as f:
-                f.write(response.content)
 
+            df.to_csv(out_path, index=False)
+
+        except R2RException as r2re:
+            self._logger.error(str(r2re))
+            raise R2RException(str(r2re), 500) from r2re
         except Exception as e:
             self._logger.error('[-] Unexpected error while exporting documents: %s [-]', e)
             raise
@@ -233,9 +246,6 @@ class StorageHandler:
             if end_date:
                 params['end_date'] = end_date
 
-            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            out_path = Path(self._export_dir) / f"{out_path}_{timestamp}.zip"
-
             response = requests.get(
                 url="http://localhost:7272/v3/documents/download_zip",
                 headers=headers,
@@ -246,6 +256,9 @@ class StorageHandler:
             if response.status_code != 200:
                 self._logger.error('[-] Failed to export documents: %s [-]', response.text)
                 raise R2RException(response.text, response.status_code)
+
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            out_path = Path(self._export_dir) / f"{out_path}_{timestamp}.zip"
 
             with open(out_path, 'wb') as f:
                 f.write(response.content)
