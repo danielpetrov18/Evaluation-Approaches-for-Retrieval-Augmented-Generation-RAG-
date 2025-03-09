@@ -1,6 +1,7 @@
 """This module is used to scrape data from the internet asynchronously."""
 
 from html2text import HTML2Text
+from readability import Document as ReadabilityDocument
 from langchain_core.documents import Document
 from langchain.document_loaders import AsyncHtmlLoader
 from langchain.document_transformers import Html2TextTransformer
@@ -27,7 +28,7 @@ class AsyncScraper:
         self._h2t.ignore_images = True # Ignores images
         self._h2t.ignore_emphasis = True # Ignore emphasis (e.g., bold, italic)
         self._h2t.bypass_tables = False # Keep markdown table structure
-        self._h2t.ignore_tables = True # Ignore table-related tags while keeping the row content
+        self._h2t.ignore_tables = False # Ignore table-related tags while keeping the row content
         self._h2t.single_line_break = True # Single line break rather than two to reduce whitespace
         self._h2t.mark_code = True # Wrap code blocks with [code] tags to preserve code formatting
         self._h2t.wrap_tables = True
@@ -48,20 +49,17 @@ class AsyncScraper:
         """
         return list(set(urls))
 
-    def fetch_documents(self) -> list[Document]:
+    async def fetch_documents(self) -> list[Document]:
         """
         Fetch documents from the provided URLs asynchronously.
-
-        Returns:
-            list[Document]: A list of documents fetched from the provided URLs.
         """
-        original_docs = self._loader.load()
-        transformed_docs = self._transform_documents(original_docs)
-        return transformed_docs
+        documents = await self._loader.aload()
+        await self._transform_documents(documents)
+        return documents
 
-    def _transform_documents(self, documents: list[Document]) -> list[Document]:
-        transformed_docs = self._html2text_transformer.transform_documents(documents)
-        for document in transformed_docs:
+    async def _transform_documents(self, documents: list[Document]):
+        for document in documents:
+            readability_doc = ReadabilityDocument(document.page_content)
+            document.page_content = readability_doc.summary()
             document.page_content = self._h2t.handle(document.page_content)
             document.page_content = document.page_content.strip()
-        return transformed_docs
