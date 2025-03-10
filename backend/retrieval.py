@@ -65,7 +65,7 @@ class RetrievalHandler:
             if filters:
                 search_settings["filters"] = filters
 
-            search_resp = self._client.retrieval.search(
+            search_resp = await self._client.retrieval.search(
                 query=query,
                 search_mode=SearchMode.custom,
                 search_settings=search_settings
@@ -126,7 +126,7 @@ class RetrievalHandler:
             if filters:
                 search_settings["filters"] = filters
 
-            rag_resp = self._client.retrieval.rag(
+            rag_resp = await self._client.retrieval.rag(
                 query=query,
                 search_mode=SearchMode.custom,
                 search_settings=search_settings,
@@ -199,7 +199,7 @@ class RetrievalHandler:
             if filters:
                 search_settings["filters"] = filters
 
-            agent_resp = self._client.retrieval.agent(
+            agent_resp = await self._client.retrieval.agent(
                 message=message,
                 search_mode=SearchMode.custom,
                 search_settings=search_settings,

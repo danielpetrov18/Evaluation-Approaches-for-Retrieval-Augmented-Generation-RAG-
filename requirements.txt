@@ -3,16 +3,12 @@
 # pyyaml==6.0.2
 # tomli_w==1.1.0
 # litellm==1.54.1
-# requests==2.32.3
-# streamlit==1.41.0
-#asyncio==3.4.3
-#aiohttp==3.11.13
+pandas==2.2.3
+r2r[core]==3.4.4
+streamlit==1.43.1
 langchain==0.3.20
 html2text==2024.2.26
 beautifulsoup4==4.13.3
+lxml_html_clean==0.4.1
 readability-lxml==0.8.1
-# langchain-ollama==0.2.1
-# langchain-community==0.3.11
-# langchain-text-splitters==0.3.2
-r2r[core]==3.4.4
-# unstructured[all-docs, pdf]==0.16.11
+langchain-community==0.3.19

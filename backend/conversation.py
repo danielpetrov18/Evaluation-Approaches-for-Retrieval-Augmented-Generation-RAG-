@@ -128,9 +128,6 @@ class ConversationHandler:
                 ]
             }
 
-            if filters is not None:
-                payload['filters'] = filters
-
             response = requests.post(
                 url='http://127.0.0.1:7272/v3/conversations/export',
                 headers=headers,
@@ -145,6 +142,12 @@ class ConversationHandler:
             df = pd.read_csv(io.BytesIO(response.content))
             if df.shape[0] == 0: # If the dataframe is empty (no rows)
                 raise R2RException('No conversations found', 404)
+
+            # Apply filters in-place
+            if filters:
+                for column, value in filters.items():
+                    if column in df.columns:
+                        df = df[df[column] == value]  # Modify df in-place
 
             out = Path(
                 self._export_dir,
