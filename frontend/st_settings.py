@@ -1,109 +1,116 @@
+"""Showcases settings and system information."""
+
 import sys
 import asyncio
-import streamlit as st
 from pathlib import Path
-from app import load_client
+from datetime import datetime
 from r2r import R2RException
+import streamlit as st
+from streamlit.errors import Error
+from st_app import load_client
 
 backend_dir = Path(__file__).parent.parent / 'backend'
 sys.path.append(str(backend_dir))
 
 from settings import SystemHandler
 
-# Create and set a persistent event loop
-loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop)
+def run_coroutine(coro):
+    """Run a coroutine synchronously."""
+    return asyncio.run(coro)
 
-def run_async(coro):
-    return loop.run_until_complete(coro)
+# Helper functions for formatting
+def format_uptime(seconds):
+    """Convert seconds to a human-readable format."""
+    days, remainder = divmod(seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
 
-st.title("⚙️ Settings & System Information")
+    parts = []
+    if days > 0:
+        parts.append(f"{int(days)} days")
+    if hours > 0:
+        parts.append(f"{int(hours)} hours")
+    if minutes > 0:
+        parts.append(f"{int(minutes)} minutes")
+    if seconds > 0 or not parts:
+        parts.append(f"{int(seconds)} seconds")
 
-client = load_client()
-system_handler = SystemHandler(client=client)
+    return ", ".join(parts)
 
-tab_health, tab_status, tab_settings, tab_logs = st.tabs(["Health", "Status", "Settings", "Logs"])
+def get_current_time():
+    """Return current time formatted nicely."""
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-with tab_health:
-    st.markdown("**Health Check**")
-    health_btn = st.button("Check health")
-    if health_btn:
-        try:
-            message = run_async(system_handler.health())
-            st.success(f"Service Status: {message}", icon="✅")
-        except R2RException as r2re:
-            st.error(f"Error checking health: {r2re}")
-        except Exception as e:
-            st.error(f"Unexpected error: {e}")
+if __name__ == "__page__":
+    st.title("⚙️ Settings & System Information")
 
-with tab_status:
-    st.markdown("**Fetch System Status**")
-    status_btn = st.button("Get Status")
-    if status_btn:
-        try:
-            status = run_async(system_handler.status())
-        
-            start_time = status.get("start_time", "N/A")
-            uptime_seconds = status.get("uptime_seconds", "N/A")
-            cpu_usage = status.get("cpu_usage", "N/A")
-            memory_usage = status.get("memory_usage", "N/A")
+    system_handler = SystemHandler(client=load_client())
 
-            st.write(f"**Start Time:** {start_time}")
-            st.write(f"**Uptime:** {uptime_seconds}")
-            st.write(f"**CPU Usage:** {cpu_usage}")
-            st.write(f"**Memory Usage:** {memory_usage}")
-            
-        except R2RException as r2re:
-            st.error(f"Error fetching status: {r2re}")
-        except Exception as e:
-            st.error(f"Unexpected error: {e}")
+    tab_health, tab_status, tab_settings = st.tabs(["Health", "Status", "Settings"])
 
-with tab_settings:
-    st.markdown("**Configuration Settings**")
-    st.markdown("Settings are read-only from here. To change them, update the server configuration and environment variables and restart the backend.")
-    
-    config_btn = st.button("Check configs")
-    if config_btn:
-        try:
-            settings = run_async(system_handler.settings())
-            if settings and isinstance(settings, dict):
-                st.write("**R2R Backend Settings:**")
-                
-                # Option 1: Display entire JSON at once
-                # st.json(settings)
-                
-                # Option 2: Display top-level keys in separate expanders (comment out st.json above if using this)
-                for key, value in settings.items():
-                    with st.expander(key, expanded=False):
-                        # If the value is a dict, show it as json
-                        if isinstance(value, dict):
-                            st.json(value)
-                        else:
-                            st.write(value)
-                
-            else:
-                st.info("No backend settings found.")
-        except R2RException as r2re:
-            st.error(f"Error fetching settings: {r2re}")
-        except Exception as e:
-            st.error(f"Unexpected error: {e}")
-with tab_logs:
-    st.markdown("View the latest logs from the R2R service.")
+    with tab_health:
+        st.markdown("**Health Check**")
+        health_btn = st.button("Check health")
+        if health_btn:
+            try:
+                message = run_coroutine(system_handler.health())
+                st.success(f"Service Status: {message.results.message}", icon="✅")
+            except R2RException as r2re:
+                st.error(f"Error checking health: {str(r2re)}")
+            except Error as e:
+                st.error(f"Unexpected error: {str(e)}")
 
-    with st.form("log_form"):
-        limit = st.number_input("Number of logs to fetch", min_value=10, max_value=100, value=100, step=10)
-        offset = st.number_input("Offset (starting log)", min_value=0, value=0, step=10)
-        submit_logs = st.form_submit_button("Fetch Logs")
+    with tab_status:
+        st.markdown("## System Status")
+        status_btn = st.button("Refresh Status")
 
-    if submit_logs:
-        try:
-            logs = run_async(system_handler.logs(offset=offset, limit=limit))
-            if logs:
-                st.write(f"Displaying {len(logs)} logs (offset {offset}, limit {limit}):")
-                st.json(logs)
-            else:
-                st.info("No logs found.")
-        except R2RException as r2re:
-            st.error(f"Error fetching logs: {r2re}")
-        except Exception as e:
-            st.error(f"Unexpected error: {e}")
+        if status_btn:
+            try:
+                with st.spinner("Fetching system status..."):
+                    status = run_coroutine(system_handler.status()).results
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.metric(label="CPU Usage", value=f"{status.cpu_usage}%")
+                    st.metric(label="Memory Usage", value=f"{status.memory_usage}%")
+
+                with col2:
+                    st.markdown("### Time Information")
+                    st.markdown(f"**Start Time:** {status.start_time}")
+
+                    # Format uptime in a more readable way
+                    UPTIME_FORMATTED = format_uptime(status.uptime_seconds)
+                    st.markdown(f"**Uptime:** {UPTIME_FORMATTED}")
+
+                st.caption(f"Last updated: {get_current_time()}")
+            except R2RException as r2re:
+                st.error(f"Error fetching status: {str(r2re)}")
+            except Error as e:
+                st.error(f"Unexpected error: {str(e)}")
+
+    with tab_settings:
+        st.markdown("**Configuration Settings**")
+        st.markdown("* Settings are read-only from here.")
+        st.markdown("* To change them, update the server configuration and environment variables.")
+
+        config_btn = st.button("Check configs")
+        if config_btn:
+            try:
+                settings = run_coroutine(system_handler.settings()).results.config
+                if settings and isinstance(settings, dict):
+                    st.write("**R2R Backend Settings:**")
+
+                    for key, value in settings.items():
+                        with st.expander(key, expanded=False):
+                            # If the value is a dict, show it as json
+                            if isinstance(value, dict):
+                                st.json(value)
+                            else:
+                                st.write(value)
+                else:
+                    st.info("No backend settings found.")
+            except R2RException as r2re:
+                st.error(f"Error fetching settings: {str(r2re)}")
+            except Error as e:
+                st.error(f"Unexpected error: {str(e)}")

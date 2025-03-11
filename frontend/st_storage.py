@@ -4,7 +4,7 @@ import asyncio
 import pandas as pd
 import streamlit as st
 from pathlib import Path
-from app import load_client
+from frontend.st_app import load_client
 from r2r import R2RException
 from langchain.docstore.document import Document
 

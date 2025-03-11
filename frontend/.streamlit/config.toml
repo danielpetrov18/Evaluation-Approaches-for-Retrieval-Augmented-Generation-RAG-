@@ -1,0 +1,9 @@
+[theme] # Custom theme
+primaryColor = "#81a1c1" 
+backgroundColor = "#2e3440"
+secondaryBackgroundColor = "#3b4252" 
+textColor = "#d8dee9"
+font = "Fira Sans"
+
+[runner]
+enforceSerializableSessionState = true # only allows pickle-serializable objects in Session State

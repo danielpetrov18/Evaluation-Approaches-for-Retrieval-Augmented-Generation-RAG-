@@ -1,10 +1,12 @@
+"""Enables the user to manage prompts with GUI."""
+
 import sys
-import yaml
 import asyncio
-import streamlit as st
 from pathlib import Path
-from app import load_client
+import yaml
+import streamlit as st
 from r2r import R2RException
+from st_app import load_client
 
 backend_dir = Path(__file__).parent.parent / 'backend'
 sys.path.append(str(backend_dir))
