@@ -1,22 +1,17 @@
 """Showcases settings and system information."""
 
 import sys
-import asyncio
 from pathlib import Path
 from datetime import datetime
 from r2r import R2RException
 import streamlit as st
 from streamlit.errors import Error
-from st_app import load_client
+from st_app import load_client, run_coroutine
 
 backend_dir = Path(__file__).parent.parent / 'backend'
 sys.path.append(str(backend_dir))
 
 from settings import SystemHandler
-
-def run_coroutine(coro):
-    """Run a coroutine synchronously."""
-    return asyncio.run(coro)
 
 # Helper functions for formatting
 def format_uptime(seconds):
@@ -61,7 +56,7 @@ if __name__ == "__page__":
                 st.error(f"Unexpected error: {str(e)}")
 
     with tab_status:
-        st.markdown("## System Status")
+        st.markdown("### System Status")
         status_btn = st.button("Refresh Status")
 
         if status_btn:
