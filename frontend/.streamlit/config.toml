@@ -5,5 +5,9 @@ secondaryBackgroundColor = "#3b4252"
 textColor = "#d8dee9"
 font = "Fira Sans"
 
-[runner]
-enforceSerializableSessionState = true # only allows pickle-serializable objects in Session State
+[logger]
+level = "debug"
+
+[client]
+showErrorDetails = "type"
+

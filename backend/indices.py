@@ -3,17 +3,17 @@ This module enables users to create and or interact with indices.
 """
 
 import logging
-from r2r import R2RAsyncClient, R2RException
+from r2r import R2RClient, R2RException
 
-class IndexHandler:
+class Indices:
     """One can create, list, remove and refer to a given index."""
 
-    def __init__(self, client: R2RAsyncClient):
+    def __init__(self, client: R2RClient):
         self._client = client
         self._logger = logging.getLogger(__name__)
         self._logger.setLevel(logging.DEBUG)
 
-    async def list_indices(self, filters: dict = None, offset: int = 0, limit: int = 100):
+    def list_indices(self, filters: dict = None, offset: int = 0, limit: int = 100):
         """
         Retrieve a list of indices from the R2R service. 
         Filters can be applied to the list of indices to narrow down the results.
@@ -32,20 +32,20 @@ class IndexHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            indices_resp = await self._client.indices.list(
+            indices_resp = self._client.indices.list(
                 filters=filters,
                 offset=offset,
                 limit=limit
             )
             return indices_resp
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while listing indices: %s [-]', e)
+            self._logger.error('[-] Unexpected error while listing indices: %s [-]', str(e))
             raise
 
-    async def create_index(
+    def create_index(
         self,
         index_method: str,
         index_name: str,
@@ -62,7 +62,6 @@ class IndexHandler:
               index_arguments:
                 M: 16
                 ef_construction: 200
-              concurrently: true
 
         Args:
             index_method: Only hnsw and ivf_flat are supported.
@@ -85,19 +84,19 @@ class IndexHandler:
                 index_measure,
                 index_arguments
             )
-            index_result = await self._client.indices.create(
+            index_result = self._client.indices.create(
                 config=config,
                 run_with_orchestration=True
             )
             return index_result
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except ValueError as ve:
             self._logger.error(str(ve))
             raise ValueError(str(ve)) from ve
         except Exception as e:
-            self._logger.error('[-] Unexpected error while creating index: %s [-]', e)
+            self._logger.error('[-] Unexpected error while creating index: %s [-]', str(e))
             raise
 
     def _construct_index_config(
@@ -130,7 +129,7 @@ class IndexHandler:
         }
         return config
 
-    async def get_index_details(self, index_name: str):
+    def get_index_details(self, index_name: str):
         """
         Retrieve details of an index in the R2R service. 
         Information like performance statistics can be retrieved.
@@ -146,19 +145,19 @@ class IndexHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            index_resp = await self._client.indices.retrieve(
+            index_resp = self._client.indices.retrieve(
                 index_name=index_name,
                 table_name="chunks"
             )
             return index_resp
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 404) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
             self._logger.error('[-] Unexpected error while retrieving index details: %s [-]', e)
             raise
 
-    async def delete_index_by_name(self, index_name: str):
+    def delete_index_by_name(self, index_name: str):
         """
         Delete an index in the R2R service.
 
@@ -173,14 +172,14 @@ class IndexHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            index = await self._client.indices.delete(
+            index = self._client.indices.delete(
                 index_name=index_name,
                 table_name="chunks"
             )
             return index
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 404) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while deleting index: %s [-]', e)
+            self._logger.error('[-] Unexpected error while deleting index: %s [-]', str(e))
             raise

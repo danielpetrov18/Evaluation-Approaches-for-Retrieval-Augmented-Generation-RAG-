@@ -6,12 +6,12 @@ from datetime import datetime
 from r2r import R2RException
 import streamlit as st
 from streamlit.errors import Error
-from st_app import load_client, run_coroutine
+from st_app import load_client
 
 backend_dir = Path(__file__).parent.parent / 'backend'
 sys.path.append(str(backend_dir))
 
-from settings import SystemHandler
+from settings import Settings
 
 # Helper functions for formatting
 def format_uptime(seconds):
@@ -39,7 +39,7 @@ def get_current_time():
 if __name__ == "__page__":
     st.title("⚙️ Settings & System Information")
 
-    system_handler = SystemHandler(client=load_client())
+    system_handler = Settings(client=load_client())
 
     tab_health, tab_status, tab_settings = st.tabs(["Health", "Status", "Settings"])
 
@@ -48,7 +48,7 @@ if __name__ == "__page__":
         health_btn = st.button("Check health")
         if health_btn:
             try:
-                message = run_coroutine(system_handler.health())
+                message = system_handler.health()
                 st.success(f"Service Status: {message.results.message}", icon="✅")
             except R2RException as r2re:
                 st.error(f"Error checking health: {str(r2re)}")
@@ -62,7 +62,7 @@ if __name__ == "__page__":
         if status_btn:
             try:
                 with st.spinner("Fetching system status..."):
-                    status = run_coroutine(system_handler.status()).results
+                    status = system_handler.status().results
 
                 col1, col2 = st.columns(2)
 
@@ -92,7 +92,7 @@ if __name__ == "__page__":
         config_btn = st.button("Check configs")
         if config_btn:
             try:
-                settings = run_coroutine(system_handler.settings()).results.config
+                settings = system_handler.settings().results.config
                 if settings and isinstance(settings, dict):
                     st.write("**R2R Backend Settings:**")
 

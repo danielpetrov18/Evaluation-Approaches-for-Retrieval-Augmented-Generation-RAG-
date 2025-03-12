@@ -5,7 +5,7 @@ This modules helps the user interact with prompts that are part of the database.
 import logging
 import dataclasses
 import yaml
-from r2r import R2RAsyncClient, R2RException
+from r2r import R2RClient, R2RException
 
 @dataclasses.dataclass
 class MyPrompt:
@@ -14,17 +14,17 @@ class MyPrompt:
     template: str
     input_types: dict
 
-class PromptHandler:
+class Prompts:
     """
     This class supports functionality for adding, listing, deleting and updating prompts.
     """
 
-    def __init__(self, client: R2RAsyncClient):
+    def __init__(self, client: R2RClient):
         self._client = client
         self._logger = logging.getLogger(__name__)
         self._logger.setLevel(logging.DEBUG)
 
-    async def list_prompts(self):
+    def list_prompts(self):
         """
         Retrieve a list of prompts from the R2R service. 
 
@@ -36,16 +36,16 @@ class PromptHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            prompts_resp = await self._client.prompts.list()
+            prompts_resp = self._client.prompts.list()
             return prompts_resp
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while listing prompts: %s [-]', e)
+            self._logger.error('[-] Unexpected error while listing prompts: %s [-]', str(e))
             raise
 
-    async def create_prompt(self, filepath: str):
+    def create_prompt(self, filepath: str):
         """
         Create a prompt in the R2R service. 
         The prompt is identified by its name, and has a template and input types.
@@ -63,20 +63,20 @@ class PromptHandler:
         """
         try:
             prompt = self._load_prompt_from_yaml(filepath)
-            prompt_resp = await self._client.prompts.create(
+            prompt_resp = self._client.prompts.create(
                 name=prompt.name,
                 template=prompt.template,
                 input_types=prompt.input_types
             )
             return prompt_resp
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except ValueError as ve:
             self._logger.error(str(ve))
             raise ValueError(str(ve)) from ve
         except Exception as e:
-            self._logger.error('[-] Unexpected error while creating prompt: %s [-]', e)
+            self._logger.error('[-] Unexpected error while creating prompt: %s [-]', str(e))
             raise
 
     def _load_prompt_from_yaml(self, filepath: str):
@@ -124,7 +124,7 @@ class PromptHandler:
             self._logger.error('[-] Error while loading YAML file: %s [-]', e)
             raise
 
-    async def get_prompt_by_name(self, name: str):
+    def get_prompt_by_name(self, name: str):
         """
         Retrieve a prompt from the R2R service by its name.
         
@@ -139,16 +139,16 @@ class PromptHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            prompt_resp = await self._client.prompts.retrieve(name)
+            prompt_resp = self._client.prompts.retrieve(name)
             return prompt_resp
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 404) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while getting prompt: %s [-]', e)
+            self._logger.error('[-] Unexpected error while getting prompt: %s [-]', str(e))
             raise
 
-    async def update_prompt(self, name: str, template: str = None, input_types: dict = None):
+    def update_prompt(self, name: str, template: str = None, input_types: dict = None):
         """
         Update a prompt in the R2R service. 
         
@@ -165,20 +165,20 @@ class PromptHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            update_resp = await self._client.prompts.update(
+            update_resp = self._client.prompts.update(
                 name,
                 template,
                 input_types
             )
             return update_resp
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while updating prompt: %s [-]', e)
+            self._logger.error('[-] Unexpected error while updating prompt: %s [-]', str(e))
             raise
 
-    async def delete_prompt_by_name(self, name: str):
+    def delete_prompt_by_name(self, name: str):
         """
         Delete a prompt from the R2R service by its name.
         
@@ -193,11 +193,11 @@ class PromptHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            deletion_resp = await self._client.prompts.delete(name)
+            deletion_resp = self._client.prompts.delete(name)
             return deletion_resp
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 404) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while deleting prompt: %s [-]', e)
+            self._logger.error('[-] Unexpected error while deleting prompt: %s [-]', str(e))
             raise

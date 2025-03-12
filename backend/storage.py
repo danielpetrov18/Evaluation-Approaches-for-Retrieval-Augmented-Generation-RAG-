@@ -13,15 +13,15 @@ import json
 import requests
 import pandas as pd
 from dotenv import load_dotenv
-from r2r import R2RException, R2RAsyncClient
+from r2r import R2RException, R2RClient
 
-class StorageHandler:
+class Storage:
     """
     This class enables users to interact with the stored data.
     Additionally deletion, insertion and update are possible.
     """
 
-    def __init__(self, client: R2RAsyncClient):
+    def __init__(self, client: R2RClient):
         self._client = client
         self._logger = logging.getLogger(__name__)
         self._logger.setLevel(logging.DEBUG)
@@ -31,7 +31,7 @@ class StorageHandler:
         self._file_dir.mkdir(parents=True, exist_ok=True)
         self._export_dir.mkdir(parents=True, exist_ok=True)
 
-    async def list_documents(self, ids: list[str] = None, offset: int = 0, limit: int = 10):
+    def list_documents(self, ids: list[str] = None, offset: int = 0, limit: int = 100):
         """
         Retrieve a list of documents from the R2R service.
 
@@ -43,20 +43,20 @@ class StorageHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            documents = await self._client.documents.list(
+            documents = self._client.documents.list(
                 ids=ids,
                 offset=offset,
                 limit=limit
             )
             return documents
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while listing documents: %s [-]', e)
+            self._logger.error('[-] Unexpected error while listing documents: %s [-]', str(e))
             raise
 
-    async def ingest_file(self, filepath: str, metadata: dict = None):
+    def ingest_file(self, filepath: str, metadata: dict = None):
         """
         Ingest a file from the local file system into the R2R service. (/backend/data)
         
@@ -74,10 +74,10 @@ class StorageHandler:
         try:
             ingestion_mode = 'fast'
             file_extension = str(filepath).rsplit('.', maxsplit=1)[-1]
-            if file_extension in ('pdf', 'md'):
+            if file_extension in ('pdf', 'md', 'html'):
                 ingestion_mode = 'custom'
 
-            ingestion_result = await self._client.documents.create(
+            ingestion_result = self._client.documents.create(
                 file_path=filepath,
                 ingestion_mode=ingestion_mode,
                 metadata=metadata,
@@ -85,13 +85,13 @@ class StorageHandler:
             )
             return ingestion_result
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while ingesting document: %s [-]', e)
+            self._logger.error('[-] Unexpected error while ingesting document: %s [-]', str(e))
             raise
 
-    async def ingest_chunks(self, chunks: list[str], metadata: dict = None):
+    def ingest_chunks(self, chunks: list[str], metadata: dict = None):
         """
         Ingests a list of text chunks into the R2R service. 
 
@@ -107,7 +107,7 @@ class StorageHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            ingestion_result = await self._client.documents.create(
+            ingestion_result = self._client.documents.create(
                 chunks=chunks,
                 ingestion_mode='fast',
                 metadata=metadata,
@@ -115,13 +115,13 @@ class StorageHandler:
             )
             return ingestion_result
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while ingesting chunks: %s [-]', e)
+            self._logger.error('[-] Unexpected error while ingesting chunks: %s [-]', str(e))
             raise
 
-    async def export_documents_to_csv(
+    def export_documents_to_csv(
         self,
         out_path: str|Path,
         bearer_token: str,
@@ -174,12 +174,11 @@ class StorageHandler:
             )
 
             if response.status_code != 200:
-                self._logger.error('[-] Failed to export documents: %s [-]', response.text)
                 raise R2RException(response.text, response.status_code)
 
             df = pd.read_csv(io.StringIO(response.text))
             if df.shape[0] == 0: # If the dataframe is empty (no rows)
-                raise R2RException('No messages found', 404)
+                raise R2RException('No documents found', 404)
 
             df['metadata'] = df['metadata'].apply(json.loads)
 
@@ -189,13 +188,13 @@ class StorageHandler:
             df.to_csv(out_path, index=False)
 
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while exporting documents: %s [-]', e)
+            self._logger.error('[-] Unexpected error while exporting documents: %s [-]', str(e))
             raise
 
-    async def export_documents_to_zip(
+    def export_documents_to_zip(
         self,
         *,
         out_path: str|Path,
@@ -214,7 +213,7 @@ class StorageHandler:
             start_date = datetime(2025, 3, 7, 10, 0, 0, 0)
             end_date = datetime(2025, 3, 7, 17, 0, 0, 0)
 
-            await storage_handler.export_documents_to_zip(
+            storage_handler.export_documents_to_zip(
                 out_path="testing",
                 bearer_token=bearer_token,
                 document_ids=None,
@@ -254,7 +253,6 @@ class StorageHandler:
             )
 
             if response.status_code != 200:
-                self._logger.error('[-] Failed to export documents: %s [-]', response.text)
                 raise R2RException(response.text, response.status_code)
 
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -263,11 +261,14 @@ class StorageHandler:
             with open(out_path, 'wb') as f:
                 f.write(response.content)
 
+        except R2RException as r2re:
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
             self._logger.error('[-] Unexpected error while exporting documents to zip: %s [-]', e)
             raise
 
-    async def get_document_metadata_by_id(self, doc_id: str):
+    def get_document_metadata_by_id(self, doc_id: str):
         """
         Retrieve a document from the R2R service by its id. This doesn't return the actual
         content of the ingested file (assuming it exists). It just gives metadata.
@@ -283,16 +284,16 @@ class StorageHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            document = await self._client.documents.retrieve(doc_id)
+            document = self._client.documents.retrieve(doc_id)
             return document
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 404) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while retrieving document: %s [-]', e)
+            self._logger.error('[-] Unexpected error while retrieving document: %s [-]', str(e))
             raise
 
-    async def delete_document_by_id(self, doc_id: str):
+    def delete_document_by_id(self, doc_id: str):
         """
         Delete a document from the R2R service by its id.
 
@@ -307,16 +308,16 @@ class StorageHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            deletion_result = await self._client.documents.delete(doc_id)
+            deletion_result = self._client.documents.delete(doc_id)
             return deletion_result
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while deleting document: %s [-]', e)
+            self._logger.error('[-] Unexpected error while deleting document: %s [-]', str(e))
             raise
 
-    async def list_document_chunks(self, doc_id: str, offset: int = 0, limit: int = 100):
+    def list_document_chunks(self, doc_id: str, offset: int = 0, limit: int = 100):
         """
         Fetches chunks of a document from the R2R service.
 
@@ -334,7 +335,7 @@ class StorageHandler:
         """
 
         try:
-            chunks = await self._client.documents.list_chunks(
+            chunks = self._client.documents.list_chunks(
                 id=doc_id,
                 include_vectors=False,
                 offset=offset,
@@ -342,13 +343,13 @@ class StorageHandler:
             )
             return chunks
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 404) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while fetching document chunks: %s [-]', e)
+            self._logger.error('[-] Unexpected error while fetching doc chunks: %s [-]', str(e))
             raise
 
-    async def download_document_content(self, doc_id: str):
+    def download_document_content(self, doc_id: str):
         """
         Downloads the original file content of a document.
         For uploaded files, returns the original file with its proper MIME type. 
@@ -367,16 +368,16 @@ class StorageHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            docs_bytes = await self._client.documents.download(doc_id)
+            docs_bytes = self._client.documents.download(doc_id)
             return docs_bytes
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 404) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
             self._logger.error('[-] Unexpected error while downloading document content: %s [-]', e)
             raise
 
-    async def delete_documents_by_filter(self, filters: dict):
+    def delete_documents_by_filter(self, filters: dict):
         """
         Delete documents based on provided filters. 
 
@@ -413,90 +414,16 @@ class StorageHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            deletion_result = await self._client.documents.delete_by_filter(filters)
+            deletion_result = self._client.documents.delete_by_filter(filters)
             return deletion_result
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while deleting documents: %s [-]', e)
+            self._logger.error('[-] Unexpected error while deleting documents: %s [-]', str(e))
             raise
 
-    async def search_document_summaries(self, query: str):
-        """
-        Searches for document summaries based on a query.
-
-        Args:
-            query (str): The query to search for.
-
-        Returns:
-            WrappedDocumentSearchResponse: The search response containing all selected data.
-
-        Raises:
-            R2RException: If there is an error while searching for summaries.
-            Exception: If an unexpected error occurs.
-        """
-        try:
-            summaries_response = await self._client.documents.search(
-                query=query,
-                search_mode="custom",
-                search_settings={
-                    "include_metadatas": True,
-                    "include_scores": True,
-                    "search_strategy": "vanilla",
-                    "chunk_settings": {
-                        "index_measure": "cosine_distance"
-                    }
-                }
-            )
-            return summaries_response
-        except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
-        except Exception as e:
-            self._logger.error('[-] Unexpected error while searching summaries: %s [-]', e)
-            raise
-
-    async def retrieve_similar_chunks(self, query: str, filters: dict = None, limit: int = 10):
-        """
-        Retrieves similar chunks based on a query and optional filters.
-
-        Args:
-            query (str): The query to search for.
-            filters (dict, optional): Filter criteria in JSON format. Defaults to None.
-            limit (int, optional): The maximum number of chunks to retrieve. Defaults to 10.
-
-        Returns:
-            WrappedVectorSearchResponse: The search response containing the similar chunks.
-
-        Raises:
-            R2RException: If there is an error while retrieving similar chunks.
-            Exception: If an unexpected error occurs.
-        """
-        try:
-            search_settings = {
-                "limit": limit,
-                "include_metadatas": True,
-                "include_scores": True,
-                "search_strategy": "vanilla"
-            }
-
-            if filters is not None:
-                search_settings["filters"] = filters
-
-            similar_chunks = await self._client.chunks.search(
-                query=query,
-                search_settings=search_settings
-            )
-            return similar_chunks
-        except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
-        except Exception as e:
-            self._logger.error('[-] Unexpected error while retrieving similar chunks: %s [-]', e)
-            raise
-
-    async def fetch_chunk_by_id(self, chunk_id: str):
+    def fetch_chunk_by_id(self, chunk_id: str):
         """
         Retrieve a chunk from the R2R service by its id.
 
@@ -511,16 +438,16 @@ class StorageHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            chunk = await self._client.chunks.retrieve(chunk_id)
+            chunk = self._client.chunks.retrieve(chunk_id)
             return chunk
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 404) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while retrieving chunk: %s [-]', e)
+            self._logger.error('[-] Unexpected error while retrieving chunk: %s [-]', str(e))
             raise
 
-    async def update_chunk_by_id(self, chunk_id: str, new_text: str, metadata: dict = None):
+    def update_chunk_by_id(self, chunk_id: str, new_text: str, metadata: dict = None):
         """
         Update a chunk in the R2R service by its id.
 
@@ -537,7 +464,7 @@ class StorageHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            response = await self._client.chunks.update(
+            response = self._client.chunks.update(
                 chunk={
                         "id": chunk_id,
                         "text": new_text,
@@ -546,13 +473,13 @@ class StorageHandler:
             )
             return response
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while updating chunk: %s [-]', e)
+            self._logger.error('[-] Unexpected error while updating chunk: %s [-]', str(e))
             raise
 
-    async def delete_chunk_by_id(self, chunk_id: str):
+    def delete_chunk_by_id(self, chunk_id: str):
         """
         Delete a chunk in the R2R service by its id.
 
@@ -567,16 +494,16 @@ class StorageHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            response = await self._client.chunks.delete(chunk_id)
+            response = self._client.chunks.delete(chunk_id)
             return response
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while deleting a chunk: %s [-]', e)
+            self._logger.error('[-] Unexpected error while deleting a chunk: %s [-]', str(e))
             raise
 
-    async def list_chunks(
+    def list_chunks(
         self,
         metadata_filters: dict = None,
         offset: int = 0,
@@ -588,7 +515,6 @@ class StorageHandler:
 
         Args:
             metadata_filters (dict, optional): Filter to apply based on chunk metadata.
-            filters (dict, optional): Additional filters for chunk retrieval.
             offset (int, optional): The starting point for fetching chunks.
             limit (int, optional): The maximum number of chunks to fetch.
             filters (dict, optional): Additional filters for chunk retrieval.
@@ -603,7 +529,7 @@ class StorageHandler:
         """
 
         try:
-            response = await self._client.chunks.list(
+            response = self._client.chunks.list(
                 include_vectors=False,
                 offset=offset,
                 limit=limit,
@@ -633,13 +559,13 @@ class StorageHandler:
 
             return response
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while listing chunks: %s [-]', e)
+            self._logger.error('[-] Unexpected error while listing chunks: %s [-]', str(e))
             raise
 
-    async def clean_db(self):
+    def clean_db(self):
         """
         Cleans the database by deleting all documents from the R2R service.
 
@@ -654,14 +580,14 @@ class StorageHandler:
         """
 
         try:
-            docs_metadata = await self.list_documents()
+            docs_metadata = self.list_documents()
             doc_ids = [doc_metadata.id for doc_metadata in docs_metadata.results]
             for doc_id in doc_ids:
-                await self.delete_document_by_id(doc_id)
+                self.delete_document_by_id(doc_id)
             self._logger.debug("[+] Deleted all files! [+]")
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while cleaning database: %s [-]', e)
+            self._logger.error('[-] Unexpected error while cleaning database: %s [-]', str(e))
             raise

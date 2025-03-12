@@ -83,3 +83,5 @@ dmypy.json
 local.sqlite
 
 *venv
+
+logs

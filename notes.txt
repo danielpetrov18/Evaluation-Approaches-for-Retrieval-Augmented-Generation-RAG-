@@ -1,5 +1,0 @@
-1. Try to figure out how to use the GPU completely without relying on CPU if possible
-2. When installing r2r[core] the prompts are missing in the /core/providers/database/prompts.
-    Can be downloaded from their official github page.
-3. From observations the chunk enrichment is not worth it since it takes a lot of time and it usually
-    leads to a timeout.

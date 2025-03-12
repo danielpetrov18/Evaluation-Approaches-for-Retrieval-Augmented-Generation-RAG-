@@ -11,15 +11,15 @@ from datetime import datetime
 import requests
 import pandas as pd
 from dotenv import load_dotenv
-from r2r import R2RAsyncClient, R2RException
+from r2r import R2RClient, R2RException
 
-class ConversationHandler:
+class Conversations:
     """
     This class supports functionality for creating, listing conversations and their metadata.
     One can also export messages and or conversations.
     """
 
-    def __init__(self, client: R2RAsyncClient):
+    def __init__(self, client: R2RClient):
         self._client = client
         self._logger = logging.getLogger(__name__)
         self._logger.setLevel(logging.DEBUG)
@@ -27,7 +27,7 @@ class ConversationHandler:
         self._export_dir = Path(os.getenv("EXPORT_DIRECTORY"))
         self._export_dir.mkdir(parents=True, exist_ok=True)
 
-    async def list_conversations(self, ids: list[str] = None, offset: int = 0, limit: int = 100):
+    def list_conversations(self, ids: list[str] = None, offset: int = 0, limit: int = 100):
         """
         Retrieve a list of conversations from the R2R service.
 
@@ -44,20 +44,20 @@ class ConversationHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            conversatios_resp = await self._client.conversations.list(
+            conversatios_resp = self._client.conversations.list(
                 ids,
                 offset,
                 limit
             )
             return conversatios_resp
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while listing conversations: %s [-]', e)
+            self._logger.error('[-] Unexpected error while listing conversations: %s [-]', str(e))
             raise
 
-    async def create_conversation(self, name: str, bearer_token: str):
+    def create_conversation(self, name: str, bearer_token: str):
         """
         Create a new conversation in the R2R service.
 
@@ -82,14 +82,16 @@ class ConversationHandler:
             )
 
             if response.status_code != 200:
-                self._logger.error('[-] Failed to create conversation: %s [-]', response.text)
                 raise R2RException(response.text, response.status_code)
 
+        except R2RException as r2re:
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
             self._logger.error('[-] Unexpected error while creating conversation: %s [-]', e)
             raise
 
-    async def export_conversations_to_csv(
+    def export_conversations_to_csv(
         self,
         bearer_token: str,
         out: str,
@@ -156,13 +158,13 @@ class ConversationHandler:
             df.to_csv(out, index=False)
 
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while exporting conversation: %s [-]', e)
+            self._logger.error('[-] Unexpected error while exporting conversation: %s [-]', str(e))
             raise
 
-    async def export_messages_to_csv(
+    def export_messages_to_csv(
         self,
         bearer_token: str,
         out: str,
@@ -239,13 +241,13 @@ class ConversationHandler:
             df.to_csv(out, index=False)
 
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), r2re.status_code) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while exporting messages: %s [-]', e)
+            self._logger.error('[-] Unexpected error while exporting messages: %s [-]', str(e))
             raise
 
-    async def get_conversation(self, conversation_id: str):
+    def get_conversation(self, conversation_id: str):
         """
         Retrieve a conversation from the R2R service by its ID.
 
@@ -260,16 +262,16 @@ class ConversationHandler:
             Exception: If an unexpected error occurs.
         """
         try:
-            conversation_data = await self._client.conversations.retrieve(conversation_id)
+            conversation_data = self._client.conversations.retrieve(conversation_id)
             return conversation_data
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 404) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while retrieving conversation: %s [-]', e)
+            self._logger.error('[-] Unexpected error while retrieving conversation: %s [-]', str(e))
             raise
 
-    async def delete_conversation(self, conversation_id: str):
+    def delete_conversation(self, conversation_id: str):
         """
         Delete a conversation from the R2R service by its ID.
 
@@ -285,16 +287,16 @@ class ConversationHandler:
         """
 
         try:
-            deletion_resp = await self._client.conversations.delete(conversation_id)
+            deletion_resp = self._client.conversations.delete(conversation_id)
             return deletion_resp
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while deleting conversation: %s [-]', e)
+            self._logger.error('[-] Unexpected error while deleting conversation: %s [-]', str(e))
             raise
 
-    async def add_message(
+    def add_message(
         self,
         conversation_id: str,
         role: str,
@@ -330,13 +332,13 @@ class ConversationHandler:
             )
             return response
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while adding message: %s [-]', e)
+            self._logger.error('[-] Unexpected error while adding message: %s [-]', str(e))
             raise
 
-    async def update_message(self, conversation_id: str, message_id: str, metadata: dict):
+    def update_message(self, conversation_id: str, message_id: str, metadata: dict):
         """
         Update a message's metadata in a conversation in the R2R service.
 
@@ -361,8 +363,8 @@ class ConversationHandler:
             )
             return response
         except R2RException as r2re:
-            self._logger.error(str(r2re))
-            raise R2RException(str(r2re), 500) from r2re
+            self._logger.error(r2re.message)
+            raise R2RException(r2re.message, r2re.status_code) from r2re
         except Exception as e:
-            self._logger.error('[-] Unexpected error while updating message: %s [-]', e)
+            self._logger.error('[-] Unexpected error while updating message: %s [-]', str(e))
             raise
