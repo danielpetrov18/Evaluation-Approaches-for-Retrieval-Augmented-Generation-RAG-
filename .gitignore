@@ -85,3 +85,6 @@ local.sqlite
 *venv
 
 logs
+
+# Extended context window Ollama file
+Modelfile
