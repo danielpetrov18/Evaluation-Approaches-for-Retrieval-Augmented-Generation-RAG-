@@ -4,10 +4,3 @@ backgroundColor = "#2e3440"
 secondaryBackgroundColor = "#3b4252" 
 textColor = "#d8dee9"
 font = "Fira Sans"
-
-[logger]
-level = "debug"
-
-[client]
-showErrorDetails = "type"
-

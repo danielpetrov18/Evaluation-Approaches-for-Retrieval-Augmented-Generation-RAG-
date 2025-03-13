@@ -22,6 +22,12 @@ def get_pages() -> list[StreamlitPage]:
             icon=":material/home:",
             default=True
         ),
+        st.Page(
+            page="st_conversation.py",
+            title="Conversations",
+            url_path="conversations",
+            icon=":material/forum:"
+        ),
     #    st.Page("st_storage.py", title="Document management", url_path="documents", icon=":material/docs:"),
         st.Page(
             page="st_settings.py",
@@ -29,7 +35,7 @@ def get_pages() -> list[StreamlitPage]:
             url_path="settings",
             icon=":material/settings:"
         ),
-    #    st.Page("st_chat.py", title="Chatbot", icon=":material/chat:"),  
+    #    st.Page("st_chat.py", title="Chatbot", icon=":material/chat:"),
         st.Page(
             page="st_prompt.py",
             title="Prompts",
