@@ -7,12 +7,17 @@ import yaml
 import streamlit as st
 from streamlit.errors import Error
 from r2r import R2RException
-from st_app import load_client, run_coroutine
+from st_app import load_client
 
 backend_dir = Path(__file__).parent.parent / 'backend'
 sys.path.append(str(backend_dir))
 
-from index import IndexHandler
+from indices import Indices
+
+@st.cache_resource
+def get_index_handler():
+    """Get the index handler."""
+    return Indices(client=load_client())
 
 @dataclass
 class Index:
@@ -35,8 +40,8 @@ def load_index_config_from_yaml(filepath: str | Path) -> Index:
     Returns:
         Index object
     """
-    with open(file=filepath, mode='r', encoding='utf-8') as file:
-        data = yaml.safe_load(file)
+    with open(file=filepath, mode='r', encoding='utf-8') as file_handle:
+        data = yaml.safe_load(file_handle)
 
     if not isinstance(data, dict) or len(data.keys()) != 1:
         raise ValueError(
@@ -67,14 +72,12 @@ if __name__ == "__page__":
         ["List Indices", "Create Index", "Retrieve Index", "Delete Index"]
     )
 
-    index_handler = IndexHandler(client=load_client())
-
     with tab_list:
         st.markdown("**List Indices**")
         list_btn = st.button("Fetch Indices")
         if list_btn:
             try:
-                indices = run_coroutine(index_handler.list_indices()).results.indices
+                indices = get_index_handler().list_indices().results.indices
                 if indices:
                     st.write(f"Found {len(indices)} indices:")
                     for index in indices:
@@ -89,7 +92,7 @@ if __name__ == "__page__":
     with tab_create:
         st.markdown("**Create Index from YAML**")
 
-        with st.expander("Upload Instructions", expanded=True):
+        with st.expander("Upload Instructions", expanded=False):
             st.markdown("""
             ### YAML File Requirements
             
@@ -106,7 +109,7 @@ if __name__ == "__page__":
                         m: 16
                         ef_construction: 64
                         ef: 40 
-            """, language="yaml")
+            """, language="yaml", line_numbers=True)
 
         uploaded_file = st.file_uploader(
             label="Upload YAML Index File",
@@ -115,7 +118,7 @@ if __name__ == "__page__":
         create_btn = st.button("Create Index")
 
         if create_btn and uploaded_file is not None:
-            index_config_dir = Path(backend_dir) / "index"
+            index_config_dir = Path(backend_dir) / "indices"
 
             # Construct the target file path
             target_path = index_config_dir / uploaded_file.name
@@ -136,13 +139,11 @@ if __name__ == "__page__":
                     index = load_index_config_from_yaml(str(target_path))
 
                     # Create the index
-                    idx_creation_resp = run_coroutine(
-                        index_handler.create_index(
-                            index_method=index.method,
-                            index_name=index.name,
-                            index_measure=index.measure,
-                            index_arguments=index.arguments
-                        )
+                    idx_creation_resp = get_index_handler().create_index(
+                        index_method=index.method,
+                        index_name=index.name,
+                        index_measure=index.measure,
+                        index_arguments=index.arguments
                     )
                     st.success(
                         f"Index created successfully! Message: {idx_creation_resp.results}",
@@ -165,11 +166,7 @@ if __name__ == "__page__":
 
         if retrieve_btn and chosen_idx.strip():
             try:
-                index_data = run_coroutine(
-                    index_handler.get_index_details(
-                        index_name = chosen_idx.strip()
-                    )
-                ).results
+                index_data = get_index_handler().get_index_details(chosen_idx.strip()).results
 
                 if index_data:
                     st.markdown("**Index Details:**")
@@ -188,13 +185,9 @@ if __name__ == "__page__":
 
         if del_btn and del_index_name.strip():
             try:
-                result = run_coroutine(
-                    index_handler.delete_index_by_name(
-                        index_name = del_index_name.strip()
-                    )
-                )
+                result = get_index_handler().delete_index_by_name(del_index_name.strip())
 
-                index_dir = Path(backend_dir) / "index"
+                index_dir = Path(backend_dir) / "indices"
                 for file in index_dir.iterdir():
                     FULLPATH = str(index_dir / file.name)
                     idx_obj = load_index_config_from_yaml(FULLPATH)

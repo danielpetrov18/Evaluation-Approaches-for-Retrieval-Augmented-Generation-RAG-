@@ -36,10 +36,13 @@ def get_current_time():
     """Return current time formatted nicely."""
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+@st.cache_resource
+def get_settings_handler():
+    """Get the settings handler."""
+    return Settings(client=load_client())
+
 if __name__ == "__page__":
     st.title("⚙️ Settings & System Information")
-
-    system_handler = Settings(client=load_client())
 
     tab_health, tab_status, tab_settings = st.tabs(["Health", "Status", "Settings"])
 
@@ -48,7 +51,7 @@ if __name__ == "__page__":
         health_btn = st.button("Check health")
         if health_btn:
             try:
-                message = system_handler.health()
+                message = get_settings_handler().health()
                 st.success(f"Service Status: {message.results.message}", icon="✅")
             except R2RException as r2re:
                 st.error(f"Error checking health: {str(r2re)}")
@@ -62,7 +65,7 @@ if __name__ == "__page__":
         if status_btn:
             try:
                 with st.spinner("Fetching system status..."):
-                    status = system_handler.status().results
+                    status = get_settings_handler().status().results
 
                 col1, col2 = st.columns(2)
 
@@ -92,13 +95,12 @@ if __name__ == "__page__":
         config_btn = st.button("Check configs")
         if config_btn:
             try:
-                settings = system_handler.settings().results.config
+                settings = get_settings_handler().settings().results.config
                 if settings and isinstance(settings, dict):
                     st.write("**R2R Backend Settings:**")
 
                     for key, value in settings.items():
                         with st.expander(key, expanded=False):
-                            # If the value is a dict, show it as json
                             if isinstance(value, dict):
                                 st.json(value)
                             else:

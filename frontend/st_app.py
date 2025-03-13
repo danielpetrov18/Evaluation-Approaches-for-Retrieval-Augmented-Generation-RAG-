@@ -2,19 +2,15 @@
 This module holds all the available pages of the frontend application.
 """
 
-import asyncio
-from r2r import R2RClient
 import streamlit as st
+from r2r import R2RClient
 from streamlit.navigation.page import StreamlitPage
 
 # Every resource defined in the main page can be accessed by all pages
+@st.cache_resource
 def load_client() -> R2RClient:
     """Loads the client necessary to interact with the backend."""
     return R2RClient('http://localhost:7272')
-
-# def run_coroutine(coro):
-#     """Run a coroutine synchronously."""
-#     return asyncio.run(coro)
 
 def get_pages() -> list[StreamlitPage]:
     """Defines main pages."""
@@ -34,13 +30,18 @@ def get_pages() -> list[StreamlitPage]:
             icon=":material/settings:"
         ),
     #    st.Page("st_chat.py", title="Chatbot", icon=":material/chat:"),  
-    #    st.Page("st_prompt.py", title="Prompts", url_path="prompts", icon=":material/notes:"),
-        # st.Page(
-        #     page="st_index.py",
-        #     title="Index Management",
-        #     url_path="index",
-        #     icon=":material/description:"
-        # )
+        st.Page(
+            page="st_prompt.py",
+            title="Prompts",
+            url_path="prompts",
+            icon=":material/notes:"
+        ),
+        st.Page(
+            page="st_index.py",
+            title="Index Management",
+            url_path="index",
+            icon=":material/description:"
+        )
     ]
 
 if __name__ == "__main__":

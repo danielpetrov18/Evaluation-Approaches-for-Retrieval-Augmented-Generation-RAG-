@@ -148,36 +148,6 @@ class Prompts:
             self._logger.error('[-] Unexpected error while getting prompt: %s [-]', str(e))
             raise
 
-    def update_prompt(self, name: str, template: str = None, input_types: dict = None):
-        """
-        Update a prompt in the R2R service. 
-        
-        Args:
-            name (str): Name of the prompt.
-            template (str, optional): Template for the prompt.
-            input_types (dict, optional): Dictionary mapping input names to input types.
-
-        Returns:
-            WrappedGenericMessageResponse: Response from the R2R service.
-        
-        Raises:
-            R2RException: If there is an error while updating the prompt.
-            Exception: If an unexpected error occurs.
-        """
-        try:
-            update_resp = self._client.prompts.update(
-                name,
-                template,
-                input_types
-            )
-            return update_resp
-        except R2RException as r2re:
-            self._logger.error(r2re.message)
-            raise R2RException(r2re.message, r2re.status_code) from r2re
-        except Exception as e:
-            self._logger.error('[-] Unexpected error while updating prompt: %s [-]', str(e))
-            raise
-
     def delete_prompt_by_name(self, name: str):
         """
         Delete a prompt from the R2R service by its name.
