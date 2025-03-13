@@ -149,7 +149,10 @@ class Conversations:
             if filters:
                 for column, value in filters.items():
                     if column in df.columns:
-                        df = df[df[column] == value]  # Modify df in-place
+                        if isinstance(value, list):  # If filtering with multiple values
+                            df = df[df[column].isin(value)]
+                        else:  # Single value filter
+                            df = df[df[column] == value]
 
             out = Path(
                 self._export_dir,
