@@ -20,13 +20,6 @@ def get_conversations_handler():
 if __name__ == "__page__":
     st.title("🗪 Manage conversations")
 
-    if "token" not in st.session_state:
-        bearer_token = load_client().users.login(
-            email = "admin@example.com",
-            password = "change_me_immediately"
-        ).results.access_token.token
-        st.session_state["token"] = bearer_token
-
     if "items_per_page" not in st.session_state:
         st.session_state["items_per_page"] = 10
 

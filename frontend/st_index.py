@@ -1,23 +1,12 @@
 """GUI support for managing indices."""
 
-import sys
 from pathlib import Path
 from dataclasses import dataclass
 import yaml
 import streamlit as st
 from streamlit.errors import Error
 from r2r import R2RException
-from st_app import load_client
-
-backend_dir = Path(__file__).parent.parent / 'backend'
-sys.path.append(str(backend_dir))
-
-from indices import Indices
-
-@st.cache_resource
-def get_index_handler():
-    """Get the index handler."""
-    return Indices(client=load_client())
+from st_app import load_client # pylint: disable=E0401
 
 @dataclass
 class Index:
@@ -65,29 +54,148 @@ def load_index_config_from_yaml(filepath: str | Path) -> Index:
 
     return Index(idx_name, idx_method, idx_measure, idx_args)
 
+def list_indices():
+    """Fetch all available indices"""
+    try:
+        indices = load_client().indices.list().results.indices
+        if indices:
+            for obj in indices:
+                with st.expander(
+                    label=f"Index: {obj.index['name']}",
+                    expanded=False
+                ):
+                    st.json(obj)
+        else:
+            st.info("No indices found.")
+    except R2RException as r2re:
+        st.error(f"Error listing indices: {str(r2re)}")
+    except Error as e:
+        st.error(f"Unexpected error: {str(e)}")
+
+def _construct_index_config(
+    index_method: str,
+    index_name: str,
+    index_measure: str,
+    index_arguments: dict
+) -> dict:
+    """Helper function to construct index configuration."""
+    # https://medium.com/@emreks/comparing-ivfflat-and-hnsw-with-pgvector-performance-analysis-on-diverse-datasets-e1626505bc9a
+    # https://towardsdatascience.com/similarity-search-part-4-hierarchical-navigable-small-world-hnsw-2aad4fe87d37/
+
+    if index_method not in ('hnsw', 'ivf_flat'):
+        raise ValueError('[-] Invalid index method, only hnsw and ivf_flat are supported! [-]')
+
+    if index_measure not in ('ip_distance', 'l2_distance', 'cosine_distance'):
+        raise ValueError('[-] Only ip_distance, l2_distance and cosine_distance are supported!')
+
+    config = {
+        # According to the documentation it should be vectors. However, it doesn't work.
+        'table_name': 'chunks',
+        'index_method': index_method,
+        'index_measure': index_measure,
+        'index_arguments': index_arguments,
+        'index_name': index_name,
+        # According documentaition it should be 'embedding', however it doesn't work.
+        # I've established connection to the pgvector container. It should be 'vec'.
+        'index_column': 'vec', 
+        'concurrently': True
+    }
+    return config
+
+def create_idx(file):
+    """Create an index from an uploaded YAML file."""
+
+    target_path = Path(st.session_state['indices_dir']) / file.name
+
+    # Check if file already exists
+    if target_path.exists():
+        st.error(
+            "A file with this name already exists. Please rename your file and try again.", 
+            icon="⚠️"
+        )
+    else:
+        # Save the uploaded file (uploaded as bytes)
+        with open(file=target_path, mode='wb') as f:
+            f.write(file.getbuffer())
+
+        try:
+            # Parse the config
+            index = load_index_config_from_yaml(str(target_path))
+
+            idx_config = _construct_index_config(
+                index_method=index.method,
+                index_name=index.name,
+                index_measure=index.measure,
+                index_arguments=index.arguments
+            )
+
+            idx_creation_resp = load_client().indices.create(
+                config=idx_config,
+                run_with_orchestration=True
+            )
+            st.success(idx_creation_resp.results.message, icon="✅")
+        except ValueError as ve:
+            target_path.unlink(missing_ok=True)
+            st.error(f"Error in YAML file structure: {str(ve)}")
+        except R2RException as r2re:
+            target_path.unlink(missing_ok=True)
+            st.error(f"Error creating index: {str(r2re)}")
+        except Error as e:
+            target_path.unlink(missing_ok=True)
+            st.error(f"Unexpected error: {str(e)}")
+
+def retrieve_idx(retrieve_name: str):
+    """Retrieves the index if it exists."""
+    try:
+        index_data = load_client().indices.retrieve(retrieve_name, table_name="chunks").results
+        if index_data.index['name'] == retrieve_name:
+            st.markdown("**Index Details:**")
+            st.json(index_data)
+        else:
+            st.info("Index not found.")
+    except R2RException as r2re:
+        st.error(f"Error retrieving index: {str(r2re)}")
+    except Error as e:
+        st.error(f"Unexpected error: {str(e)}")
+
+def delete_idx(name: str):
+    """Delete index if available."""
+    try:
+        result = load_client().indices.delete(
+            index_name=name,
+            table_name="chunks"
+        ).results.message
+
+        index_dir = Path(st.session_state['indices_dir'])
+        for file in index_dir.iterdir():
+            fullpath = str(index_dir / file.name)
+            idx_obj = load_index_config_from_yaml(fullpath)
+            if idx_obj.name == name.strip():
+                file.unlink(missing_ok=True)
+                break
+        st.success(body=result, icon="🗑️")
+    except R2RException as r2re:
+        st.error(f"Error deleting index: {str(r2re)}")
+    except Error as e:
+        st.error(f"Unexpected error: {str(e)}")
+
 if __name__ == "__page__":
-    st.title("📊 Index Management")
+    st.title("📊 Indices")
 
     tab_list, tab_create, tab_retrieve, tab_delete = st.tabs(
-        ["List Indices", "Create Index", "Retrieve Index", "Delete Index"]
+        [
+            "List Indices",
+            "Create Index",
+            "Retrieve Index",
+            "Delete Index"
+        ]
     )
 
     with tab_list:
         st.markdown("**List Indices**")
-        list_btn = st.button("Fetch Indices")
-        if list_btn:
-            try:
-                indices = get_index_handler().list_indices().results.indices
-                if indices:
-                    st.write(f"Found {len(indices)} indices:")
-                    for index in indices:
-                        st.json(index)
-                else:
-                    st.info("No indices found.")
-            except R2RException as r2re:
-                st.error(f"Error listing indices: {str(r2re)}")
-            except Error as e:
-                st.error(f"Unexpected error: {str(e)}")
+
+        if st.button(label="Fetch Indices"):
+            list_indices()
 
     with tab_create:
         st.markdown("**Create Index from YAML**")
@@ -117,85 +225,37 @@ if __name__ == "__page__":
         )
         create_btn = st.button("Create Index")
 
-        if create_btn and uploaded_file is not None:
-            index_config_dir = Path(backend_dir) / "indices"
-
-            # Construct the target file path
-            target_path = index_config_dir / uploaded_file.name
-
-            # Check if file already exists
-            if target_path.exists():
-                st.error(
-                    "A file with this name already exists. Please rename your file and try again.", 
-                    icon="⚠️"
-                )
+        if create_btn:
+            if not uploaded_file:
+                st.error("Please upload a YAML file to create an index.", icon="⚠️")
             else:
-                # Save the uploaded file (uploaded as bytes)
-                with open(target_path, 'wb') as f:
-                    f.write(uploaded_file.getbuffer())
-
-                try:
-                    # Parse the config
-                    index = load_index_config_from_yaml(str(target_path))
-
-                    # Create the index
-                    idx_creation_resp = get_index_handler().create_index(
-                        index_method=index.method,
-                        index_name=index.name,
-                        index_measure=index.measure,
-                        index_arguments=index.arguments
-                    )
-                    st.success(
-                        f"Index created successfully! Message: {idx_creation_resp.results}",
-                        icon="✅"
-                    )
-                except ValueError as ve:
-                    target_path.unlink(missing_ok=True)
-                    st.error(f"Error in YAML file structure: {str(ve)}")
-                except R2RException as r2re:
-                    target_path.unlink(missing_ok=True)
-                    st.error(f"Error creating index: {str(r2re)}")
-                except Error as e:
-                    target_path.unlink(missing_ok=True)
-                    st.error(f"Unexpected error: {str(e)}")
+                create_idx(uploaded_file)
 
     with tab_retrieve:
         st.markdown("**Retrieve Index by Name**")
-        chosen_idx = st.text_input("Index Name to Retrieve")
-        retrieve_btn = st.button("Get Index Details")
 
-        if retrieve_btn and chosen_idx.strip():
-            try:
-                index_data = get_index_handler().get_index_details(chosen_idx.strip()).results
+        chosen_idx = st.text_input(
+            label="Index Name to Retrieve",
+            placeholder="Ex. index_name",
+            value=""
+        )
 
-                if index_data:
-                    st.markdown("**Index Details:**")
-                    st.json(index_data)
-                else:
-                    st.info("Index not found.")
-            except R2RException as r2re:
-                st.error(f"Error retrieving index: {str(r2re)}")
-            except Error as e:
-                st.error(f"Unexpected error: {str(e)}")
+        if st.button(label="Get Index Details"):
+            if not chosen_idx.strip():
+                st.error("Please provide an index name to retrieve.", icon="⚠️")
+            else:
+                retrieve_idx(chosen_idx.strip())
 
     with tab_delete:
         st.markdown("**Delete Index by Name**")
-        del_index_name = st.text_input("Index Name to Delete")
-        del_btn = st.button("Delete Index")
 
-        if del_btn and del_index_name.strip():
-            try:
-                result = get_index_handler().delete_index_by_name(del_index_name.strip())
-
-                index_dir = Path(backend_dir) / "indices"
-                for file in index_dir.iterdir():
-                    FULLPATH = str(index_dir / file.name)
-                    idx_obj = load_index_config_from_yaml(FULLPATH)
-                    if idx_obj.name == del_index_name.strip():
-                        file.unlink(missing_ok=True)
-                        break
-                st.success(f"Index deletion result: {result}", icon="🗑️")
-            except R2RException as r2re:
-                st.error(f"Error deleting index: {str(r2re)}")
-            except Error as e:
-                st.error(f"Unexpected error: {str(e)}")
+        del_index_name = st.text_input(
+            label="Index Name to Delete",
+            value="",
+            placeholder="Ex index_name"
+        )
+        if st.button(label="Delete Index"):
+            if not del_index_name.strip():
+                st.error("Please provide an index name to delete.", icon="⚠️")
+            else:
+                delete_idx(del_index_name.strip())

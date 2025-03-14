@@ -50,22 +50,4 @@ class Splitter:
             self._logger.warning("[-] No documents provided for splitting! [-]")
             return []
 
-        processed_chunks = []
-        for doc in documents:
-            try:
-                if not doc.page_content or not doc.page_content.strip():
-                    self._logger.warning(
-                        "[-] Empty document found: %s! [-]", 
-                        {doc.metadata.get('source', 'unknown source')}
-                    )
-                    continue
-
-                chunks = self._recursive_splitter.split_documents([doc])
-                processed_chunks.extend(chunks)
-            except ValueError as ve:
-                self._logger.warning(
-                    "[-] Error splitting document %s: %s [-]", 
-                    {doc.metadata.get('source', 'unknown source')}, str(ve)
-                )
-                continue
-        return processed_chunks
+        return self._recursive_splitter.split_documents(documents)

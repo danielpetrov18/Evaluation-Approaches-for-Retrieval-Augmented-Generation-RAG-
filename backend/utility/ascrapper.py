@@ -2,7 +2,7 @@
 
 from readability import Document as ReadabilityDocument
 from langchain_core.documents import Document
-from langchain.document_loaders import AsyncHtmlLoader
+from langchain_community.document_loaders import AsyncHtmlLoader
 
 class AsyncScraper:
     """

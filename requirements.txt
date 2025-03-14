@@ -1,13 +1,11 @@
 # tomli==2.2.1
 # ragas==0.2.9
 # tomli_w==1.1.0
-# litellm==1.54.1
 pandas==2.2.3
-r2r[core]==3.4.4
+r2r[core]==3.4.1
 streamlit==1.43.1
 langchain==0.3.20
 html2text==2024.2.26
-beautifulsoup4==4.13.3
 lxml_html_clean==0.4.1
 readability-lxml==0.8.1
 langchain-community==0.3.19

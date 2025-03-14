@@ -72,14 +72,9 @@ class Storage:
             Exception: If an unexpected error occurs.
         """
         try:
-            ingestion_mode = 'fast'
-            file_extension = str(filepath).rsplit('.', maxsplit=1)[-1]
-            if file_extension in ('pdf', 'md', 'html'):
-                ingestion_mode = 'custom'
-
             ingestion_result = self._client.documents.create(
                 file_path=filepath,
-                ingestion_mode=ingestion_mode,
+                ingestion_mode="fast",
                 metadata=metadata,
                 run_with_orchestration=True
             )
@@ -220,6 +215,9 @@ class Storage:
                 start_date=start_date,
                 end_date=end_date
             )
+            
+        NOTE: Only data that got ingested over the ingest_files endpoint can be exported
+              Chunks have correct document_id, however it doesn't work.
 
         Args:
             out_path (str|Path): Filepath to export the documents to.
