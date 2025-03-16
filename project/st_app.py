@@ -51,18 +51,18 @@ def get_pages() -> list[StreamlitPage]:
             url_path="settings",
             icon=":material/settings:"
         ),
-        # st.Page(
-        #     page="st_prompt.py",
-        #     title="Prompts",
-        #     url_path="prompts",
-        #     icon=":material/notes:"
-        # ),
-        # st.Page(
-        #     page="st_index.py",
-        #     title="Indices",
-        #     url_path="index",
-        #     icon=":material/description:"
-        # )
+        st.Page(
+            page="st_prompt.py",
+            title="Prompts",
+            url_path="prompts",
+            icon=":material/notes:"
+        ),
+        st.Page(
+            page="st_index.py",
+            title="Indices",
+            url_path="index",
+            icon=":material/description:"
+        )
     ]
 
 if __name__ == "__main__":

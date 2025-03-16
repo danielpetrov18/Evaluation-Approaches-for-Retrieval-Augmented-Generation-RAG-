@@ -1,31 +1,11 @@
 """Simple file for separation the GUI from the logic as much as possible."""
 
+# pylint: disable=W0718 -> disable too-broad of an exception
+
 import datetime
 import streamlit as st
 from streamlit.errors import Error
 from r2r import R2RException, R2RClient
-
-def format_uptime(seconds):
-    """Convert seconds to a human-readable format."""
-    days, remainder = divmod(seconds, 86400)
-    hours, remainder = divmod(remainder, 3600)
-    minutes, seconds = divmod(remainder, 60)
-
-    parts = []
-    if days > 0:
-        parts.append(f"{int(days)} days")
-    if hours > 0:
-        parts.append(f"{int(hours)} hours")
-    if minutes > 0:
-        parts.append(f"{int(minutes)} minutes")
-    if seconds > 0 or not parts:
-        parts.append(f"{int(seconds)} seconds")
-
-    return ", ".join(parts)
-
-def get_current_time():
-    """Return current time formatted nicely."""
-    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def check_health(client: R2RClient):
     """Check health"""
@@ -35,7 +15,9 @@ def check_health(client: R2RClient):
     except R2RException as r2re:
         st.error(f"Error checking health: {str(r2re)}")
     except Error as e:
-        st.error(f"Unexpected error: {str(e)}")
+        st.error(f"Unexpected streamlit error: {str(e)}")
+    except Exception as exc:
+        st.error(f"Unexpected error: {str(exc)}")
 
 def check_status(client: R2RClient):
     """Check status"""
@@ -53,14 +35,16 @@ def check_status(client: R2RClient):
             st.markdown("### Time Information")
             st.markdown(f"**Start Time:** {status.start_time}")
 
-            uptime_formatted = format_uptime(status.uptime_seconds)
+            uptime_formatted = _format_uptime(status.uptime_seconds)
             st.markdown(f"**Uptime:** {uptime_formatted}")
 
-        st.caption(f"Last updated: {get_current_time()}")
+        st.caption(f"Last updated: {_get_current_time()}")
     except R2RException as r2re:
         st.error(f"Error fetching status: {str(r2re)}")
     except Error as e:
-        st.error(f"Unexpected error: {str(e)}")
+        st.error(f"Unexpected streamlit error: {str(e)}")
+    except Exception as exc:
+        st.error(f"Unexpected error: {str(exc)}")
 
 def check_settings(client: R2RClient):
     """Check settings"""
@@ -80,4 +64,28 @@ def check_settings(client: R2RClient):
     except R2RException as r2re:
         st.error(f"Error fetching settings: {str(r2re)}")
     except Error as e:
-        st.error(f"Unexpected error: {str(e)}")
+        st.error(f"Unexpected streamlit error: {str(e)}")
+    except Exception as exc:
+        st.error(f"Unexpected error: {str(exc)}")
+
+def _format_uptime(seconds):
+    """Convert seconds to a human-readable format."""
+    days, remainder = divmod(seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    parts = []
+    if days > 0:
+        parts.append(f"{int(days)} days")
+    if hours > 0:
+        parts.append(f"{int(hours)} hours")
+    if minutes > 0:
+        parts.append(f"{int(minutes)} minutes")
+    if seconds > 0 or not parts:
+        parts.append(f"{int(seconds)} seconds")
+
+    return ", ".join(parts)
+
+def _get_current_time():
+    """Return current time formatted nicely."""
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
