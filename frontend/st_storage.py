@@ -1,7 +1,5 @@
 """GUI support for interacting with documents."""
 
-import os
-import sys
 import asyncio
 from pathlib import Path
 from datetime import datetime
@@ -10,15 +8,10 @@ import pandas as pd
 import streamlit as st
 from streamlit.errors import Error
 from r2r import R2RException
-from st_app import load_client
 from langchain.docstore.document import Document
-
-backend_dir = Path(__file__).parent.parent / 'backend'
-sys.path.append(str(backend_dir))
-
-from storage import Storage
-from utility.ascrapper import AsyncScraper
-from utility.splitter import Splitter
+from st_app import load_client # pylint: disable=E0401
+from utility.splitter import Splitter # pylint: disable=E0401
+from utility.ascrapper import AsyncScraper # pylint: disable=E0401
 
 @st.cache_resource
 def load_ascraper(url_list: list[str]):
@@ -29,11 +22,6 @@ def load_ascraper(url_list: list[str]):
 def load_splitter():
     """Load RecursiveCharacterTextSplitter."""
     return Splitter()
-
-@st.cache_resource
-def load_storage_handler():
-    """Get object for managing storage."""
-    return Storage(client=load_client())
 
 def extract_urls(file) -> list[str]:
     """Extracts URLs from a provided CSV file for web scrapping."""
@@ -67,81 +55,195 @@ def fetch_data_from_urls(scrape_urls: list[str]) -> list[Document]:
     ascraper = load_ascraper(scrape_urls)
     return run_async_function(ascraper.fetch_documents())
 
-def display_documents(documents):
-    """Better way to visualize documents"""
-    for i, document in enumerate(documents):
-        with st.expander(
-            label=f"Document: {document.title} ({document.id})",
-            expanded=False
-        ):
-            # Create two columns for metadata and content
-            meta_col, content_col = st.columns([1, 2])
+def delete_document(document_id: str):
+    """Delete any document by id"""
+    try:
+        load_client().documents.delete(document_id)
+        st.success(f"Successfully deleted document: {document_id}")
+    except R2RException as r2re:
+        st.error(f"Error: {str(r2re)}")
+    except Error as e:
+        st.error(f"Error: {str(e)}")
 
-            with meta_col:
-                st.markdown("### Metadata")
-                st.markdown(f"**ID:** {document.id}")
-                st.markdown(f"**Created:** {document.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
-                           if hasattr(document, 'created_at') else "Date not available")
+def fetch_documents(ids: list[str], offset: int, limit: int):
+    """Retrieve documents"""
+    try:
+        selected_files = load_client().documents.list(
+            ids,
+            offset,
+            limit
+        ).results
+        if selected_files:
+            for i, doc in enumerate(selected_files):
+                with st.expander(
+                    label=f"Document: {doc.title} ({doc.id})",
+                    expanded=False
+                ):
+                    st.json(doc)
 
-                if hasattr(document, 'metadata') and document.metadata:
-                    st.json(document.metadata)
-            
-            # with content_col:
-            #     st.markdown("### Content")
-                
-            #     # Show document content if available
-            #     if hasattr(document, 'content') and document.content:
-            #         st.text_area("Document Content", document.content, height=200, disabled=True)
-            #     else:
-            #         # Otherwise show the full JSON
-            #         st.json(document)
+                    with st.popover(
+                            label="Delete document",
+                            icon="🗑️",
+                        ):
+                            delete_doc_btn = st.button( # pylint: disable=W0612
+                                label="Confirm deletion",
+                                key=f"delete_document_{i}",
+                                on_click=delete_document,
+                                args=(doc.id, )
+                            )
 
-            # Add action buttons for this document
-            action_col1, action_col2 = st.columns(2)
-            with action_col1:
-                if st.button(f"View Details #{document.id}", key=f"view_{document.id}"):
-                    st.session_state["selected_document"] = document.id
-            with action_col2:
-                if st.button(f"Delete #{document.id}", key=f"delete_{document.id}", type="secondary"):
-                    st.warning(f"Are you sure you want to delete document {document.id}?")
-                    if st.button(f"Confirm Delete #{document.id}", key=f"confirm_delete_{document.id}", type="primary"):
-                        try:
-                            load_storage_handler().delete_document_by_id(document.id)
-                            st.success(f"Document {document.id} deleted successfully!")
-                        except R2RException as r2re:
-                            st.error(f"Error deleting: {str(r2re)}")
-                        except Error as e:
-                            st.error(str(e))
+            # Show a message if we've reached the end
+            if len(selected_files) < limit:
+                st.info("You've reached the end of the documents.")
+        else:
+            st.info("No documents found.")
+    except R2RException as r2re:
+        st.error(f"Error: {str(r2re)}")
+    except Error as e:
+        st.error(f"Error: {str(e)}")
 
-# async def clear_files():
-#     # Delete from vector store
-#     try:
-#         await storage.clean_db()
-#     except Exception as e:
-#         st.error(f"Failed to clear vector store: {e}")
-#         return False
+def ingest_file(uploaded_file, metadata: dict):
+    """Creating a temp file and ingesting it"""
+    try:
+        file_path = Path(st.session_state['files_dir']) / uploaded_file.name
+        file_path.parent.mkdir(exist_ok=True, parents=True)
+
+        with open(file=file_path, mode="wb") as f:
+            f.write(uploaded_file.getbuffer())
+
+        with st.spinner(text="Ingesting document...", show_time=True):
+            if metadata:
+                metadata = json.loads(metadata)
+
+            ingest_resp = load_client().documents.create(
+                file_path=str(file_path),
+                ingestion_mode="custom",
+                metadata=metadata,
+                run_with_orchestration=True
+            ).results
+            st.success(ingest_resp.message)
+    except json.JSONDecodeError as jde:
+        st.error(f"Error: {str(jde)}")
+    except R2RException as r2re:
+        st.error(f"Error: {str(r2re)}")
+    except Error as e:
+        st.error(f"Error: {str(e)}")
+    finally:
+        file_path.unlink()
+
+def perform_webscrape(uploaded_url_file):
+    """By providing a file with URLs we can scrape and ingest the data"""
+
+    with st.status(
+        label="Processing URLs...",
+        expanded=True,
+        state="running"
+    ):
+        try:
+            urls = extract_urls(uploaded_url_file)
+            if len(urls) > 0:
+                st.write('Extracted URLs...')
+
+                documents = fetch_data_from_urls(urls)
+                st.write('Fetched data...')
+
+                split_docs = load_splitter().split_documents(documents)
+                st.write('Split data...')
+
+                if split_docs:
+                    for url in urls:
+                        chunks = [d for d in split_docs if d.metadata['source'] == url]
+                        if chunks:
+                            chunks_metadata = chunks[0].metadata
+                            chunks_text = [chunk.page_content for chunk in chunks]
+                            try:
+                                chunks_ing_resp = load_client().documents.create(
+                                    chunks=chunks_text,
+                                    ingestion_mode='custom',
+                                    metadata=chunks_metadata,
+                                    run_with_orchestration=True
+                                ).results
+                                st.success(chunks_ing_resp.message)
+                            except R2RException as r2re:
+                                st.error(f"Error {url}: {str(r2re)}")
+                    st.info("Completed URL ingestion process")
+                else:
+                    st.warning("No valid content found in the provided URLs")
+            else:
+                st.error("No valid URLs found in file")
+        except R2RException as r2re:
+            st.error(f"Error: {str(r2re)}")
+        except ValueError as ve:
+            st.error(f"Error: {str(ve)}")
+
+def export_docs_to_csv(filename: str, filetype: str, ingestion_status: str):
+    """Exports all available documents to a csv file."""
+    try:
+        filters = {}
+
+        if filetype != "all":
+            filters["type"] = filetype
+
+        if ingestion_status != "all":
+            filters["ingestion_status"] = ingestion_status
+
+        columns = [
+            "id",
+            "type",
+            "title",
+            "ingestion_status",
+            "created_at",
+            "updated_at",
+            "summary",
+            "total_tokens"
+        ]
+
+        out_path = Path(st.session_state['export_dir']) / f"{filename}.csv"
+        load_client().documents.export(
+            output_path=out_path,
+            filters=filters,
+            columns=columns,
+            include_header=True
+        )
+        st.success("Successfully exported documents!")
+    except R2RException as r2re:
+        st.error(f"Error: {str(r2re)}")
+    except Error as e:
+        st.error(f"Error: {str(e)}")
+
+def fetch_document_chunks(document_id: str, offset: int, limit: int):
+    """Fetches all chunks related to a document"""
+    try:
+        chunks = load_client().documents.list_chunks(
+            id=document_id,
+            include_vectors=False,
+            offset=offset,
+            limit=limit
+        ).results
         
-#     # Clear filesystem
-#     files_dir = Path(FILES_DIRECTORY)
-#     if files_dir.exists():
-#         for file in files_dir.rglob('*'):
-#             if file.is_file():
-#                 file.unlink()
-                
-#     return True
+        for i, chunk in enumerate(chunks):
+            with st.expander(
+                label=f"{i}. Chunk {chunk.id}",
+                expanded=False
+            ):
+                st.markdown("### Text: \n", unsafe_allow_html=True)
+                st.markdown(chunk.text)
+                st.markdown("### Metadata: \n", unsafe_allow_html=True)
+                for k, v in chunk.metadata.items():
+                    st.markdown(f"* **{k.upper()}**: `{v}`")
+        
+    except R2RException as r2re:
+        st.error(f"Error: {str(r2re)}")
+    except Error as e:
+        st.error(f"Error: {str(e)}")
 
 if __name__ == "__page__":
     st.title("📄 Document Management")
 
-    FILES_DIRECTORY = os.getenv("FILES_DIRECTORY")
-    EXPORT_DIRECTORY = os.getenv("EXPORT_DIRECTORY")
-
-    storage = load_storage_handler()
-
-    t_list, t_retrieve, t_file_ingest, t_webscrape, t_export_docs, t_download  = st.tabs(
+    t_list, t_chunks, t_file_ingest, t_webscrape, t_export_docs, t_download = st.tabs(
         [
-            "List Documents", 
-            "Retrieve Document",
+            "List Documents",
+            "List chunks",
             "Ingest File",
             "Webscrape URLs",
             "Export Documents",
@@ -154,92 +256,43 @@ if __name__ == "__page__":
 
         col1, col2 = st.columns([1, 2])
         with col1:
-            offset = st.number_input("Offset", min_value=0, value=0)
+            offset = st.number_input("Offset", min_value=0, value=0, step=10)
         with col2:
-            limit = st.number_input("Limit", min_value=1, max_value=100, value=10)
+            limit = st.number_input("Limit", min_value=1, max_value=100, value=10, step=10)
 
-        if st.button("Fetch Documents", type="primary"):
-            try:
-                documents = storage.list_documents(offset=offset, limit=limit).results
-                if documents:
-                    for i, document in enumerate(documents):
-                        with st.expander(
-                            label=f"Document: {document.title} ({document.id})",
-                            expanded=False
-                        ):
-                            st.json(document)
-
-                    # Show a message if we've reached the end
-                    if len(documents) < limit:
-                        st.info("You've reached the end of the conversations list.")
-                else:
-                    st.info("No documents found.")
-            except R2RException as r2re:
-                st.error(f"Error: {str(r2re)}")
-            except Error as e:
-                st.error(f"Error: {str(e)}")
-
-    with t_retrieve:
-        st.markdown("**Retrieve Document**")
-        doc_id = st.text_input(
-            label="Document ID",
-            placeholder="Ex. document_id"
+        doc_ids = st.text_area(
+            label="Document IDs",
+            placeholder="document_id1\ndocument_id2\n...",
+            height=100,
+            value=None
         )
 
-        if st.button("Get Document", type="primary"):
-            if not doc_id:
-                st.warning("Please enter a document ID")
+        if doc_ids:
+            doc_ids = [doc.strip() for doc in doc_ids.split("\n")]
+
+        if st.button("Fetch Documents", type="primary"):
+            fetch_documents(doc_ids, offset, limit)
+
+    with t_chunks:
+        st.markdown("**List Chunks**")
+
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            offset = st.number_input("Offset", min_value=0, value=0, step=10, key="Chunks offset")
+        with col2:
+            limit = st.number_input("Limit", min_value=1, max_value=1000, value=10, step=10, key="Chunks limit")
+
+        document_id_chunks = st.text_input(
+            label="Document id",
+            placeholder="Ex. document_id",
+            value=None
+        )
+
+        if st.button("Fetch Chunks", type="primary"):
+            if not document_id_chunks:
+                st.error("Please provide a document id.")
             else:
-                try:
-                    document = storage.get_document_metadata_by_id(doc_id).results
-                    st.json(document)
-                except R2RException as r2re:
-                    st.error(f"Error: {str(r2re)}")
-                except Error as e:
-                    st.error(f"Error: {str(e)}")
-
-    # with tab_chunks:
-    #     st.subheader("Document Chunks")
-    #     chunk_doc_id = st.text_input("Document ID for chunks")
-    #     col1, col2, col3 = st.columns([1, 1, 1])
-    #     with col1:
-    #         chunk_offset = st.number_input("Chunk Offset", min_value=0, value=0)
-    #     with col2:
-    #         chunk_limit = st.number_input("Chunk Limit", min_value=1, value=100)
-    #     with col3:
-    #         include_vectors = st.checkbox("Include Vectors")
-        
-    #     if st.button("Get Chunks", type="primary"):
-    #         if chunk_doc_id:
-    #             try:
-    #                 chunks = run_async(storage.fetch_document_chunks(
-    #                     doc_id=chunk_doc_id,
-    #                     offset=chunk_offset,
-    #                     limit=chunk_limit,
-    #                     include_vectors=include_vectors
-    #                 ))
-    #                 st.json(chunks)
-    #             except R2RException as r2re:
-    #                 st.error(f"Error: {str(r2re)}")
-    #             except Exception as e:
-    #                 st.error(f"Error: {str(e)}")
-    #         else:
-    #             st.warning("Please enter a document ID")
-
-    # with tab_chunk_retrieve:
-    #     st.subheader("Retrieve Chunk")
-    #     chunk_id = st.text_input("Chunk ID")
-    #     if st.button("Get Chunk", type="primary"):
-    #         if chunk_id:
-    #             try:
-    #                 chunk = run_async(storage.retrieve_chunk_by_id(chunk_id))
-    #                 st.json(chunk)
-    #             except R2RException as r2re:
-    #                 st.error(f"Error: {str(r2re)}")
-    #             except Exception as e:
-    #                 st.error(f"Error: {str(e)}")
-    #         else:
-    #             st.warning("Please enter a chunk ID")
+                fetch_document_chunks(document_id_chunks, offset, limit)
 
     with t_file_ingest:
         st.markdown("**Ingest Document**")
@@ -256,32 +309,10 @@ if __name__ == "__page__":
         )
 
         if st.button("Ingest Document", type="primary"):
-            try:
-                file_path = Path(FILES_DIRECTORY) / uploaded_file.name
-                file_path.parent.mkdir(exist_ok=True, parents=True)
-
-                if file_path.exists():
-                    st.error(
-                        body=f"A file with the name '{uploaded_file.name}' already exists.",
-                        icon="⚠️"
-                    )
-                else:
-                    with open(file=file_path, mode="wb") as f:
-                        f.write(uploaded_file.getbuffer())
-
-                    with st.spinner(text="Ingesting document...", show_time=True):
-                        metadata = json.loads(metadata)
-                        ingest_resp = storage.ingest_file(str(file_path), metadata).results
-                        st.success(ingest_resp.message)
-            except json.JSONDecodeError as jde:
-                file_path.unlink()
-                st.error("Error: Invalid JSON format in file.")
-            except R2RException as r2re:
-                file_path.unlink()
-                st.error(f"Error: {str(r2re)}")
-            except Error as e:
-                file_path.unlink()
-                st.error(f"Error: {str(e)}")
+            if not uploaded_file:
+                st.error("Please upload a file.")
+            else:
+                ingest_file(uploaded_file, metadata)
 
     with t_webscrape:
         st.markdown("**Perform Web Scrape**")
@@ -293,67 +324,48 @@ if __name__ == "__page__":
         )
 
         if st.button("Ingest data from URLs", type="primary"):
-            with st.status(label="Processing URLs...", expanded=True, state="running"):
-                try:
-                    urls = extract_urls(uploaded_url_file)
-                    if len(urls) > 0:
-                        st.write('Extracted URLs...')
-
-                        documents = fetch_data_from_urls(urls)
-                        st.write('Fetched data...')
-
-                        split_docs = load_splitter().split_documents(documents)
-                        st.write('Split data...')
-
-                        if split_docs:
-                            for url in urls:
-                                chunks = [d for d in split_docs if d.metadata['source'] == url]
-                                if chunks:
-                                    metadata = chunks[0].metadata
-                                    chunks_text = [chunk.page_content for chunk in chunks]
-                                    try:
-                                        chunks_ing_resp = storage.ingest_chunks(
-                                            chunks_text,
-                                            metadata
-                                        ).results
-                                        st.success(chunks_ing_resp.message)
-                                    except R2RException as r2re:
-                                        st.error(f"Error {url}: {str(r2re)}")
-                            st.info("Completed URL ingestion process")
-                        else:
-                            st.warning("No valid content found in the provided URLs")
-                    else:
-                        st.error("No valid URLs found in file")
-                except R2RException as r2re:
-                    st.error(f"Error: {str(r2re)}")
-                except ValueError as ve:
-                    st.error(f"Error: {str(ve)}")
+            if not uploaded_url_file:
+                st.error("Please upload a file containing URLs.")
+            else:
+                perform_webscrape(uploaded_url_file)
 
     with t_export_docs:
         st.markdown("**Export Documents**")
 
-        files_out = st.text_input(
+        files_csv_out = st.text_input(
             label='Name of output file (without extension)',
             placeholder="Ex. exported_docs"
         )
 
+        filetype_col, ingestion_status_col = st.columns(2)
+
+        with filetype_col:
+            filetype_filter = st.selectbox(
+                label="File type to filter on",
+                options=["all", "csv", "txt", "pdf", "docx", "json"],
+            )
+
+        with ingestion_status_col:
+            ingestion_status_filter = st.selectbox(
+                label="Ingestion status to filter on",
+                options=["all", "success", "embedding", "parsing"]
+            )
+
         if st.button("Export Documents", type="primary"):
-            try:
-                storage.export_documents_to_csv(
-                    out_path = files_out,
-                    bearer_token = st.session_state["token"]
+            if not files_csv_out:
+                st.warning("Please enter a file name")
+            else:
+                export_docs_to_csv(
+                    files_csv_out.strip(),
+                    filetype_filter,
+                    ingestion_status_filter
                 )
-                st.success("Successfully exported documents!")
-            except R2RException as r2re:
-                st.error(f"Error: {str(r2re)}")
-            except Error as e:
-                st.error(f"Error: {str(e)}")
 
     with t_download:
         st.markdown("**Download Documents**")
 
         download_out = st.text_input(
-            label='Name of zip file to download',
+            label='Name of zip file to download (no extension)',
             placeholder="Ex. documents"
         )
 
@@ -365,12 +377,14 @@ if __name__ == "__page__":
             if use_date_filter:
                 start_date_filter = st.date_input(
                     label="Start date",
-                    value=datetime(2025, 1, 1)
+                    value=datetime(2025, 1, 1),
+                    format="DD-MM-YYYY"
                 )
 
                 end_date_filter = st.date_input(
                     label="End date",
-                    value=datetime.now()
+                    value=datetime.now(),
+                    format="DD-MM-YYYY"
                 )
 
         with col2:
@@ -379,38 +393,42 @@ if __name__ == "__page__":
             if use_id_filter:
                 document_ids_input = st.text_area(
                     label="Document IDs (one per line)",
-                    placeholder="Enter document IDs, one per line"
+                    placeholder="Enter document IDs, one per line",
+                    height=125,
+                    value=None
                 )
-
-        # Provide the ability to filter based on ids, start and end date
 
         if st.button("Download Documents", type="primary"):
             if not download_out:
                 st.error("Please provide a name for the ZIP file.")
             else:
                 try:
-                    document_ids = None
-                    if use_id_filter and document_ids_input:
-                        document_ids = [doc_id.strip() for doc_id in document_ids_input.split('\n') if doc_id.strip()]
-      
-                    # Process date filters if enabled
-                    start_date = None
-                    end_date = None
+                    document_ids = []
+                    if use_id_filter:
+                        document_ids = [
+                            doc_id.strip()
+                            for doc_id in document_ids_input.split('\n')
+                            if doc_id.strip()
+                        ]
+
+                    START_DATE = None
+                    END_DATE = None
                     if use_date_filter:
                         # Convert date to datetime at beginning and end of day
-                        start_date = datetime.combine(start_date_filter, datetime.min.time())
-                        end_date = datetime.combine(end_date_filter, datetime.max.time())
+                        START_DATE = datetime.combine(start_date_filter, datetime.min.time())
+                        END_DATE = datetime.combine(end_date_filter, datetime.max.time())
 
+                    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                    out_path = Path(st.session_state['export_dir']) / f"{download_out}_{timestamp}.zip"
                     with st.spinner("Preparing documents for download..."):
-                        storage.export_documents_to_zip(
-                            out_path=download_out,
-                            bearer_token=st.session_state["token"],
+                        load_client().documents.download_zip(
                             document_ids=document_ids,
-                            start_date=start_date,
-                            end_date=end_date
+                            start_date=START_DATE,
+                            end_date=END_DATE,
+                            output_path=out_path
                         )
 
-                    st.success(f"Successfully downloaded documents!")
+                    st.success("Successfully downloaded documents!")
                 except R2RException as r2re:
                     st.error(f"Error: {str(r2re)}")
                 except Error as e:
@@ -449,11 +467,3 @@ if __name__ == "__page__":
     #                 st.error(f"Error: {str(r2re)}")
     #             except Exception as e:
     #                 st.error(f"Error: {str(e)}")
-
-    # with tab_clear:
-    #     st.subheader("Clear All Files")
-    #     if st.button("Clear Files", type="primary"):
-    #         if run_async(clear_files()):
-    #             st.success("All files cleared successfully!")
-    #         else:
-    #             st.error("Files directory not found")

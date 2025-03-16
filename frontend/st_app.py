@@ -21,10 +21,10 @@ def get_pages() -> list[StreamlitPage]:
     """Defines main pages."""
     return [
         st.Page(
-            page="st_homepage.py",
-            title="Homepage",
-            url_path="homepage",
-            icon=":material/home:",
+            page="st_chat.py",
+            title="Chatbot",
+            icon=":material/chat:",
+            url_path="chat",
             default=True
         ),
         st.Page(
@@ -35,7 +35,7 @@ def get_pages() -> list[StreamlitPage]:
         ),
         st.Page(
             page="st_storage.py",
-            title="Document management",
+            title="Documents",
             url_path="documents",
             icon=":material/docs:"
         ),
@@ -45,7 +45,6 @@ def get_pages() -> list[StreamlitPage]:
             url_path="settings",
             icon=":material/settings:"
         ),
-    #    st.Page("st_chat.py", title="Chatbot", icon=":material/chat:"),
         st.Page(
             page="st_prompt.py",
             title="Prompts",
@@ -54,7 +53,7 @@ def get_pages() -> list[StreamlitPage]:
         ),
         st.Page(
             page="st_index.py",
-            title="Index Management",
+            title="Indices",
             url_path="index",
             icon=":material/description:"
         )
