@@ -1,13 +1,9 @@
-"""Showcases settings and system information."""
+"""Simple file for separation the GUI from the logic as much as possible."""
 
-from datetime import datetime
-from r2r import R2RException
+import datetime
 import streamlit as st
 from streamlit.errors import Error
-# No error, just annoying. Pylint complains about the import.
-#             |
-#             v
-from st_app import load_client # pylint: disable=E0401
+from r2r import R2RException, R2RClient
 
 def format_uptime(seconds):
     """Convert seconds to a human-readable format."""
@@ -29,23 +25,23 @@ def format_uptime(seconds):
 
 def get_current_time():
     """Return current time formatted nicely."""
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-def check_health():
+def check_health(client: R2RClient):
     """Check health"""
     try:
-        message = load_client().system.health()
-        st.success(f"Service Status: {message.results.message}", icon="✅")
+        message = client.system.health()
+        st.success(f"Service status: {message.results.message}")
     except R2RException as r2re:
         st.error(f"Error checking health: {str(r2re)}")
     except Error as e:
         st.error(f"Unexpected error: {str(e)}")
 
-def check_status():
+def check_status(client: R2RClient):
     """Check status"""
     try:
         with st.spinner(text="Fetching system status..."):
-            status = load_client().system.status().results
+            status = client.system.status().results
 
         col1, col2 = st.columns(2)
 
@@ -57,7 +53,6 @@ def check_status():
             st.markdown("### Time Information")
             st.markdown(f"**Start Time:** {status.start_time}")
 
-            # Format uptime in a more readable way
             uptime_formatted = format_uptime(status.uptime_seconds)
             st.markdown(f"**Uptime:** {uptime_formatted}")
 
@@ -67,11 +62,11 @@ def check_status():
     except Error as e:
         st.error(f"Unexpected error: {str(e)}")
 
-def check_settings():
+def check_settings(client: R2RClient):
     """Check settings"""
     try:
-        settings = load_client().system.settings().results.config
-        if settings and isinstance(settings, dict):
+        settings = client.system.settings().results.config
+        if settings:
             st.write("**R2R Backend Settings:**")
 
             for key, value in settings.items():
@@ -86,34 +81,3 @@ def check_settings():
         st.error(f"Error fetching settings: {str(r2re)}")
     except Error as e:
         st.error(f"Unexpected error: {str(e)}")
-
-if __name__ == "__page__":
-    st.title("⚙️ Settings & System Information")
-
-    tab_health, tab_status, tab_settings = st.tabs(
-        [
-            "Health", 
-            "Status", 
-            "Settings"
-        ]
-    )
-
-    with tab_health:
-        st.markdown("**Health Check**")
-
-        if st.button(label="Check health"):
-            check_health()
-
-    with tab_status:
-        st.markdown("### System Status")
-
-        if st.button(label="Refresh Status"):
-            check_status()
-
-    with tab_settings:
-        st.markdown("**Configuration Settings**")
-        st.markdown("* Settings are read-only from here.")
-        st.markdown("* To change them, update the server configuration and environment variables.")
-
-        if st.button(label="Check configs"):
-            check_settings()

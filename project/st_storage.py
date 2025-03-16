@@ -433,37 +433,3 @@ if __name__ == "__page__":
                     st.error(f"Error: {str(r2re)}")
                 except Error as e:
                     st.error(f"Error: {str(e)}")
-
-    # with tab_delete:
-    #     st.subheader("Delete Document")
-    #     delete_tabs = st.tabs(["Delete by ID", "Delete by Filter"])
-        
-    #     with delete_tabs[0]:
-    #         del_doc_id = st.text_input("Document ID to delete")
-    #         if st.button("Delete Document", type="primary"):
-    #             if del_doc_id:
-    #                 try:
-    #                     result = run_async(storage.delete_document_by_id(del_doc_id))
-    #                     st.success("Document deleted successfully!")
-    #                     st.json(result)
-    #                 except Exception as e:
-    #                     st.error(f"Error: {str(e)}")
-    #             else:
-    #                 st.warning("Please enter a document ID")
-        
-    #     with delete_tabs[1]:
-    #         filter_json = st.text_area(
-    #             "Filter (JSON format)",
-    #             value="{}",
-    #             help="Filter criteria in JSON format"
-    #         )
-    #         if st.button("Delete Documents", type="primary"):
-    #             try:
-    #                 filters = json.loads(filter_json)
-    #                 result = run_async(storage.delete_documents_by_filter(filters))
-    #                 st.success("Documents deleted successfully!")
-    #                 st.json(result)
-    #             except R2RException as r2re:
-    #                 st.error(f"Error: {str(r2re)}")
-    #             except Exception as e:
-    #                 st.error(f"Error: {str(e)}")

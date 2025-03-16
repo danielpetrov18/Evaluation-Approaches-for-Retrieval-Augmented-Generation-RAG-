@@ -24,6 +24,6 @@ do
     fi
 done
 
-cd frontend || { echo "Error: Directory not found!"; exit 1; }
+cd project || { echo "Error: Directory not found!"; exit 1; }
 
 streamlit run st_app.py
