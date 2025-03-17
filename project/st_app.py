@@ -34,17 +34,17 @@ def get_pages() -> list[StreamlitPage]:
         #     default=True
         # ),
         # st.Page(
-        #     page="st_conversation.py",
-        #     title="Conversations",
-        #     url_path="conversations",
-        #     icon=":material/forum:"
-        # ),
-        # st.Page(
         #     page="st_storage.py",
         #     title="Documents",
         #     url_path="documents",
         #     icon=":material/docs:"
         # ),
+        st.Page(
+            page="st_conversation.py",
+            title="Conversations",
+            url_path="conversations",
+            icon=":material/forum:"
+        ),
         st.Page(
             page="st_settings.py",
             title="Settings",
@@ -83,6 +83,12 @@ if __name__ == "__main__":
 
     if "export_dir" not in st.session_state:
         st.session_state['exports_dir'] = os.getenv("EXPORTS_DIRECTORY")
+
+    if "bearer_token" not in st.session_state:
+        st.session_state['bearer_token'] = load_client().users.login(
+            email = "admin@example.com",
+            password = "change_me_immediately"
+        ).results.access_token.token
 
     # Run selected page
     page.run()

@@ -1,189 +1,12 @@
 """GUI to manage conversations."""
 
-import sys
-from uuid import uuid4
-from pathlib import Path
-from r2r import R2RException
+# pylint: disable=E0401
+# pylint: disable=C0301
+
+import re
 import streamlit as st
-from streamlit.errors import Error
-from st_app import load_client # pylint: disable=E0401
-
-backend_dir = Path(__file__).parent.parent / 'backend'
-sys.path.append(str(backend_dir))
-
-from conversations import Conversations  # pylint: disable=C0401
-
-@st.cache_resource
-def get_conversations_handler():
-    """Get the conversations handler."""
-    return Conversations(client=load_client())
-
-def list_conversations(ids: list[str] = None, offset: int = 0, limit: int = 100):
-    """List conversations."""
-    try:
-        conversations_response = load_client().conversations.list(
-            ids = ids,
-            offset = offset,
-            limit = limit
-        )
-        conversations = conversations_response.results
-
-        if conversations:
-            st.write(f"Showing conversations {offset+1} to {offset+len(conversations)}")
-
-            # Display each conversation in a cleaner format
-            for i, conversation in enumerate(conversations):
-                with st.expander(
-                    label=f"Conversation: {conversation.name} ({conversation.id})",
-                    expanded=False
-                ):
-                    st.json(conversation)
-
-                    update_col, delete_col = st.columns(2)
-
-                    with update_col:
-                        with st.popover(
-                            label="Rename conversation",
-                            icon="✏️"
-                        ):
-                            new_name_key = str(uuid4())
-                            new_name = st.text_input( # pylint: disable=W0612
-                                label="Rename conversation",
-                                placeholder="Enter new name",
-                                key=new_name_key
-                            )
-                            update_conv_btn = st.button( # pylint: disable=W0612
-                                label="Update Name",
-                                key=f"update_conversation_{i}",
-                                on_click=update_conversation,
-                                args=(conversation.id, new_name_key)
-                            )
-
-                    with delete_col:
-                        with st.popover(
-                            label="Delete conversation",
-                            icon="🗑️",
-                        ):
-                            delete_conv_btn = st.button( # pylint: disable=W0612
-                                label="Confirm deletion",
-                                key=f"delete_conversation_{i}",
-                                on_click=delete_conversation,
-                                args=(conversation.id,)
-                            )
-
-            # Show a message if we've reached the end
-            if len(conversations) < limit:
-                st.info("You've reached the end of the conversations list.")
-        else:
-            if st.session_state["page_number"] > 0:
-                st.warning("No more conversations found.")
-            else:
-                st.info("No conversations found")
-    except R2RException as r2re:
-        st.error(f"Error checking conversations: {str(r2re)}")
-    except Error as e:
-        st.error(f"Unexpected error: {str(e)}")
-
-def fetch_messages(conversation_id: str, display_metadata: bool):
-    """Fetch all messages related to a particular conversation."""
-    try:
-        messages = load_client().conversations.retrieve(conversation_id).results
-
-        if not messages:
-            st.warning(f"No messages found for conversation: {conversation_id}")
-        else:
-            st.markdown(f"**Showing messages for conversation: {conversation_id}**")
-
-            for i, obj in enumerate(messages):
-                with st.expander(
-                    label=f"Message {i+1}: [{obj.id}]",
-                    expanded=True,
-                    icon="📝"
-                ):
-                    if display_metadata:
-                        st.markdown(
-                            # pylint: disable=C0301
-                            f"**Role:** {obj.message.role.upper()}<br>**Content:** {obj.message.content}<br>",
-                            unsafe_allow_html=True
-                        )
-                        st.json(obj.metadata)
-                    else:
-                        st.markdown(
-                            # pylint: disable=C0301
-                            f"**Role:** {obj.message.role.upper()}<br>**Content:** {obj.message.content}",
-                            unsafe_allow_html=True
-                        )
-
-    except R2RException as r2re:
-        st.error(f"Error fetching messages: {str(r2re)}")
-    except Error as e:
-        st.error(f"Unexpected error: {str(e)}")
-
-def delete_conversation(del_conversation_id: str):
-    """Delete a conversation."""
-    try:
-        load_client().conversations.delete(del_conversation_id)
-        st.session_state["page_number"] = 0
-        st.success(body=f"Deleted conversation: {del_conversation_id}", icon="🗑️")
-    except R2RException as r2re:
-        st.error(f"Error deleting conversation: {str(r2re)}")
-    except Error as e:
-        st.error(f"Unexpected error: {str(e)}")
-
-def update_conversation(update_conversation_id: str, input_name_key: str):
-    """
-    Change the name of an existing conversation.
-    
-    Since I had problems with this particular functionality I decided to capture
-    the new name from the widget since it's automatically stored in the session
-    state by Streamlit.
-    """
-    try:
-        new_name = st.session_state[input_name_key]
-        update_resp = load_client().conversations.update(
-            id=update_conversation_id,
-            name=new_name
-        ).results
-        st.session_state["page_number"] = 0
-        st.success(
-            body=f"Updated name of {update_conversation_id} to {update_resp.name}!",
-            icon="✅"
-        )
-    except R2RException as r2re:
-        st.error(f"Error updating conversation: {str(r2re)}")
-    except Error as e:
-        st.error(f"Unexpected error: {str(e)}")
-
-def export_conversations(conversations_ids: str, output_path: str):
-    """Export conversations to /backend/exports. (Only metadata)"""
-    try:
-        filters = {}
-        if conversations_ids:
-            filters['id'] = [filter_id.strip() for filter_id in conversations_ids.split('\n')]
-
-        get_conversations_handler().export_conversations_to_csv(
-            bearer_token = st.session_state["token"],
-            out = output_path,
-            filters = filters
-        )
-        st.success("Conversations exported successfully")
-    except R2RException as r2re:
-        st.error(f"Error exporting conversations: {str(r2re)}")
-    except Error as e:
-        st.error(f"Unexpected error: {str(e)}")
-
-def export_messages(outpath: str):
-    """Exports all messages of all conversations."""
-    try:
-        get_conversations_handler().export_messages_to_csv(
-            bearer_token = st.session_state["token"],
-            out = outpath
-        )
-        st.success("Messages exported successfully")
-    except R2RException as r2re:
-        st.error(f"Error exporting messages: {str(r2re)}")
-    except Error as e:
-        st.error(f"Unexpected error: {str(e)}")
+from st_app import load_client
+from utility.r2r.conversations import list_conversations, fetch_messages, export_conversations, export_messages
 
 if __name__ == "__page__":
     st.title("🗪 Manage conversations")
@@ -214,7 +37,6 @@ if __name__ == "__page__":
             height=100
         )
 
-        # Pagination controls
         col1, col2 = st.columns(spec=[3, 1])
         with col1:
             st.session_state["items_per_page"] = st.select_slider(
@@ -223,9 +45,8 @@ if __name__ == "__page__":
                 value=st.session_state["items_per_page"]
             )
         with col2:
-            conversations_btn = st.button("Check conversations")
+            conversations_btn = st.button("Check conversations", key="list_conv_btn")
 
-        # Display pagination navigation
         page_col1, page_col2, page_col3 = st.columns([1, 2, 1])
         with page_col1:
             if st.button("← Previous") and st.session_state["page_number"] > 0:
@@ -240,34 +61,34 @@ if __name__ == "__page__":
                 st.session_state["page_number"] += 1
                 st.rerun()
 
-        # Calculate offset based on pagination
-        curr_offset = st.session_state["page_number"] * st.session_state["items_per_page"]
-        curr_limit = st.session_state["items_per_page"]
+        offset = st.session_state["page_number"] * st.session_state["items_per_page"]
+        limit = st.session_state["items_per_page"]
 
         if filter_ids:
             filter_ids = [id.strip() for id in filter_ids.split('\n')]
 
         if conversations_btn:
-            list_conversations(ids = filter_ids, offset = curr_offset, limit = curr_limit)
+            list_conversations(load_client(), filter_ids, offset, limit)
 
     with t_conv_msgs:
         st.markdown("**Conversation messages**")
 
         conversation_id = st.text_input(
             label = "Conversation ID",
-            placeholder = "Ex. conversation_id"
+            placeholder = "Ex. conversation_id",
+            value=""
         )
 
         include_metadata = st.checkbox(
             label="Include metadata",
-            value=False,
+            value=False
         )
 
-        if st.button("Get messages", type="primary"):
+        if st.button("Get messages", type="primary", key="conv_msgs_btn"):
             if not conversation_id:
                 st.warning("Please enter a conversation ID")
             else:
-                fetch_messages(conversation_id, include_metadata)
+                fetch_messages(load_client(), conversation_id, include_metadata)
 
     with t_exp_conversations:
         st.markdown("**Export Conversations Metadata to CSV**")
@@ -285,7 +106,7 @@ if __name__ == "__page__":
             help = "Conversation ids on each line"
         )
 
-        if st.button("Export conversations"):
+        if st.button("Export conversations", key="export_conv_btn"):
             if not filename:
                 st.warning("Please enter a filename")
             else:
@@ -301,8 +122,46 @@ if __name__ == "__page__":
             help = "Name of the exported file without extension"
         )
 
+        role_col, msg_len_col, conv_id_col = st.columns(3)
+
+        with role_col:
+            role_filter = st.selectbox(
+                label="Role to filter on",
+                options=["all", "user", "assistant"],
+                help="Leaving it to all selects all"
+            )
+
+        with msg_len_col:
+            msg_len_filter = st.select_slider(
+                label="Minimum message length",
+                options=[0, 50, 100, 200, 500, 1000],
+                value=0,
+                help="Leaving it to 0 selects all"
+            )
+
+        with conv_id_col:
+            conv_id_filter = st.text_area(
+                label="Conversation ids",
+                value="",
+                height=100,
+                placeholder="conversation_id1,conversation_id2,...",
+                help="Leaving it empty selects all"
+            )
+
         if st.button("Export messages"):
             if not filename:
                 st.warning("Please enter a filename")
             else:
-                export_messages(filename)
+                filters = {}
+
+                if role_filter != "all":
+                    filters['role'] = role_filter
+
+                if msg_len_filter > 0:
+                    filters['min_msg_length'] = msg_len_filter
+
+                if conv_id_filter:
+                    clean_ids = [id.strip() for id in re.split(r'[,\n\s]+', conv_id_filter) if id.strip()]
+                    filters['conversation_id'] = clean_ids
+
+                export_messages(filename, filters)
