@@ -33,12 +33,12 @@ def get_pages() -> list[StreamlitPage]:
         #     url_path="chat",
         #     default=True
         # ),
-        # st.Page(
-        #     page="st_storage.py",
-        #     title="Documents",
-        #     url_path="documents",
-        #     icon=":material/docs:"
-        # ),
+        st.Page(
+            page="st_storage.py",
+            title="Documents",
+            url_path="documents",
+            icon=":material/docs:"
+        ),
         st.Page(
             page="st_conversation.py",
             title="Conversations",
