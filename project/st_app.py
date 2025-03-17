@@ -21,18 +21,12 @@ def get_pages() -> list[StreamlitPage]:
     """Defines main pages."""
     return [
         st.Page(
-            page="st_homepage.py",
-            title="Home",
-            icon=":material/home:",
+            page="st_chat.py",
+            title="Chatbot",
+            icon=":material/chat:",
+            url_path="chat",
             default=True
         ),
-        # st.Page(
-        #     page="st_chat.py",
-        #     title="Chatbot",
-        #     icon=":material/chat:",
-        #     url_path="chat",
-        #     default=True
-        # ),
         st.Page(
             page="st_storage.py",
             title="Documents",
@@ -89,6 +83,9 @@ if __name__ == "__main__":
             email = "admin@example.com",
             password = "change_me_immediately"
         ).results.access_token.token
+
+    if "conversation_id" not in st.session_state:
+        st.session_state['conversation_id'] = None
 
     # Run selected page
     page.run()
