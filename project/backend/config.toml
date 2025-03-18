@@ -27,10 +27,10 @@ provider = "litellm"
 concurrent_request_limit = 1
 
   [completion.generation_config]
-  temperature = 0.1
+  temperature = 0.3
   top_p = 1
   max_tokens_to_sample = 4096
-  stream = false
+  stream = true
 
 [completion_embedding]
 provider = "ollama"

@@ -87,5 +87,20 @@ if __name__ == "__main__":
     if "conversation_id" not in st.session_state:
         st.session_state['conversation_id'] = None
 
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    if "chat_model" not in st.session_state:
+        st.session_state["chat_model"] = os.getenv("CHAT_MODEL")
+
+    if "embedding_model" not in st.session_state:
+        st.session_state["embedding_model"] = os.getenv("EMBEDDING_MODEL")
+
+    if "similarity_threshold" not in st.session_state:
+        st.session_state["similarity_threshold"] = float(os.getenv("SIMILARITY_THRESHOLD"))
+
+    if "max_relevant_messages" not in st.session_state:
+        st.session_state["max_relevant_messages"] = int(os.getenv("MAX_RELEVANT_MESSAGES"))
+
     # Run selected page
     page.run()
