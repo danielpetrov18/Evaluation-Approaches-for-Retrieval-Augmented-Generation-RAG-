@@ -5,6 +5,7 @@
 # pylint: disable=W0719
 # pylint: disable=R0903
 
+import json
 from uuid import UUID, uuid4
 from datetime import datetime
 from typing import  Generator
@@ -71,30 +72,25 @@ def retrieve_conversation(_client: R2RClient, conversation_id: str) -> list[Mess
         st.error(f"Unexpected error: {str(exc)}")
         return None
 
-def check_conversation_exists(client: R2RClient, conversation_id: str = None) -> str:
+def check_conversation_exists(client: R2RClient):
     """Making sure that a conversation exists. If not we create one."""
     try:
-        # Make sure the conversation exists
-        if not conversation_id: # If the id is empty -> create a new one and use it
-            conversation_id = client.conversations.create().results.id
-            st.session_state['conversation_id'] = conversation_id
+        # If the id is empty -> create a new one and use it
+        if not st.session_state['conversation_id']:
+            st.session_state['conversation_id'] = client.conversations.create().results.id
+            st.session_state.messages = []
         else:
             # If the provided id is not related to a conversation raise error
-            if not client.conversations.list(ids = [conversation_id]).results:
-                raise R2RException(f"Conversation: {conversation_id} doesn't exist!", 404)
-
-        return st.session_state['conversation_id']
+            if not client.conversations.list(ids = [st.session_state['conversation_id']]).results:
+                raise R2RException(f"Conversation: {st.session_state['conversation_id']} doesn't exist!", 404)
     except R2RException as r2re:
         st.error(str(r2re))
-        return None
     except Error as e:
         st.error(str(e))
-        return None
     except Exception as exc:
         st.error(str(exc))
-        return None
 
-def add_message(client: R2RClient, msg: dict) -> Message:
+def add_message(client: R2RClient, msg: dict):
     """Adding a new message to a conversation."""
     try:
         embedding = _compute_embedding(msg['content'])
@@ -107,23 +103,29 @@ def add_message(client: R2RClient, msg: dict) -> Message:
         parent_id = None
         if st.session_state.messages:
             parent_id = st.session_state.messages[-1].id
+            print(parent_id)
 
         client.conversations.add_message(
             id = st.session_state['conversation_id'],
             content = new_msg.content,
             role = new_msg.role,
             metadata = {
-                "timestamp": new_msg.timestamp,
-                "embedding": new_msg.embedding
+                # Both need to be strings since R2R accepts only strings
+                "timestamp": str(new_msg.timestamp),
+                "embedding": json.dumps(new_msg.embedding)
             },
-            parent_id = parent_id
+            parent_id = str(parent_id) if parent_id else None
         )
 
-        return new_msg
+        # Then to session state
+        if not st.session_state.messages:
+            st.session_state.messages = [new_msg]
+        else:
+            st.session_state.messages.append(new_msg)
 
     except R2RException as r2re:
         st.error(str(r2re))
-        raise R2RException from r2re
+        raise R2RException(str(r2re), r2re.status_code) from r2re
     except Exception as e:
         st.error(str(e))
         raise Exception from e
@@ -156,13 +158,18 @@ def submit_query(client: R2RClient) -> Generator:
         }
 
         # Augmented query where I try to store context/relevant history
-        enhanced_query = _get_enhanced_query(st.session_state[-1].content)
+        enhanced_query = _get_enhanced_query(st.session_state.messages[-1].content)
 
         generator = client.retrieval.rag(
             query = enhanced_query,
             search_mode = "custom",
             search_settings = search_settings,
-            include_title_if_available = True,
+            rag_generation_config = {
+                "temperature": st.session_state['rag_generation_config']['temperature'],
+                "top_p": st.session_state['rag_generation_config']['top_p'],
+                "max_tokens_to_sample": st.session_state['rag_generation_config']['max_tokens_to_sample'],
+                "stream": True # You must specify this explicitly. In config file it doesn't run.
+            }
         )
 
         return generator
@@ -177,6 +184,41 @@ def submit_query(client: R2RClient) -> Generator:
         st.error(f"An error occurred: {str(e)}")
         raise e
 
+def extract_completion(generator: Generator) -> Generator:
+    """
+    Extracts and yields only the text inside <completion>...</completion> tags from a generator.
+
+    Args:
+        generator (Generator[str, None, None]): A generator yielding text chunks.
+
+    Yields:
+        str: Extracted text within <completion> tags.
+     """
+
+    inside_completion = False  # Track whether we are inside the <completion> section
+
+    for chunk in generator:
+        if "<completion>" in chunk:
+            inside_completion = True
+            after_tag = chunk.split("<completion>", 1)[1]
+
+            # Handle cases where closing tag is in the same chunk
+            if "</completion>" in after_tag:
+                before_close, _ = after_tag.split("</completion>", 1)
+                yield before_close.strip()
+                inside_completion = False
+            else:
+                yield after_tag.strip()
+            continue
+
+        if inside_completion:
+            if "</completion>" in chunk:
+                before_close, _ = chunk.split("</completion>", 1)
+                yield before_close.strip()
+                inside_completion = False
+            else:
+                yield chunk.strip()
+
 def _get_enhanced_query(query: str) -> str:
     """
     Enhance the query with relevant historical context.
@@ -190,6 +232,7 @@ def _get_enhanced_query(query: str) -> str:
     # Take all assistant messages which are relevant for context
     assistant_messages = [msg for msg in st.session_state.messages if msg.role == "assistant"]
 
+    # If json.loads() makes no sense refer to add_message()
     relevant_messages = _get_relevant_messages(
         query_embedding = st.session_state.messages[-1].embedding,
         history = assistant_messages
@@ -199,10 +242,7 @@ def _get_enhanced_query(query: str) -> str:
         return query
 
     # Construct prompt for summarizing relevant history
-    history_summary_prompt = _construct_history_summary_prompt(
-        query,
-        relevant_messages
-    )
+    history_summary_prompt = _construct_history_summary_prompt(query, relevant_messages)
 
     # Get summary of relevant context
     context_summary = _summarize_context(history_summary_prompt)
@@ -225,7 +265,7 @@ def _compute_embedding(text: str) -> list[float]:
         List of floats representing the vector embedding of the given text
     """
     try:
-        # Since this function can be used for batch processing, it returns a list of embeddings. 
+        # Since this function can be used for batch processing, it returns a list of embeddings.
         # We only one the first one.
         response = ollama.embed(
             model = st.session_state['embedding_model'],
@@ -280,7 +320,7 @@ def _get_relevant_messages(query_embedding: list[float], history: list[Message])
     for message in history:
         similarity = _compute_similarity(
             embedding1 = query_embedding,
-            embedding2 = message.embedding
+            embedding2 = json.loads(message.embedding)
         )
         if similarity >= st.session_state['similarity_threshold']:
             relevant_messages.append({
@@ -339,11 +379,7 @@ def _summarize_context(history_summary_prompt: str) -> str:
     Returns:
         str: Summarized context
     """
-    resp = ollama.generate(
-        model = st.session_state['chat_model'],
-        prompt = history_summary_prompt
-    )['response']
-
+    resp = ollama.generate(st.session_state['chat_model'], history_summary_prompt)['response']
     return resp
 
 def _enhance_user_query(query: str, context_summary: str) -> str:

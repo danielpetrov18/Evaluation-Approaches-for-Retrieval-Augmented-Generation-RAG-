@@ -8,6 +8,8 @@ import streamlit as st
 from r2r import R2RClient
 from streamlit.navigation.page import StreamlitPage
 
+# pylint: disable=C0301
+
 # ttl of None signifies that it doesn't expire
 @st.cache_resource(ttl=None)
 def load_client() -> R2RClient:
@@ -72,10 +74,7 @@ if __name__ == "__main__":
     if "chunk_overlap" not in st.session_state:
         st.session_state['chunk_overlap'] = int(os.getenv("CHUNK_OVERLAP"))
 
-    if "files_dir" not in st.session_state:
-        st.session_state['files_dir'] = os.getenv("FILES_DIRECTORY")
-
-    if "export_dir" not in st.session_state:
+    if "exports_dir" not in st.session_state:
         st.session_state['exports_dir'] = os.getenv("EXPORTS_DIRECTORY")
 
     if "bearer_token" not in st.session_state:
@@ -101,6 +100,9 @@ if __name__ == "__main__":
 
     if "max_relevant_messages" not in st.session_state:
         st.session_state["max_relevant_messages"] = int(os.getenv("MAX_RELEVANT_MESSAGES"))
+
+    if "rag_generation_config" not in st.session_state:
+        st.session_state["rag_generation_config"] = load_client().system.settings().results.config['completion']['generation_config']
 
     # Run selected page
     page.run()

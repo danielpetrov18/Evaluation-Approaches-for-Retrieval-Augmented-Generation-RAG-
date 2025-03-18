@@ -6,11 +6,11 @@
 import streamlit as st
 from st_app import load_client
 from utility.r2r.retrieval import (
-    Message,
     retrieve_conversation,
     check_conversation_exists,
     add_message,
     submit_query,
+    extract_completion
 )
 
 if __name__ == "__page__":
@@ -32,21 +32,18 @@ if __name__ == "__page__":
             label="Pick a conversation",
             placeholder="Ex. conversation_id",
             key="conversation_id_input",
-            help="By selecting an existing one, the context and previous interactions are loaded"
+            help="By selecting an existing one, the context and previous interactions are loaded",
+            value=st.session_state['conversation_id']
         )
 
         if st.button("Confirm", type="primary", key="conv_id_btn"):
             if not selected_conversation_id:
                 st.warning("Please enter a conversation ID")
             else:
-                # Conversation contains a sequence of all messages so far
-                # Make sure that the conversation exists
-                # And if it's the same id, don't update it
-                conversation = retrieve_conversation(load_client(), selected_conversation_id)
-                if conversation and st.session_state['conversation_id'] != selected_conversation_id:
+                msgs = retrieve_conversation(load_client(), selected_conversation_id)
+                if msgs and st.session_state['conversation_id'] != selected_conversation_id:
                     st.session_state['conversation_id'] = selected_conversation_id
-                    # Reset the messages to load from the new conversation
-                    st.session_state.messages = []
+                    st.session_state.messages = msgs
                     st.rerun()
 
         # A button to start a new conversation
@@ -70,44 +67,24 @@ if __name__ == "__page__":
         st.info("Select a conversation or submit a query to get started")
     else:
         for msg in st.session_state.messages:
-            role = msg['role']
-            content = msg['content']
+            role = msg.role
+            content = msg.content
             with st.chat_message(role, avatar="🤖" if role == "assistant" else "😎"):
                 st.write(content)
 
     query = st.chat_input(placeholder="Please enter your question here ...")
     if query:
-        # Display newly submitted query
         with st.chat_message("user", avatar="😎"):
             st.write(query)
 
-        st.session_state['conversation_id'] = check_conversation_exists(
-            load_client(),
-            st.session_state['conversation_id']
-        )
+        # If there was no conversation id a new conversation will be created
+        check_conversation_exists(load_client())
 
-        usr_msg = {
-            "role": "user",
-            "content": query
-        }
+        add_message(load_client(), {"role": "user", "content": query})
 
-        # Adding the message to the conversation
-        new_msg = add_message(load_client(), st.session_state['conversation_id'], usr_msg)
+        with st.chat_message("assistant", avatar="🤖"):
+            # Pass all previous messages as history without the last one / current one.
+            response_generator = submit_query(load_client())
+            response = st.write_stream(extract_completion(response_generator))
 
-        # Then to session state
-        if not st.session_state.messages:
-            st.session_state.messages = [new_msg]
-        else:
-            st.session_state.messages.append(new_msg)
-
-        # Wait for the response from LLM
-        with st.spinner(text="Generating response ...", show_time=True):
-            llm_response = submit_query(load_client())
-            st.session_state.messages.append(
-                Message(
-                    role = "user",
-                    content = "query"
-                )
-            )
-            with st.chat_message("assistant", avatar="🤖"):
-                st.write(llm_response)
+        add_message(load_client(), {"role": "assistant", "content": response})
