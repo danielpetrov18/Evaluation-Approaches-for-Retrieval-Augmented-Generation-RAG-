@@ -12,23 +12,41 @@ from pathlib import Path
 from datetime import datetime
 import json
 import pandas as pd
+from r2r import (
+    R2RException,
+    R2RClient
+)
 import streamlit as st
 from streamlit.errors import Error
 from streamlit.runtime.uploaded_file_manager import UploadedFile
-from r2r import R2RException, R2RClient
 from langchain.docstore.document import Document
-from utility.splitter import Splitter
-from utility.ascrapper import AsyncScraper
+from langchain_community.document_loaders import (
+    BSHTMLLoader,
+    AsyncHtmlLoader
+)
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 @st.cache_resource
-def load_ascraper(url_list: list[str]):
-    """Load the AsyncScraper with the provided URLs."""
-    return AsyncScraper(url_list)
+def load_ascraper(urls: list[str]):
+    """Load object to retrieve data from the internet"""
+    return AsyncHtmlLoader(
+        web_path=urls,
+        default_parser="lxml"
+    )
 
 @st.cache_resource
 def load_splitter():
     """Load RecursiveCharacterTextSplitter."""
-    return Splitter()
+    separators = ["\n\n", "\n"]
+
+    recursive_splitter = RecursiveCharacterTextSplitter(
+        chunk_size = st.session_state['chunk_size'],
+        chunk_overlap = st.session_state['chunk_overlap'],
+        length_function = len,
+        separators = separators
+    )
+
+    return recursive_splitter
 
 def fetch_documents(client: R2RClient, ids: list[str], offset: int, limit: int):
     """Retrieve documents"""
@@ -147,24 +165,23 @@ def perform_webscrape(client: R2RClient, file: UploadedFile):
                 documents = _fetch_data_from_urls(urls)
                 st.write('Fetched data...')
 
-                split_docs = load_splitter().split_documents(documents)
-                st.write('Split data...')
-
-                for url in urls:
-                    chunks = [d for d in split_docs if d.metadata['source'] == url]
-                    if chunks:
-                        chunks_metadata = chunks[0].metadata
-                        chunks_text = [chunk.page_content for chunk in chunks]
+                for document in documents:
+                    with tempfile.NamedTemporaryFile(delete=True, suffix=".html") as temp_file:
+                        temp_file.write(document.page_content.encode('utf-8'))
+                        temp_file.flush()
+                        bs4_parser = BSHTMLLoader(temp_file.name)
+                        splitted_documents = bs4_parser.load_and_split(load_splitter())
+                        chunks_text = [chunk.page_content for chunk in splitted_documents]
                         try:
                             chunks_ing_resp = client.documents.create(
                                 chunks=chunks_text,
                                 ingestion_mode='custom',
-                                metadata=chunks_metadata,
+                                metadata=document.metadata,
                                 run_with_orchestration=True
                             ).results
                             st.success(chunks_ing_resp.message)
                         except R2RException as r2re:
-                            st.error(f"Error {url}: {str(r2re)}")
+                            st.error(f"Error {document.metadata['source']}: {str(r2re)}")
                 st.info("Completed URL ingestion process")
             else:
                 st.error("No valid URLs found in file")
@@ -255,7 +272,8 @@ def download_documents(
 def _fetch_data_from_urls(scrape_urls: list[str]) -> list[Document]:
     """Fetches data from the provided URLs asynchronously."""
     ascraper = load_ascraper(scrape_urls)
-    return _run_async_function(ascraper.fetch_documents())
+    web_documents = _run_async_function(ascraper.aload())
+    return web_documents
 
 def _extract_urls(file: UploadedFile) -> list[str]:
     """Extracts URLs from a provided CSV file for web scrapping."""
@@ -283,3 +301,6 @@ def _extract_urls(file: UploadedFile) -> list[str]:
 def _run_async_function(coroutine):
     """Run an async function inside a synchronous Streamlit app."""
     return asyncio.run(coroutine)
+
+def _remove_duplicate_urls(urls: list[str]) -> list[str]:
+    return list(set(urls))

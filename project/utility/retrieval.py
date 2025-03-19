@@ -19,6 +19,7 @@ class Message(BaseModel):
     Represents a chat message with metadata and embedding information.
     
     Attributes:
+        id: Unique identifier for the message
         role: Role of the message sender (e.g., 'user', 'assistant')
         content: The actual message content
         embedding: Vector embedding of fixed length (1024 dimensions if using the mxbai-embed-large model)
@@ -36,7 +37,7 @@ class Message(BaseModel):
 
 
 # When using an underscore the client won't be part of the arguments passed to the function
-# which are of importance for the caching behaviour.
+# which are of importance for the caching behaviour. Since client cannot be pickled/serialized.
 # https://docs.streamlit.io/develop/api-reference/caching-and-state/st.cache_data
 @st.cache_data(ttl=60)  # Cache for 60 seconds
 def retrieve_conversation(_client: R2RClient, conversation_id: str) -> list[Message] | None:
