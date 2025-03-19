@@ -89,6 +89,9 @@ if __name__ == "__main__":
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+    if "parent_id" not in st.session_state:
+        st.session_state["parent_id"] = None
+
     if "chat_model" not in st.session_state:
         st.session_state["chat_model"] = os.getenv("CHAT_MODEL")
 

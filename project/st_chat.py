@@ -44,6 +44,7 @@ if __name__ == "__page__":
                 if msgs and st.session_state['conversation_id'] != selected_conversation_id:
                     st.session_state['conversation_id'] = selected_conversation_id
                     st.session_state.messages = msgs
+                    st.session_state['parent_id'] = st.session_state.messages[-1].id
                     st.rerun()
 
         # A button to start a new conversation
@@ -54,6 +55,7 @@ if __name__ == "__page__":
         ):
             st.session_state['conversation_id'] = None
             st.session_state.messages = []
+            st.session_state['parent_id'] = None
             st.rerun()
 
     # Load conversation messages if we have a conversation ID and no messages loaded yet
@@ -62,6 +64,7 @@ if __name__ == "__page__":
             messages = retrieve_conversation(load_client(), st.session_state['conversation_id'])
             if messages:
                 st.session_state.messages = messages
+                st.session_state['parent_id'] = st.session_state.messages[-1].id
 
     if not st.session_state.messages and not st.session_state['conversation_id']:
         st.info("Select a conversation or submit a query to get started")
@@ -83,7 +86,15 @@ if __name__ == "__page__":
         add_message(load_client(), {"role": "user", "content": query})
 
         with st.chat_message("assistant", avatar="🤖"):
-            # Pass all previous messages as history without the last one / current one.
+            # response_container = st.empty()
+            # full_response = ""
+
+            # for chunk in extract_completion(submit_query(load_client())):
+            #     full_response += chunk
+            #     # Update with markdown rendering at each step
+            #     response_container.markdown(full_response)
+
+            # response = full_response
             response_generator = submit_query(load_client())
             response = st.write_stream(extract_completion(response_generator))
 

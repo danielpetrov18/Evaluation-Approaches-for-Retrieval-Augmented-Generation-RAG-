@@ -6,8 +6,6 @@
 # pylint: disable=R0903
 
 import json
-from uuid import UUID, uuid4
-from datetime import datetime
 from typing import  Generator
 import ollama
 import numpy as np
@@ -21,26 +19,20 @@ class Message(BaseModel):
     Represents a chat message with metadata and embedding information.
     
     Attributes:
-        id: Unique identifier for the message
         role: Role of the message sender (e.g., 'user', 'assistant')
         content: The actual message content
         embedding: Vector embedding of fixed length (1024 dimensions if using the mxbai-embed-large model)
-        timestamp: UTC timestamp of when the message was created
     """
-    id: UUID = Field(default_factory=uuid4)
+    id: str = Field(..., min_length=1)
     role: str = Field(..., min_length=1)  # ... means required/not nullable
     content: str = Field(..., min_length=1)  # min_length=1 ensures non-empty string
     embedding: list[float] = Field(...)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
 
     # https://docs.pydantic.dev/1.10/usage/model_config/
     class Config:
         """Configuration for the message. A message cannot be modified once created."""
         frozen = True  # Makes instances immutable
         extra = "forbid" # Prevents additional fields not defined in model
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
 
 # When using an underscore the client won't be part of the arguments passed to the function
@@ -53,11 +45,11 @@ def retrieve_conversation(_client: R2RClient, conversation_id: str) -> list[Mess
         conversation = _client.conversations.retrieve(conversation_id).results
         msgs = [
             Message(
-                id = obj.id,
+                id = str(obj.id),
                 role = obj.message.role,
                 content = obj.message.content,
-                embedding = obj.metadata['embedding'],
-                timestamp = obj.metadata['timestamp']
+                # Make sure you convert it back to an embedding -> check add_message()
+                embedding = json.loads(obj.metadata['embedding']),
             )
             for obj in conversation
         ]
@@ -79,6 +71,7 @@ def check_conversation_exists(client: R2RClient):
         if not st.session_state['conversation_id']:
             st.session_state['conversation_id'] = client.conversations.create().results.id
             st.session_state.messages = []
+            st.session_state['parent_id'] = None
         else:
             # If the provided id is not related to a conversation raise error
             if not client.conversations.list(ids = [st.session_state['conversation_id']]).results:
@@ -90,31 +83,33 @@ def check_conversation_exists(client: R2RClient):
     except Exception as exc:
         st.error(str(exc))
 
-def add_message(client: R2RClient, msg: dict):
-    """Adding a new message to a conversation."""
+def add_message(client: R2RClient, msg: dict) -> str:
+    """
+    Adding a new message to a conversation.
+    Returns the id of the newly added message.
+    """
     try:
         embedding = _compute_embedding(msg['content'])
+
+        msg_response = client.conversations.add_message(
+            id = st.session_state['conversation_id'],
+            content = msg['content'],
+            role = msg['role'],
+            metadata = {
+                # Needs to be converted to a string, since R2R cannot accept a list[float]
+                "embedding": json.dumps(embedding)
+            },
+            parent_id = st.session_state['parent_id']
+        )
+
+        # Set the parent id for next message to equal the id of the newly added one
+        st.session_state['parent_id'] = str(msg_response.results.id)
+
         new_msg = Message(
+            id = st.session_state['parent_id'],
             content = msg['content'],
             role = msg['role'],
             embedding = embedding
-        )
-
-        parent_id = None
-        if st.session_state.messages:
-            parent_id = st.session_state.messages[-1].id
-            print(parent_id)
-
-        client.conversations.add_message(
-            id = st.session_state['conversation_id'],
-            content = new_msg.content,
-            role = new_msg.role,
-            metadata = {
-                # Both need to be strings since R2R accepts only strings
-                "timestamp": str(new_msg.timestamp),
-                "embedding": json.dumps(new_msg.embedding)
-            },
-            parent_id = str(parent_id) if parent_id else None
         )
 
         # Then to session state
@@ -186,15 +181,15 @@ def submit_query(client: R2RClient) -> Generator:
 
 def extract_completion(generator: Generator) -> Generator:
     """
-    Extracts and yields only the text inside <completion>...</completion> tags from a generator.
-
+    Extracts and yields only the text inside <completion>...</completion> tags from a generator
+    while preserving original formatting.
+    
     Args:
         generator (Generator[str, None, None]): A generator yielding text chunks.
-
+        
     Yields:
-        str: Extracted text within <completion> tags.
-     """
-
+        str: Extracted text within <completion> tags with formatting preserved.
+    """
     inside_completion = False  # Track whether we are inside the <completion> section
 
     for chunk in generator:
@@ -205,19 +200,19 @@ def extract_completion(generator: Generator) -> Generator:
             # Handle cases where closing tag is in the same chunk
             if "</completion>" in after_tag:
                 before_close, _ = after_tag.split("</completion>", 1)
-                yield before_close.strip()
+                yield before_close
                 inside_completion = False
             else:
-                yield after_tag.strip()
+                yield after_tag
             continue
 
         if inside_completion:
             if "</completion>" in chunk:
                 before_close, _ = chunk.split("</completion>", 1)
-                yield before_close.strip()
+                yield before_close
                 inside_completion = False
             else:
-                yield chunk.strip()
+                yield chunk
 
 def _get_enhanced_query(query: str) -> str:
     """
@@ -232,7 +227,6 @@ def _get_enhanced_query(query: str) -> str:
     # Take all assistant messages which are relevant for context
     assistant_messages = [msg for msg in st.session_state.messages if msg.role == "assistant"]
 
-    # If json.loads() makes no sense refer to add_message()
     relevant_messages = _get_relevant_messages(
         query_embedding = st.session_state.messages[-1].embedding,
         history = assistant_messages
@@ -320,7 +314,7 @@ def _get_relevant_messages(query_embedding: list[float], history: list[Message])
     for message in history:
         similarity = _compute_similarity(
             embedding1 = query_embedding,
-            embedding2 = json.loads(message.embedding)
+            embedding2 = message.embedding
         )
         if similarity >= st.session_state['similarity_threshold']:
             relevant_messages.append({
