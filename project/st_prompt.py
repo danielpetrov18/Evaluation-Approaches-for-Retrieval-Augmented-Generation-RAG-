@@ -5,7 +5,7 @@
 
 import streamlit as st
 from st_app import load_client
-from utility.r2r.prompts import list_prompts, create_prompt, retrieve_prompt, delete_prompt
+from utility.prompts import list_prompts, create_prompt, retrieve_prompt, delete_prompt
 
 if __name__ == "__page__":
     st.title("📝 Prompt Management")

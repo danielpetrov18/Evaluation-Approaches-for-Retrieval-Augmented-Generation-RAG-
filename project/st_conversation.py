@@ -6,7 +6,7 @@
 import re
 import streamlit as st
 from st_app import load_client
-from utility.r2r.conversations import list_conversations, fetch_messages, export_conversations, export_messages
+from utility.conversations import list_conversations, fetch_messages, export_conversations, export_messages
 
 if __name__ == "__page__":
     st.title("🗪 Manage conversations")

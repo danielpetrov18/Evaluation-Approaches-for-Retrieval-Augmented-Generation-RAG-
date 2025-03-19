@@ -4,7 +4,7 @@
 
 import streamlit as st
 from st_app import load_client
-from utility.r2r.indices import list_indices, create_idx, retrieve_idx, delete_idx
+from utility.indices import list_indices, create_idx, retrieve_idx, delete_idx
 
 if __name__ == "__page__":
     st.title("📊 Indices")

@@ -5,7 +5,7 @@
 
 import streamlit as st
 from st_app import load_client
-from utility.r2r.retrieval import (
+from utility.retrieval import (
     retrieve_conversation,
     check_conversation_exists,
     add_message,
@@ -86,15 +86,6 @@ if __name__ == "__page__":
         add_message(load_client(), {"role": "user", "content": query})
 
         with st.chat_message("assistant", avatar="🤖"):
-            # response_container = st.empty()
-            # full_response = ""
-
-            # for chunk in extract_completion(submit_query(load_client())):
-            #     full_response += chunk
-            #     # Update with markdown rendering at each step
-            #     response_container.markdown(full_response)
-
-            # response = full_response
             response_generator = submit_query(load_client())
             response = st.write_stream(extract_completion(response_generator))
 

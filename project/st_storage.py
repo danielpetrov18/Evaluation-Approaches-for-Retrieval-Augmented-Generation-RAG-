@@ -6,7 +6,7 @@
 import datetime
 import streamlit as st
 from st_app import load_client
-from utility.r2r.documents import (
+from utility.documents import (
     fetch_documents,
     fetch_document_chunks,
     ingest_file,

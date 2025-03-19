@@ -4,7 +4,7 @@
 
 import streamlit as st
 from st_app import load_client
-from utility.r2r.settings import check_health, check_status, check_settings
+from utility.settings import check_health, check_status, check_settings
 
 if __name__ == "__page__":
     st.title("⚙️ Settings & System Information")
