@@ -244,6 +244,7 @@ def _get_enhanced_query(query: str) -> str:
     # Enhance query with context
     return _enhance_user_query(query, context_summary)
 
+@st.cache_data(ttl=None)
 def _compute_embedding(text: str) -> list[float]:
     """
     Compute the vector embedding of a given text using the selected Ollama model.
@@ -273,6 +274,7 @@ def _compute_embedding(text: str) -> list[float]:
         st.error(f"Unexpected error computing embeddings: {e}")
         raise Exception(str(e)) from e
 
+@st.cache_data(ttl=None)
 def _compute_similarity(embedding1: list[float], embedding2: list[float]) -> float:
     """
     Compute the cosine similarity between two vector embeddings.
