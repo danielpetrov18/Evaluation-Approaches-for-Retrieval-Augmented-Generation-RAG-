@@ -6,6 +6,7 @@
 # pylint: disable=R1732
 
 import os
+import time
 import asyncio
 import tempfile
 from pathlib import Path
@@ -54,7 +55,7 @@ def fetch_documents(client: R2RClient, ids: list[str], offset: int, limit: int):
         selected_files = client.documents.list(ids, offset, limit).results
         if selected_files:
             for i, doc in enumerate(selected_files):
-                with st.expander(label=f"Document: {doc.title}", expanded=False):
+                with st.expander(label=f"{i}. Document: {doc.title}", expanded=False):
                     st.json(doc)
 
                     with st.popover(label="Delete document", icon="🗑️"):
@@ -179,9 +180,10 @@ def perform_webscrape(client: R2RClient, file: UploadedFile):
                                 metadata=document.metadata,
                                 run_with_orchestration=True
                             ).results
-                            st.success(chunks_ing_resp.message)
+                            st.success(f"{document.metadata['source']}: {chunks_ing_resp.message}")
                         except R2RException as r2re:
                             st.error(f"Error {document.metadata['source']}: {str(r2re)}")
+                        time.sleep(10) # Wait for ingestion 
                 st.info("Completed URL ingestion process")
             else:
                 st.error("No valid URLs found in file")
