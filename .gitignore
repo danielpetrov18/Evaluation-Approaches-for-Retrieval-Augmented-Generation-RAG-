@@ -88,3 +88,5 @@ logs
 
 # Extended context window Ollama file
 Modelfile
+
+.env
