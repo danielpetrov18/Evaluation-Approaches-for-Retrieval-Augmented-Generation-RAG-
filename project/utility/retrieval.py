@@ -146,7 +146,7 @@ def submit_query(client: R2RClient) -> Generator:
     try:
         search_settings = {
             "use_semantic_search": True,
-            "limit": 10,
+            "limit": 5,
             "offset": 0,
             "include_metadatas": False,
             "include_scores": True,
