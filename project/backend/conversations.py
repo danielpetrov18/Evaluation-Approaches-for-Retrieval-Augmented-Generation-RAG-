@@ -27,14 +27,14 @@ def list_conversations(
 ):
     """List conversations."""
     try:
-        conversations = client.conversations.list(ids, offset, limit = limit).results
+        conversations = client.conversations.list(ids, offset, limit).results
 
         if conversations:
             st.write(f"Showing conversations {offset+1} to {offset+len(conversations)}")
 
             for i, conversation in enumerate(conversations):
                 with st.expander(
-                    label=f"Conversation: {conversation.name}",
+                    label=f"Conversation {i + 1}: {conversation.id}",
                     expanded=False
                 ):
                     st.json(conversation)
@@ -145,7 +145,7 @@ def fetch_messages(client: R2RClient, conversation_id: str, display_metadata: bo
                     )
                     if display_metadata:
                         st.json(obj.metadata)
-
+            st.info("You've reached the end of the messages list.")
     except R2RException as r2re:
         st.error(f"Error fetching messages: {str(r2re)}")
     except Error as e:

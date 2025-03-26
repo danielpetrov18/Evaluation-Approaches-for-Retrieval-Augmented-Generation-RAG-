@@ -7,7 +7,10 @@ import tempfile
 import dataclasses
 from pathlib import Path
 import yaml
-from r2r import R2RException, R2RClient
+from r2r import (
+    R2RException,
+    R2RClient
+)
 import streamlit as st
 from streamlit.errors import Error
 from streamlit.runtime.uploaded_file_manager import UploadedFile
@@ -31,6 +34,7 @@ def list_indices(client: R2RClient):
                     expanded=False
                 ):
                     st.json(obj)
+            st.info("You've reached the end of the indices.")
         else:
             st.info("No indices found.")
     except R2RException as r2re:
@@ -61,8 +65,8 @@ def create_idx(client: R2RClient, file: UploadedFile):
         idx_creation_resp = client.indices.create(
             config=idx_config,
             run_with_orchestration=True
-        )
-        st.success(idx_creation_resp.results.message)
+        ).results.message
+        st.success(idx_creation_resp)
     except ValueError as ve:
         st.error(f"Error in YAML file structure: {str(ve)}")
     except R2RException as r2re:
@@ -73,25 +77,6 @@ def create_idx(client: R2RClient, file: UploadedFile):
         st.error(f"Unexpected error: {str(exc)}")
     finally:
         temp_file.close()
-
-def retrieve_idx(client: R2RClient, retrieve_name: str):
-    """Retrieves the index if it exists."""
-    try:
-        index_data = client.indices.retrieve(
-            index_name=retrieve_name,
-            table_name="chunks"
-        ).results
-        if index_data.index['name'] == retrieve_name:
-            st.markdown("**Index Details:**")
-            st.json(index_data)
-        else:
-            st.info("Index not found.")
-    except R2RException as r2re:
-        st.error(f"Error retrieving index: {str(r2re)}")
-    except Error as e:
-        st.error(f"Unexpected streamlit error: {str(e)}")
-    except Exception as exc:
-        st.error(f"Unexpected error: {str(exc)}")
 
 def delete_idx(client: R2RClient, name: str):
     """Delete index if available."""

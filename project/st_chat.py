@@ -5,7 +5,7 @@
 
 import streamlit as st
 from st_app import load_client
-from utility.retrieval import (
+from backend.retrieval import (
     retrieve_conversation,
     check_conversation_exists,
     add_message,

@@ -6,7 +6,7 @@
 import datetime
 import streamlit as st
 from st_app import load_client
-from utility.documents import (
+from backend.documents import (
     fetch_documents,
     fetch_document_chunks,
     ingest_file,
@@ -134,12 +134,14 @@ if __name__ == "__page__":
             filetype_filter = st.selectbox(
                 label="File type to filter on",
                 options=["all", "csv", "txt", "pdf", "docx", "json"],
+                help="If left on `all` it selects all possible documents"
             )
 
         with ingestion_status_col:
             ingestion_status_filter = st.selectbox(
                 label="Ingestion status to filter on",
-                options=["all", "success", "embedding", "parsing", "failed"]
+                options=["all", "success", "embedding", "parsing", "failed"],
+                help="If left on `all` it selects all possible documents"
             )
 
         if st.button("Export Documents", type="primary"):

@@ -9,14 +9,19 @@ import json
 from typing import  Generator
 import ollama
 import numpy as np
+from r2r import (
+    R2RClient,
+    R2RException,
+    MessageEvent
+)
 import streamlit as st
 from streamlit.errors import Error
 from pydantic import BaseModel, Field
-from r2r import R2RClient, R2RException
+from shared.api.models.retrieval.responses import SSEEventBase
 
 class Message(BaseModel):
     """
-    Represents a chat message with metadata and embedding information.
+    Represents a chat message with embedding information.
     
     Attributes:
         id: Unique identifier for the message
@@ -69,6 +74,7 @@ def check_conversation_exists(client: R2RClient):
     """Making sure that a conversation exists. If not we create one."""
     try:
         # If the id is empty -> create a new one and use it
+        # This is the case when the user starts a new conversation
         if not st.session_state['conversation_id']:
             st.session_state['conversation_id'] = client.conversations.create().results.id
             st.session_state.messages = []
@@ -76,7 +82,10 @@ def check_conversation_exists(client: R2RClient):
         else:
             # If the provided id is not related to a conversation raise error
             if not client.conversations.list(ids = [st.session_state['conversation_id']]).results:
-                raise R2RException(f"Conversation: {st.session_state['conversation_id']} doesn't exist!", 404)
+                raise R2RException(
+                    message=f"Conversation: {st.session_state['conversation_id']} doesn't exist!",
+                    status_code=404
+                )
     except R2RException as r2re:
         st.error(str(r2re))
     except Error as e:
@@ -84,11 +93,8 @@ def check_conversation_exists(client: R2RClient):
     except Exception as exc:
         st.error(str(exc))
 
-def add_message(client: R2RClient, msg: dict) -> str:
-    """
-    Adding a new message to a conversation.
-    Returns the id of the newly added message.
-    """
+def add_message(client: R2RClient, msg: dict):
+    """Adding a new message to a conversation."""
     try:
         embedding = _compute_embedding(msg['content'])
 
@@ -100,6 +106,7 @@ def add_message(client: R2RClient, msg: dict) -> str:
                 # Needs to be converted to a string, since R2R cannot accept a list[float]
                 "embedding": json.dumps(embedding)
             },
+            # If this is the first message in the conversation => None/Null
             parent_id = st.session_state['parent_id']
         )
 
@@ -113,7 +120,7 @@ def add_message(client: R2RClient, msg: dict) -> str:
             embedding = embedding
         )
 
-        # Then to session state
+        # Finally, add to session state to be displayed
         if not st.session_state.messages:
             st.session_state.messages = [new_msg]
         else:
@@ -158,14 +165,14 @@ def submit_query(client: R2RClient) -> Generator:
 
         generator = client.retrieval.rag(
             query = enhanced_query,
-            search_mode = "custom",
-            search_settings = search_settings,
             rag_generation_config = {
                 "temperature": st.session_state['rag_generation_config']['temperature'],
                 "top_p": st.session_state['rag_generation_config']['top_p'],
                 "max_tokens_to_sample": st.session_state['rag_generation_config']['max_tokens_to_sample'],
                 "stream": True # You must specify this explicitly. In config file it doesn't run.
-            }
+            },
+            search_mode = "custom",
+            search_settings = search_settings,
         )
 
         return generator
@@ -180,40 +187,21 @@ def submit_query(client: R2RClient) -> Generator:
         st.error(f"An error occurred: {str(e)}")
         raise e
 
-def extract_completion(generator: Generator) -> Generator:
+def extract_completion(generator: Generator[SSEEventBase, None, None]) -> Generator:
     """
     Extracts and yields only the text inside <completion>...</completion> tags from a generator
     while preserving original formatting.
     
     Args:
-        generator (Generator[str, None, None]): A generator yielding text chunks.
+        generator (Generator[SSEEventBase, None, None]): 
+            A generator yielding various events.
         
     Yields:
-        str: Extracted text within <completion> tags with formatting preserved.
+        str: Only data that is generated on the fly relevant for the final answer.
     """
-    inside_completion = False  # Track whether we are inside the <completion> section
-
-    for chunk in generator:
-        if "<completion>" in chunk:
-            inside_completion = True
-            after_tag = chunk.split("<completion>", 1)[1]
-
-            # Handle cases where closing tag is in the same chunk
-            if "</completion>" in after_tag:
-                before_close, _ = after_tag.split("</completion>", 1)
-                yield before_close
-                inside_completion = False
-            else:
-                yield after_tag
-            continue
-
-        if inside_completion:
-            if "</completion>" in chunk:
-                before_close, _ = chunk.split("</completion>", 1)
-                yield before_close
-                inside_completion = False
-            else:
-                yield chunk
+    for event in generator:
+        if isinstance(event, MessageEvent):
+            yield event.data.delta.content[0].payload.value
 
 def _get_enhanced_query(query: str) -> str:
     """

@@ -10,8 +10,8 @@ from r2r import R2RException, R2RClient
 def check_health(client: R2RClient):
     """Check health"""
     try:
-        message = client.system.health()
-        st.success(f"Service status: {message.results.message}")
+        message = client.system.health().results.message
+        st.success(f"Service status: {message}")
     except R2RException as r2re:
         st.error(f"Error checking health: {str(r2re)}")
     except Error as e:

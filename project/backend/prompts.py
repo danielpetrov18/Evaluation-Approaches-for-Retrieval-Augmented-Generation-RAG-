@@ -6,7 +6,10 @@
 import tempfile
 import dataclasses
 import yaml
-from r2r import R2RException, R2RClient
+from r2r import (
+    R2RException,
+    R2RClient
+)
 import streamlit as st
 from streamlit.errors import Error
 from streamlit.runtime.uploaded_file_manager import UploadedFile
@@ -27,6 +30,7 @@ def list_prompts(client: R2RClient):
             for prompt in prompts:
                 with st.expander(label=f"Prompt: {prompt.name}", expanded=False):
                     st.json(prompt)
+            st.info("You've reached the end of the prompts.")
         else:
             st.info("No prompts found.")
     except R2RException as r2re:
@@ -37,7 +41,7 @@ def list_prompts(client: R2RClient):
         st.error(f"Unexpected error: {str(exc)}")
 
 def create_prompt(client: R2RClient, file: UploadedFile):
-    """Create a custom propmt and save into database"""
+    """Create a custom prompt and save into database"""
 
     temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".yaml")
     temp_file.write(file.getbuffer())
@@ -45,16 +49,19 @@ def create_prompt(client: R2RClient, file: UploadedFile):
 
     try:
         prompt_obj: MyPrompt = _load_prompt_from_yaml(temp_file.name)
-        
+
         if not prompt_obj:
             st.error("Error loading prompt from YAML file.")
         else:
-            result = client.prompts.create(
-                name = prompt_obj.name,
-                template = prompt_obj.template,
-                input_types = prompt_obj.input_types
-            )
-            st.success(body=f"Prompt created: {result.results.message}")
+            if _check_prompt_exists(client, prompt_obj.name):
+                st.error(f"Prompt with name {prompt_obj.name} already exists.")
+            else:
+                result = client.prompts.create(
+                    name = prompt_obj.name,
+                    template = prompt_obj.template,
+                    input_types = prompt_obj.input_types
+                ).results.message
+                st.success(result)
     except ValueError as ve:
         st.error(f"Error creating prompt: {str(ve)}")
     except R2RException as r2re:
@@ -66,28 +73,13 @@ def create_prompt(client: R2RClient, file: UploadedFile):
     finally:
         temp_file.close()
 
-def retrieve_prompt(client: R2RClient, name: str):
-    """Get specific prompt by name"""
-    try:
-        prompt = client.prompts.retrieve(name).results
-        if prompt:
-            st.json(prompt)
-        else:
-            st.info("Prompt not found.")
-    except R2RException as r2re:
-        st.error(f"Error retrieving prompt: {str(r2re)}")
-    except Error as e:
-        st.error(f"Unexpected streamlit error: {str(e)}")
-    except Exception as exc:
-        st.error(f"Unexpected error: {str(exc)}")
-
 def delete_prompt(client:R2RClient, name: str):
     """Delete specific prompt by name"""
     try:
         result = client.prompts.delete(name)
         st.success(f"Prompt deletion result: {result.results}")
     except R2RException as r2re:
-        st.error(f"Error deleting prompt: {str(r2re)}")
+        st.error(f"Error deleting prompt: {r2re.message}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
@@ -137,3 +129,13 @@ def _load_prompt_from_yaml(filepath: str) -> MyPrompt | None:
     except Error as e:
         st.error(f"Unexpected error: {str(e)}")
         return None
+    except Exception as exc:
+        st.error(f"Unexpected error: {str(exc)}")
+        return None
+
+def _check_prompt_exists(client: R2RClient, name: str) -> bool:
+    try:
+        prompt = client.prompts.retrieve(name).results
+        return prompt is not None
+    except R2RException:
+        return False

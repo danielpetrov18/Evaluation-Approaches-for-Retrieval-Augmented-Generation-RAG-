@@ -6,7 +6,12 @@
 import re
 import streamlit as st
 from st_app import load_client
-from utility.conversations import list_conversations, fetch_messages, export_conversations, export_messages
+from backend.conversations import (
+    list_conversations,
+    fetch_messages,
+    export_conversations,
+    export_messages
+)
 
 if __name__ == "__page__":
     st.title("🗪 Manage conversations")
@@ -49,9 +54,12 @@ if __name__ == "__page__":
 
         page_col1, page_col2, page_col3 = st.columns([1, 2, 1])
         with page_col1:
-            if st.button("← Previous") and st.session_state["page_number"] > 0:
-                st.session_state["page_number"] -= 1
-                st.rerun()
+            if st.button("← Previous", key="prev_page"):
+                if st.session_state["page_number"] > 0:
+                    st.session_state["page_number"] -= 1
+                    st.rerun()
+                else:
+                    st.info("This is the first page")
 
         with page_col2:
             st.write(f"Page {st.session_state['page_number'] + 1}")

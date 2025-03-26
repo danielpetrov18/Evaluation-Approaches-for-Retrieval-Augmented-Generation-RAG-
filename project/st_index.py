@@ -4,16 +4,19 @@
 
 import streamlit as st
 from st_app import load_client
-from utility.indices import list_indices, create_idx, retrieve_idx, delete_idx
+from backend.indices import (
+    list_indices,
+    create_idx,
+    delete_idx
+)
 
 if __name__ == "__page__":
     st.title("📊 Indices")
 
-    tab_list, tab_create, tab_retrieve, tab_delete = st.tabs(
+    tab_list, tab_create, tab_delete = st.tabs(
         [
             "List Indices",
             "Create Index",
-            "Retrieve Index",
             "Delete Index"
         ]
     )
@@ -57,21 +60,6 @@ if __name__ == "__page__":
                 st.error("Please upload a YAML file to create an index.")
             else:
                 create_idx(load_client(), uploaded_file)
-
-    with tab_retrieve:
-        st.markdown("**Retrieve Index by Name**")
-
-        chosen_idx = st.text_input(
-            label="Index Name to Retrieve",
-            placeholder="Ex. index_name",
-            value=""
-        )
-
-        if st.button(label="Get Index Details", key="retrieve_index_btn"):
-            if not chosen_idx.strip():
-                st.error("Please provide an index name to retrieve.")
-            else:
-                retrieve_idx(load_client(), chosen_idx.strip())
 
     with tab_delete:
         st.markdown("**Delete Index by Name**")

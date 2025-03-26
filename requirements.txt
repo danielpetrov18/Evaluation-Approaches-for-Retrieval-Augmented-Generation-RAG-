@@ -1,7 +1,7 @@
 ragas==0.2.14
 pandas==2.2.3
-r2r[core]==3.4.6
-streamlit==1.43.1
+r2r[core]==3.5.6
+streamlit==1.43.2
 ipykernel==6.29.5
 unstructured==0.17.0
 unstructured[pdf]==0.17.0

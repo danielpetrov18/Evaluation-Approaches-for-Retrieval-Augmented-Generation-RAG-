@@ -3,20 +3,22 @@
 # pylint: disable=E0401
 # pylint: disable=W0612
 # pylint: disable=W0718
+# pylint: disable=R0914
 # pylint: disable=R1732
 
 import os
 import time
 import asyncio
 import tempfile
+from uuid import uuid4
 from pathlib import Path
 from datetime import datetime
 import json
-import pandas as pd
 from r2r import (
     R2RException,
     R2RClient
 )
+import pandas as pd
 import streamlit as st
 from streamlit.errors import Error
 from streamlit.runtime.uploaded_file_manager import UploadedFile
@@ -55,16 +57,36 @@ def fetch_documents(client: R2RClient, ids: list[str], offset: int, limit: int):
         selected_files = client.documents.list(ids, offset, limit).results
         if selected_files:
             for i, doc in enumerate(selected_files):
-                with st.expander(label=f"{i}. Document: {doc.title}", expanded=False):
+                with st.expander(label=f"Document {i + 1}: {doc.title}", expanded=False):
                     st.json(doc)
 
-                    with st.popover(label="Delete document", icon="🗑️"):
-                        delete_doc_btn = st.button(
-                            label="Confirm deletion",
-                            key=f"delete_document_{i}",
-                            on_click=delete_document,
-                            args=(client, doc.id, )
-                        )
+                    delete_col, update_metadata_col = st.columns(2)
+
+                    with delete_col:
+                        with st.popover(label="Delete document", icon="🗑️"):
+                            delete_doc_btn = st.button(
+                                label="Confirm deletion",
+                                key=f"delete_document_{i}",
+                                on_click=delete_document,
+                                args=(client, doc.id, )
+                            )
+
+                    with update_metadata_col:
+                        with st.popover(label="Update metadata", icon="✏️"):
+                            updated_metadata_key = str(uuid4())
+                            metadata_str = st.text_area(
+                                label="Update metadata",
+                                key=updated_metadata_key,
+                                value=json.dumps(doc.metadata, indent=4),
+                                height=150
+                            )
+
+                            update_metadata_btn = st.button(
+                                label="Confirm update",
+                                key=f"update_metadata_btn_{i}",
+                                on_click=update_metadata,
+                                args=(client, doc.id, updated_metadata_key)
+                            )
 
             if len(selected_files) < limit:
                 st.info("You've reached the end of the documents.")
@@ -89,6 +111,30 @@ def delete_document(client: R2RClient, document_id: str):
     except Exception as exc:
         st.error(f"Unexpected error: {str(exc)}")
 
+def update_metadata(client: R2RClient, document_id: str, updated_metadata_key: str):
+    """Update or add fields to metadata of a document"""
+    try:
+        metadata = st.session_state[updated_metadata_key]
+
+        key_value_pairs = []
+        if metadata:
+            metadata = json.loads(metadata)
+            key_value_pairs = [{k: v} for k, v in metadata.items()]
+
+        client.documents.append_metadata(
+            id=document_id,
+            metadata=key_value_pairs
+        )
+        st.success("Successfully updated metadata")
+    except json.JSONDecodeError as jde:
+        st.error(f"Error: {str(jde)}")
+    except R2RException as r2re:
+        st.error(f"Error: {str(r2re)}")
+    except Error as e:
+        st.error(f"Unexpected streamlit error: {str(e)}")
+    except Exception as exc:
+        st.error(f"Unexpected error: {str(exc)}")
+
 def fetch_document_chunks(client: R2RClient, document_id: str, offset: int, limit: int):
     """Fetches all chunks related to a document"""
     try:
@@ -101,7 +147,7 @@ def fetch_document_chunks(client: R2RClient, document_id: str, offset: int, limi
 
         for i, chunk in enumerate(chunks):
             with st.expander(
-                label=f"{i}. Chunk {chunk.id}",
+                label=f"Chunk {i + 1}: {chunk.id}",
                 expanded=False
             ):
                 st.markdown("### Text: \n", unsafe_allow_html=True)
@@ -183,7 +229,7 @@ def perform_webscrape(client: R2RClient, file: UploadedFile):
                             st.success(f"{document.metadata['source']}: {chunks_ing_resp.message}")
                         except R2RException as r2re:
                             st.error(f"Error {document.metadata['source']}: {str(r2re)}")
-                        time.sleep(10) # Wait for ingestion 
+                        time.sleep(10) # Wait for ingestion
                 st.info("Completed URL ingestion process")
             else:
                 st.error("No valid URLs found in file")
@@ -298,6 +344,7 @@ def _extract_urls(file: UploadedFile) -> list[str]:
         raise ValueError("CSV file is empty")
 
     extracted_urls = dataframe.iloc[1:, 0].dropna().astype(str).str.strip().tolist()
+    extracted_urls = _remove_duplicate_urls(extracted_urls)
     return extracted_urls
 
 def _run_async_function(coroutine):

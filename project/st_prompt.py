@@ -5,16 +5,19 @@
 
 import streamlit as st
 from st_app import load_client
-from utility.prompts import list_prompts, create_prompt, retrieve_prompt, delete_prompt
+from backend.prompts import (
+    list_prompts,
+    create_prompt,
+    delete_prompt
+)
 
 if __name__ == "__page__":
     st.title("📝 Prompt Management")
 
-    tab_list, tab_create, tab_retrieve, tab_delete = st.tabs(
+    tab_list, tab_create, tab_delete = st.tabs(
         [
             "List Prompts", 
             "Create Prompt", 
-            "Retrieve Prompt", 
             "Delete Prompt"
         ]
     )
@@ -55,20 +58,6 @@ if __name__ == "__page__":
                 st.error(body="Please upload a YAML file.")
             else:
                 create_prompt(load_client(), uploaded_file)
-
-    with tab_retrieve:
-        st.markdown("**Retrieve Prompt by Name**")
-
-        p_name = st.text_input(
-            label="Prompt Name to Retrieve",
-            placeholder="Ex. prompt_name",
-            value=""
-        )
-        if st.button(label="Get Prompt", key="retrieve_prompt_btn"):
-            if not p_name.strip():
-                st.error("Please enter a prompt name.")
-            else:
-                retrieve_prompt(load_client(), p_name.strip())
 
     with tab_delete:
         st.markdown("**Delete Prompt by Name**")
