@@ -38,7 +38,9 @@ class EnhancedPersonaGenerationPrompt(PydanticPrompt[StringIO, Persona]):
     instruction: str = (
         "Using the provided summary, keyphrases, and themes, generate a single persona "
         "who would likely interact with or benefit from the content. Include a unique name "
-        "and a concise role description of who they are."
+        "and a concise role description of who they are. The unique name should be more of a role "
+        "that describes the persona's role and not the name of the persona itself. Avoid using "
+        "actual names."
     )
     input_model: t.Type[StringIO] = StringIO
     output_model: t.Type[Persona] = Persona
