@@ -29,8 +29,7 @@ else
 
     # Set num_ctx to 24000 for llama3.1
     echo "Setting context window for llama3.1 to 24000 tokens..."
-    echo 'FROM llama3.1
-    PARAMETER num_ctx 24000' > Modelfile
+    echo -e 'FROM llama3.1\nPARAMETER num_ctx 24000' > Modelfile
     ollama create llama3.1 -f Modelfile
     echo "Model configuration complete."
 fi
