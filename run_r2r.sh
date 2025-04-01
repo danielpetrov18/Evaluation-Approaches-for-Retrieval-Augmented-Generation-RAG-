@@ -56,6 +56,9 @@ fi
 echo "Activating virtual environment..."
 source $VENV_DIR/bin/activate
 
+# Upgrade tools
+python3 -m pip install --upgrade pip setuptools wheel
+
 # Install requirements
 echo "Installing/updating required packages..."
 if [ -f "requirements.txt" ]
