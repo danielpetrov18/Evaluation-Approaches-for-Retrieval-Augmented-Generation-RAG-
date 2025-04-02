@@ -9,6 +9,6 @@ source deepeval_venv/bin/activate
 # Upgrade tools
 python3 -m pip install --upgrade pip setuptools wheel
 
-pip3 install deepeval==2.6.5 ipykernel==6.29.5
+pip3 install deepeval==2.6.6 ipykernel==6.29.5
 
 echo "DeepEval installation complete"
