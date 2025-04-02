@@ -92,3 +92,5 @@ Modelfile
 .env
 
 .deepeval*
+
+.pytest_cache
