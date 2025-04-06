@@ -28,6 +28,7 @@ else
     fi
 
     # Set num_ctx to 24000 for llama3.1
+    # https://r2r-docs.sciphi.ai/self-hosting/local-rag
     echo "Setting context window for llama3.1 to 24000 tokens..."
     echo -e 'FROM llama3.1\nPARAMETER num_ctx 24000' > Modelfile
     ollama create llama3.1 -f Modelfile

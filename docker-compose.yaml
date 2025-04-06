@@ -11,16 +11,6 @@ services:
       - 'postgres_data:/var/lib/postgresql/data'
     networks:
       - r2r_network
-  unstructured:
-    build:
-      context: "./services/unstructured"
-      dockerfile: "Dockerfile"
-    container_name: unstructured
-    ports:
-      - "7275:7275"
-    networks:
-      - r2r_network
-    restart: unless-stopped
 volumes:
   postgres_data:
 networks:

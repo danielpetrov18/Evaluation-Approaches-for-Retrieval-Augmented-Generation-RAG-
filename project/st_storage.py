@@ -90,11 +90,11 @@ if __name__ == "__page__":
 
         uploaded_file = st.file_uploader(
             "Choose a file to upload",
-            type=["txt", "pdf", "docx", "csv", "json", "md", "html"]
+            type=["txt", "pdf", "docx", "csv", "md", "html"]
         )
 
         metadata = st.text_area(
-            "Metadata (JSON format)",
+            label="Metadata (JSON format)",
             value="{}",
             help="Optional metadata in JSON format"
         )

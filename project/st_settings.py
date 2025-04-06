@@ -28,7 +28,7 @@ if __name__ == "__page__":
             check_health(load_client())
 
     with tab_status:
-        st.markdown("### System Status")
+        st.markdown("**System Status**")
 
         if st.button(label="Refresh Status", key="status_check_button"):
             check_status(load_client())

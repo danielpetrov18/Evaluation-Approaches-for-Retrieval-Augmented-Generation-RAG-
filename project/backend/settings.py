@@ -1,4 +1,4 @@
-"""Simple file for separation the GUI from the logic as much as possible."""
+"""Simple file for separating the GUI from the logic as much as possible."""
 
 # pylint: disable=W0718 -> disable too-broad of an exception
 

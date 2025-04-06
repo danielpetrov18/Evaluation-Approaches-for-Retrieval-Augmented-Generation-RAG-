@@ -13,21 +13,36 @@ import tempfile
 from uuid import uuid4
 from pathlib import Path
 from datetime import datetime
+from typing import Dict, Any, List
 import json
-from r2r import (
-    R2RException,
-    R2RClient
-)
 import pandas as pd
 import streamlit as st
+from r2r import R2RException, R2RClient
+
 from streamlit.errors import Error
 from streamlit.runtime.uploaded_file_manager import UploadedFile
+
 from langchain.docstore.document import Document
-from langchain_community.document_loaders import (
-    BSHTMLLoader,
-    AsyncHtmlLoader
-)
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import TokenTextSplitter
+from langchain_community.document_loaders import BSHTMLLoader, AsyncHtmlLoader
+from langchain_community.document_loaders.unstructured import UnstructuredFileLoader
+
+@st.cache_resource
+def load_unstructured(filepath: str, ingestion_conf: Dict[str, Any]):
+    """Load object to to extract text from files."""
+    return UnstructuredFileLoader(
+        file_path=filepath,
+        mode="single",
+        unstructured_kwargs=ingestion_conf
+    )
+
+@st.cache_resource
+def load_token_splitter():
+    """Load TokenTextSplitter."""
+    return TokenTextSplitter(
+        chunk_size = st.session_state['chunk_size'],
+        chunk_overlap = st.session_state['chunk_overlap']
+    )
 
 @st.cache_resource
 def load_ascraper(urls: list[str]):
@@ -37,27 +52,13 @@ def load_ascraper(urls: list[str]):
         default_parser="lxml"
     )
 
-@st.cache_resource
-def load_splitter():
-    """Load RecursiveCharacterTextSplitter."""
-    separators = ["\n\n", "\n"]
-
-    recursive_splitter = RecursiveCharacterTextSplitter(
-        chunk_size = st.session_state['chunk_size'],
-        chunk_overlap = st.session_state['chunk_overlap'],
-        length_function = len,
-        separators = separators
-    )
-
-    return recursive_splitter
-
 def fetch_documents(client: R2RClient, ids: list[str], offset: int, limit: int):
-    """Retrieve documents"""
+    """Retrieve documents. For each document there's a delete and update metadata buttons."""
     try:
         selected_files = client.documents.list(ids, offset, limit).results
         if selected_files:
             for i, doc in enumerate(selected_files):
-                with st.expander(label=f"Document {i + 1}: {doc.title}", expanded=False):
+                with st.expander(label=f"{i + 1}: {doc.metadata['filename']}", expanded=False):
                     st.json(doc)
 
                     delete_col, update_metadata_col = st.columns(2)
@@ -164,22 +165,50 @@ def fetch_document_chunks(client: R2RClient, document_id: str, offset: int, limi
         st.error(f"Unexpected error: {str(exc)}")
 
 def ingest_file(client: R2RClient, file: UploadedFile, metadata: dict):
-    """Creating a temp file and ingesting it"""
+    """
+    This method takes a file in binary format. Saves it in the tmp folder.
+    Thereafter, the text is extracted and split using token splitter.
+    Finally, it gets ingested. Alternatively, one can ingest the document
+    directly, however I prefer the token splitter since the chunks make sense to me.
+    If you use the R2R unstructured service, you can ingest directly.
+    """
+    # Do it outside because of the finally clause
+    temp_filepath = os.path.join(tempfile.gettempdir(), file.name)
     try:
-        # Save file temporarily and also save it with its proper title
-        temp_dir = tempfile.gettempdir()
-        temp_filepath = os.path.join(temp_dir, file.name)
+        # Make sure file doesn't already exist.
+        for doc in client.documents.list().results:
+            if doc.metadata["filename"] == file.name:
+                st.error("File already exists!")
+                return
+
         with open(file=temp_filepath, mode="wb") as temp_file:
             temp_file.write(file.getbuffer())
 
+        if not os.path.exists(temp_filepath) or os.path.getsize(temp_filepath) == 0:
+            st.error("Failed to save file or file is empty.")
+            return
+
+        loader = load_unstructured(
+            filepath=temp_filepath,
+            ingestion_conf=st.session_state['ingestion_config']
+        )
+        document: Document = loader.load()[0]
+
+        splitter = load_token_splitter()
+        chunks: List[Document] = splitter.split_documents([document])
+        txt_chunks: List[str] = [chunk.page_content for chunk in chunks]
+
         with st.spinner(text="Ingesting document...", show_time=True):
-            if metadata:
+            if isinstance(metadata, str):
                 metadata = json.loads(metadata)
 
+            combined_metadata = {**document.metadata, **metadata}
+            combined_metadata["filename"] = file.name
+
             ingest_resp = client.documents.create(
-                file_path=temp_filepath,
-                ingestion_mode="custom",
-                metadata=metadata,
+                chunks=txt_chunks,
+                ingestion_mode="fast",
+                metadata=combined_metadata,
                 run_with_orchestration=True
             ).results
             st.success(ingest_resp.message)
@@ -199,48 +228,48 @@ def ingest_file(client: R2RClient, file: UploadedFile, metadata: dict):
 def perform_webscrape(client: R2RClient, file: UploadedFile):
     """By providing a file with URLs we can scrape and ingest the data"""
 
-    with st.status(
-        label="Processing URLs...",
-        expanded=True,
-        state="running"
-    ):
-        try:
-            urls = _extract_urls(file)
-            if len(urls) > 0:
-                st.write('Extracted URLs...')
+    # with st.status(
+    #     label="Processing URLs...",
+    #     expanded=True,
+    #     state="running"
+    # ):
+    #     try:
+    #         urls = _extract_urls(file)
+    #         if len(urls) > 0:
+    #             st.write('Extracted URLs...')
 
-                documents = _fetch_data_from_urls(urls)
-                st.write('Fetched data...')
+    #             documents = _fetch_data_from_urls(urls)
+    #             st.write('Fetched data...')
 
-                for document in documents:
-                    with tempfile.NamedTemporaryFile(delete=True, suffix=".html") as temp_file:
-                        temp_file.write(document.page_content.encode('utf-8'))
-                        temp_file.flush()
-                        bs4_parser = BSHTMLLoader(temp_file.name)
-                        splitted_documents = bs4_parser.load_and_split(load_splitter())
-                        chunks_text = [chunk.page_content for chunk in splitted_documents]
-                        try:
-                            chunks_ing_resp = client.documents.create(
-                                chunks=chunks_text,
-                                ingestion_mode='custom',
-                                metadata=document.metadata,
-                                run_with_orchestration=True
-                            ).results
-                            st.success(f"{document.metadata['source']}: {chunks_ing_resp.message}")
-                        except R2RException as r2re:
-                            st.error(f"Error {document.metadata['source']}: {str(r2re)}")
-                        time.sleep(10) # Wait for ingestion
-                st.info("Completed URL ingestion process")
-            else:
-                st.error("No valid URLs found in file")
-        except R2RException as r2re:
-            st.error(f"Error: {str(r2re)}")
-        except ValueError as ve:
-            st.error(f"Error: {str(ve)}")
-        except Error as e:
-            st.error(f"Unexpected streamlit error: {str(e)}")
-        except Exception as exc:
-            st.error(f"Unexpected error: {str(exc)}")
+    #             for document in documents:
+    #                 with tempfile.NamedTemporaryFile(delete=True, suffix=".html") as temp_file:
+    #                     temp_file.write(document.page_content.encode('utf-8'))
+    #                     temp_file.flush()
+    #                     bs4_parser = BSHTMLLoader(temp_file.name)
+    #                     splitted_documents = bs4_parser.load_and_split(load_splitter())
+    #                     chunks_text = [chunk.page_content for chunk in splitted_documents]
+    #                     try:
+    #                         chunks_ing_resp = client.documents.create(
+    #                             chunks=chunks_text,
+    #                             ingestion_mode='custom',
+    #                             metadata=document.metadata,
+    #                             run_with_orchestration=True
+    #                         ).results
+    #                         st.success(f"{document.metadata['source']}: {chunks_ing_resp.message}")
+    #                     except R2RException as r2re:
+    #                         st.error(f"Error {document.metadata['source']}: {str(r2re)}")
+    #                     time.sleep(10) # Wait for ingestion
+    #             st.info("Completed URL ingestion process")
+    #         else:
+    #             st.error("No valid URLs found in file")
+    #     except R2RException as r2re:
+    #         st.error(f"Error: {str(r2re)}")
+    #     except ValueError as ve:
+    #         st.error(f"Error: {str(ve)}")
+    #     except Error as e:
+    #         st.error(f"Unexpected streamlit error: {str(e)}")
+    #     except Exception as exc:
+    #         st.error(f"Unexpected error: {str(exc)}")
 
 def export_docs_to_csv(client: R2RClient, filename: str, filetype: str, ingestion_status: str):
     """Exports all available documents to a csv file."""

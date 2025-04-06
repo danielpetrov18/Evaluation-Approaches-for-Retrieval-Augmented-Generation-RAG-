@@ -1,9 +1,10 @@
 """
-This module holds all the available pages of the frontend application.
+This module holds all the available pages of the frontend part of the application.
 Every resource defined in the main page can be accessed by all pages.
 """
 
 import os
+import typing as t
 import streamlit as st
 from r2r import R2RClient
 from streamlit.navigation.page import StreamlitPage
@@ -19,7 +20,7 @@ def load_client() -> R2RClient:
         timeout=600
     )
 
-def get_pages() -> list[StreamlitPage]:
+def get_pages() -> t.List[StreamlitPage]:
     """Defines main pages."""
     return [
         st.Page(
@@ -68,14 +69,30 @@ if __name__ == "__main__":
     # This page is an entrypoint and as such serves as a page router.
     page = st.navigation(pages)
 
+    # ====== TWEAK VALUES BELOW TO ACHIEVE BEST PERFORMANCE ======
+
+    if "top_k" not in st.session_state:
+        st.session_state['top_k'] = int(os.getenv("TOP_K"))
+
+    if "top_p" not in st.session_state:
+        st.session_state['top_p'] = float(os.getenv("TOP_P"))
+
+    if "max_tokens" not in st.session_state:
+        st.session_state['max_tokens'] = int(os.getenv("MAX_TOKENS"))
+
     if "chunk_size" not in st.session_state:
         st.session_state['chunk_size'] = int(os.getenv("CHUNK_SIZE"))
+
+    if "temperature" not in st.session_state:
+        st.session_state['temperature'] = float(os.getenv("TEMPERATURE"))
 
     if "chunk_overlap" not in st.session_state:
         st.session_state['chunk_overlap'] = int(os.getenv("CHUNK_OVERLAP"))
 
+    # ====== TWEAK VALUES ABOVE TO ACHIEVE BEST PERFORMANCE ======
+
     if "exports_dir" not in st.session_state:
-        st.session_state['exports_dir'] = os.getenv("EXPORTS_DIRECTORY")
+        st.session_state['exports_dir'] = "./exports"
 
     if "bearer_token" not in st.session_state:
         st.session_state['bearer_token'] = load_client().users.login(
@@ -104,8 +121,8 @@ if __name__ == "__main__":
     if "max_relevant_messages" not in st.session_state:
         st.session_state["max_relevant_messages"] = int(os.getenv("MAX_RELEVANT_MESSAGES"))
 
-    if "rag_generation_config" not in st.session_state:
-        st.session_state["rag_generation_config"] = load_client().system.settings().results.config['completion']['generation_config']
+    if 'ingestion_config' not in st.session_state:
+        st.session_state['ingestion_config'] = load_client().system.settings().results.config['ingestion']
 
     # Run selected page
     page.run()

@@ -1,16 +1,7 @@
-[agent]
-tools = ["local_search"]
-
-  [agent.generation_config]
-  model = "ollama/llama3.1"
-
 [app]
-project_name = "bachelor"
-
+project = "Evaluation Approaches for RAG systems"
 fast_llm = "ollama/llama3.1"    # LLM used for internal operations, like deriving conversation names
 quality_llm = "ollama/llama3.1" # LLM used for user-facing output, like RAG replies
-vlm = "ollama/llama3.2-vision"  # LLM used for ingesting visual inputs
-audio_lm = "ollama/llama3.1"    # LLM used for transcription
 
 [auth]
 provider = "r2r"  # currently only "r2r" | "supabase" are supported
@@ -20,7 +11,7 @@ default_admin_email = "admin@example.com"
 default_admin_password = "change_me_immediately"
 access_token_lifetime_in_minutes = 3600  # 60 hours
 refresh_token_lifetime_in_days = 7  # 7 days
-secret_key = "s3cr3t"  # Used for JWT token signing
+secret_key = "your-secret-key"  # Used for JWT token signing
 
 [completion]
 provider = "litellm"
@@ -29,35 +20,22 @@ concurrent_request_limit = 1
   [completion.generation_config]
   temperature = 0.1
   top_p = 1
-  max_tokens_to_sample = 512
+  max_tokens_to_sample = 1_024
   stream = false
+  api_base = "http://localhost:11434/v1" # Assuming this is where Ollama would be running
 
 [completion_embedding]
 provider = "ollama"
 base_model = "mxbai-embed-large"
 base_dimension = 1_024
-batch_size = 32
+batch_size = 128
 add_title_as_prefix = true
 concurrent_request_limit = 2
-
-[database]
-provider = "postgres"
 
 [embedding]
 provider = "ollama"
 base_model = "mxbai-embed-large"
 base_dimension = 1_024
-batch_size = 32
+batch_size = 128
 add_title_as_prefix = true
-concurrent_request_limit = 2
-
-[ingestion]
-provider = "unstructured_local"
-strategy = "auto"
-chunking_strategy = "by_title"
-new_after_n_chars = 1024     # average chunk
-max_characters = 2048        # max chunk
-combine_under_n_chars = 256 # chunk merge threshold
-overlap = 128
-chunks_for_document_summary = 10
-automatic_extraction = false
+concurrent_request_limit = 8
