@@ -6,11 +6,11 @@
 import tempfile
 import dataclasses
 from pathlib import Path
+from typing import Dict, Union
+
 import yaml
-from r2r import (
-    R2RException,
-    R2RClient
-)
+from r2r import R2RException, R2RClient
+
 import streamlit as st
 from streamlit.errors import Error
 from streamlit.runtime.uploaded_file_manager import UploadedFile
@@ -21,7 +21,7 @@ class Index:
     name: str
     method: str
     measure: str
-    arguments: dict
+    arguments: Dict[str, Union[str, Dict]]
 
 def list_indices(client: R2RClient):
     """Fetch all available indices"""
@@ -38,7 +38,7 @@ def list_indices(client: R2RClient):
         else:
             st.info("No indices found.")
     except R2RException as r2re:
-        st.error(f"Error listing indices: {str(r2re)}")
+        st.error(f"Error listing indices: {r2re.message}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
@@ -70,7 +70,7 @@ def create_idx(client: R2RClient, file: UploadedFile):
     except ValueError as ve:
         st.error(f"Error in YAML file structure: {str(ve)}")
     except R2RException as r2re:
-        st.error(f"Error creating index: {str(r2re)}")
+        st.error(f"Error creating index: {r2re.message}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
@@ -94,7 +94,7 @@ def delete_idx(client: R2RClient, name: str):
     except Exception as exc:
         st.error(f"Unexpected error: {str(exc)}")
 
-def _load_index_config_from_yaml(filepath: str | Path) -> Index:
+def _load_index_config_from_yaml(filepath: Union[str,Path]) -> Index:
     """
     Load index configuration from a YAML file.
 
@@ -110,7 +110,7 @@ def _load_index_config_from_yaml(filepath: str | Path) -> Index:
     with open(file=filepath, mode='r', encoding='utf-8') as f:
         data = yaml.safe_load(f)
 
-    if not isinstance(data, dict) or len(data.keys()) != 1:
+    if not isinstance(data, Dict) or len(data.keys()) != 1:
         raise ValueError(
             "YAML file must contain exactly one top-level key representing the index name!"
         )
@@ -137,7 +137,7 @@ def _construct_index_config(
     index_name: str,
     index_measure: str,
     index_arguments: dict
-) -> dict:
+) -> Dict[str, Union[str, bool]]:
     """Helper function to construct index configuration."""
     # https://medium.com/@emreks/comparing-ivfflat-and-hnsw-with-pgvector-performance-analysis-on-diverse-datasets-e1626505bc9a
     # https://towardsdatascience.com/similarity-search-part-4-hierarchical-navigable-small-world-hnsw-2aad4fe87d37/

@@ -8,6 +8,7 @@ from st_app import load_client
 from backend.retrieval import (
     retrieve_conversation,
     check_conversation_exists,
+    set_new_prompt,
     add_message,
     submit_query,
     extract_completion
@@ -57,6 +58,17 @@ if __name__ == "__page__":
             st.session_state.messages = []
             st.session_state['parent_id'] = None
             st.rerun()
+
+        # Select a different prompt from the default one
+        new_prompt_name = st.text_input(
+            label="Prompt Name",
+            value=st.session_state['selected_prompt'],
+        )
+
+        if st.button(label="Confirm", key="new_prompt_btn"):
+            if new_prompt_name == st.session_state['selected_prompt']:
+                st.error("Please enter a different prompt name.")
+            set_new_prompt(load_client(), new_prompt_name.strip())
 
     # Load conversation messages if we have a conversation ID and no messages loaded yet
     if st.session_state['conversation_id'] and not st.session_state.messages:

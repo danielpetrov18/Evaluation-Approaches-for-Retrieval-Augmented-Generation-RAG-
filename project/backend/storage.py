@@ -6,34 +6,36 @@
 # pylint: disable=R0914
 # pylint: disable=R1732
 
+import requests
+from ollama import Options, Ollama
 import os
 import time
 import asyncio
 import tempfile
 from uuid import uuid4
+from typing import List
 from pathlib import Path
-from datetime import datetime
-from typing import Dict, Any, List
+
 import json
 import pandas as pd
-import streamlit as st
 from r2r import R2RException, R2RClient
 
+import streamlit as st
 from streamlit.errors import Error
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 from langchain.docstore.document import Document
 from langchain_text_splitters import TokenTextSplitter
-from langchain_community.document_loaders import BSHTMLLoader, AsyncHtmlLoader
+from langchain_community.document_loaders import AsyncHtmlLoader
 from langchain_community.document_loaders.unstructured import UnstructuredFileLoader
 
 @st.cache_resource
-def load_unstructured(filepath: str, ingestion_conf: Dict[str, Any]):
+def load_unstructured(filepath: str):
     """Load object to to extract text from files."""
     return UnstructuredFileLoader(
         file_path=filepath,
         mode="single",
-        unstructured_kwargs=ingestion_conf
+        unstructured_kwargs=st.session_state['ingestion_config']
     )
 
 @st.cache_resource
@@ -51,6 +53,20 @@ def load_ascraper(urls: list[str]):
         web_path=urls,
         default_parser="lxml"
     )
+
+def delete_all_documents(client: R2RClient):
+    """Delete all present documents"""
+    try:
+        doc_ids = [doc.id for doc in client.documents.list().results]
+        for doc_id in doc_ids:
+            client.documents.delete(doc_id)
+        st.success("Successfully deleted all documents")
+    except R2RException as r2re:
+        st.error(f"Error when deleting document: {str(r2re)}")
+    except Error as e:
+        st.error(f"Unexpected streamlit error: {str(e)}")
+    except Exception as exc:
+        st.error(f"Unexpected error: {str(exc)}")
 
 def fetch_documents(client: R2RClient, ids: list[str], offset: int, limit: int):
     """Retrieve documents. For each document there's a delete and update metadata buttons."""
@@ -188,10 +204,7 @@ def ingest_file(client: R2RClient, file: UploadedFile, metadata: dict):
             st.error("Failed to save file or file is empty.")
             return
 
-        loader = load_unstructured(
-            filepath=temp_filepath,
-            ingestion_conf=st.session_state['ingestion_config']
-        )
+        loader = load_unstructured(filepath=temp_filepath)
         document: Document = loader.load()[0]
 
         splitter = load_token_splitter()
@@ -228,48 +241,55 @@ def ingest_file(client: R2RClient, file: UploadedFile, metadata: dict):
 def perform_webscrape(client: R2RClient, file: UploadedFile):
     """By providing a file with URLs we can scrape and ingest the data"""
 
-    # with st.status(
-    #     label="Processing URLs...",
-    #     expanded=True,
-    #     state="running"
-    # ):
-    #     try:
-    #         urls = _extract_urls(file)
-    #         if len(urls) > 0:
-    #             st.write('Extracted URLs...')
+    with st.status(
+        label="Processing URLs...",
+        expanded=True,
+        state="running"
+    ):
+        try:
+            urls = _extract_urls(file)
+            if len(urls) > 0:
+                st.write('Extracted URLs...')
 
-    #             documents = _fetch_data_from_urls(urls)
-    #             st.write('Fetched data...')
+                documents = _fetch_data_from_urls(urls)
+                st.write('Fetched data...')
 
-    #             for document in documents:
-    #                 with tempfile.NamedTemporaryFile(delete=True, suffix=".html") as temp_file:
-    #                     temp_file.write(document.page_content.encode('utf-8'))
-    #                     temp_file.flush()
-    #                     bs4_parser = BSHTMLLoader(temp_file.name)
-    #                     splitted_documents = bs4_parser.load_and_split(load_splitter())
-    #                     chunks_text = [chunk.page_content for chunk in splitted_documents]
-    #                     try:
-    #                         chunks_ing_resp = client.documents.create(
-    #                             chunks=chunks_text,
-    #                             ingestion_mode='custom',
-    #                             metadata=document.metadata,
-    #                             run_with_orchestration=True
-    #                         ).results
-    #                         st.success(f"{document.metadata['source']}: {chunks_ing_resp.message}")
-    #                     except R2RException as r2re:
-    #                         st.error(f"Error {document.metadata['source']}: {str(r2re)}")
-    #                     time.sleep(10) # Wait for ingestion
-    #             st.info("Completed URL ingestion process")
-    #         else:
-    #             st.error("No valid URLs found in file")
-    #     except R2RException as r2re:
-    #         st.error(f"Error: {str(r2re)}")
-    #     except ValueError as ve:
-    #         st.error(f"Error: {str(ve)}")
-    #     except Error as e:
-    #         st.error(f"Unexpected streamlit error: {str(e)}")
-    #     except Exception as exc:
-    #         st.error(f"Unexpected error: {str(exc)}")
+                for document in documents:
+                    with tempfile.NamedTemporaryFile(delete=True, suffix=".html") as temp_file:
+                        temp_file.write(document.page_content.encode('utf-8'))
+                        temp_file.flush()
+
+                        loader = load_unstructured(filepath=temp_file.name)
+                        loaded_document = loader.load()[0]
+
+                        token_splitter = load_token_splitter()
+                        doc_chunks = token_splitter.split_documents([loaded_document])
+
+                        chunks_text = [chunk.page_content for chunk in doc_chunks]
+                        document.metadata['filename'] = document.metadata['title']
+
+                        try:
+                            chunks_ing_resp = client.documents.create(
+                                chunks=chunks_text,
+                                ingestion_mode='fast',
+                                metadata=document.metadata,
+                                run_with_orchestration=True
+                            ).results
+                            st.success(f"{document.metadata['source']}: {chunks_ing_resp.message}")
+                        except R2RException as r2re:
+                            st.error(f"Error {document.metadata['source']}: {str(r2re)}")
+                        time.sleep(5) # Wait for ingestion
+                st.info("Completed URL ingestion process")
+            else:
+                st.error("No valid URLs found in file")
+        except R2RException as r2re:
+            st.error(f"Error: {str(r2re)}")
+        except ValueError as ve:
+            st.error(f"Error: {str(ve)}")
+        except Error as e:
+            st.error(f"Unexpected streamlit error: {str(e)}")
+        except Exception as exc:
+            st.error(f"Unexpected error: {str(exc)}")
 
 def export_docs_to_csv(client: R2RClient, filename: str, filetype: str, ingestion_status: str):
     """Exports all available documents to a csv file."""
@@ -288,9 +308,7 @@ def export_docs_to_csv(client: R2RClient, filename: str, filetype: str, ingestio
             "title",
             "ingestion_status",
             "created_at",
-            "updated_at",
-            "summary",
-            "total_tokens"
+            "updated_at"
         ]
 
         out_path = Path(st.session_state['exports_dir']) / f"{filename}.csv"
@@ -308,51 +326,41 @@ def export_docs_to_csv(client: R2RClient, filename: str, filetype: str, ingestio
     except Exception as exc:
         st.error(f"Unexpected error: {str(exc)}")
 
-def download_documents(
-    client: R2RClient,
-    download_out: str,
-    document_ids: str = None,
-    start_date_filter: datetime = None,
-    end_date_filter: datetime = None
-):
-    """
-        Downloads the files in the specified filepath.
-        # Note: Only files that were ingested as a whole can be downloaded. NO chunks
-    """
+def export_chunks_to_csv(client: R2RClient, filename: str):
+    """Export all chunks that is going to be used as context for generating data with DeepEval"""
     try:
-        if document_ids:
-            document_ids = [doc_id.strip() for doc_id in document_ids.split('\n')]
-
-        if start_date_filter and end_date_filter:
-            # Convert date to datetime at beginning and end of day
-            start_date_filter = datetime.combine(start_date_filter, datetime.min.time())
-            end_date_filter = datetime.combine(end_date_filter, datetime.max.time())
-
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        out_path = Path(st.session_state['exports_dir']) / f"{download_out}_{timestamp}.zip"
-        with st.spinner("Preparing documents for download..."):
-            client.documents.download_zip(
-                document_ids=document_ids,
-                start_date=start_date_filter,
-                end_date=end_date_filter,
-                output_path=out_path
-            )
-
-        st.success("Successfully downloaded documents!")
+        chunks = [chunk.text for chunk in client.chunks.list().results]
+        df = pd.DataFrame(chunks, columns=["chunk_content"])
+        filepath = Path(st.session_state['exports_dir']) / f"{filename}.csv"
+        df.to_csv(filepath, index=False)
+        st.success("Successfully exported chunks!")
     except R2RException as r2re:
         st.error(f"Error: {str(r2re)}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
+        st.error(f"Unexpected error: {str(exc)}") 
+
+def perform_websearch(client: R2RClient, query: str, results_to_return: int):
+    """
+    Uses the following API https://langsearch.com/ to perform a web search.
+    Then we can receive the results and use them as context for generating data.
+    However, this doesn't use R2R, but simple Ollama with a tool call.
+    """
+    try:
+        pass
+    except Error as e:
+        st.error(f"Unexpected streamlit error: {str(e)}")
+    except Exception as exc:
         st.error(f"Unexpected error: {str(exc)}")
 
-def _fetch_data_from_urls(scrape_urls: list[str]) -> list[Document]:
+def _fetch_data_from_urls(scrape_urls: List[str]) -> List[Document]:
     """Fetches data from the provided URLs asynchronously."""
     ascraper = load_ascraper(scrape_urls)
     web_documents = _run_async_function(ascraper.aload())
     return web_documents
 
-def _extract_urls(file: UploadedFile) -> list[str]:
+def _extract_urls(file: UploadedFile) -> List[str]:
     """Extracts URLs from a provided CSV file for web scrapping."""
     if file is None:
         raise FileNotFoundError("File not found")
@@ -380,5 +388,5 @@ def _run_async_function(coroutine):
     """Run an async function inside a synchronous Streamlit app."""
     return asyncio.run(coroutine)
 
-def _remove_duplicate_urls(urls: list[str]) -> list[str]:
+def _remove_duplicate_urls(urls: List[str]) -> List[str]:
     return list(set(urls))

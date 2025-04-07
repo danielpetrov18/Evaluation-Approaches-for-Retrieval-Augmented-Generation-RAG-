@@ -1,31 +1,51 @@
-"""GUI support for interacting with documents."""
+"""
+GUI support for interacting with documents.
+There's also support for performing a web scrape.
+There's additionally a tab to perform a simple web search to gather URLs and a small summary.
+"""
 
 # pylint: disable=E0401
 # pylint: disable=C0103
+# pylint: disable=C0301
 
-import datetime
 import streamlit as st
 from st_app import load_client
-from backend.documents import (
+from backend.storage import (
+    delete_all_documents,
     fetch_documents,
     fetch_document_chunks,
     ingest_file,
     perform_webscrape,
     export_docs_to_csv,
-    download_documents
+    export_chunks_to_csv,
+    perform_websearch
 )
 
 if __name__ == "__page__":
     st.title("📄 Document Management")
 
-    t_list, t_chunks, t_file_ingest, t_webscrape, t_export_docs, t_download = st.tabs(
+    with st.sidebar:
+        with st.popover(
+            label="Delete all documents",
+            help="Remove all documents from knowledge base",
+            icon="🗑️"
+        ):
+            delete_all_docs_btn = st.button(
+                label="Confirm deletion",
+                key="delete_all_docs_btn",
+                on_click=delete_all_documents,
+                args=(load_client(), )
+            )
+
+    t_list, t_chunks, t_file_ingest, t_webscrape, t_export_docs, t_export_chunks, t_websearch = st.tabs(
         [
             "List Documents",
             "List chunks",
             "Ingest File",
             "Webscrape URLs",
             "Export Documents",
-            "Download Documents"
+            "Export Chunks",
+            "Web Search"
         ]
     )
 
@@ -155,56 +175,74 @@ if __name__ == "__page__":
                     ingestion_status_filter
                 )
 
-    with t_download:
-        st.markdown("**Download Documents**")
+    with t_export_chunks:
+        st.markdown("**Export Chunks**")
 
-        download_out = st.text_input(
-            label='Name of zip file to download (no extension)',
-            placeholder="Ex. documents"
+        chunks_csv_out = st.text_input(
+            label='Name of output file (without extension)',
+            placeholder="Ex. exported_chunks"
         )
 
-        col1, col2 = st.columns(2)
-
-        with col1:
-            use_date_filter = st.checkbox("Filter by date range")
-
-            if use_date_filter:
-                start_date_filter = st.date_input(
-                    label="Start date",
-                    value=datetime.datetime(2025, 1, 1),
-                    format="DD-MM-YYYY"
-                )
-
-                end_date_filter = st.date_input(
-                    label="End date",
-                    value=datetime.datetime.now(),
-                    format="DD-MM-YYYY"
-                )
+        if st.button("Export Chunks", type="primary"):
+            if not chunks_csv_out:
+                st.warning("Please enter a file name")
             else:
-                start_date_filter = None
-                end_date_filter = None
-
-        with col2:
-            use_id_filter = st.checkbox("Filter by document IDs")
-
-            if use_id_filter:
-                document_ids_input = st.text_area(
-                    label="Document IDs (one per line)",
-                    placeholder="Enter document IDs, one per line",
-                    height=125,
-                    value=None
-                )
-            else:
-                document_ids_input = None
-
-        if st.button("Download Documents", type="primary"):
-            if not download_out:
-                st.error("Please provide a name for the ZIP file.")
-            else:
-                download_documents(
+                export_chunks_to_csv(
                     load_client(),
-                    download_out,
-                    document_ids_input,
-                    start_date_filter,
-                    end_date_filter
+                    chunks_csv_out
                 )
+
+    with t_websearch:
+        st.markdown("**Web Search**")
+
+        with st.sidebar:
+            new_api_key = st.text_input(
+                label="API key",
+                value=st.session_state['websearch_api_key'],
+                type="password"
+            )
+
+            if st.button(label="Save API key", key="save_api_key_btn"):
+                if not new_api_key:
+                    st.error("Please enter an API key.")
+                elif 'sk-' not in new_api_key:
+                    st.error("Please enter a valid API key.")
+                else:
+                    st.session_state['websearch_api_key'] = new_api_key
+
+        with st.expander("Instructions on how to use it", expanded=True, icon="📖"):
+            st.markdown("""
+            * First go to this website: [langsearch](https://langsearch.com/)
+            * Create a free account and login
+            * Get an API key that looks like this: `sk-****************`
+            * Submit your API key in the input box on the left
+            * Finally, submit a query and number of web pages
+            * You will get a list of web pages that match your query each one containing:
+                * Title
+                * URL
+                * Chunk of the summary       
+            * You can use the links to create a csv file to then ingest     
+            """)
+
+        query = st.text_input(
+            label="Enter query",
+            key="query_input",
+            placeholder="What is the capital of France?"
+        )
+
+        results_to_return = st.slider(
+            label="Number of results to return",
+            min_value=1,
+            max_value=10,
+            value=5,
+            step=1,
+            help="The number of web pages to be considered by the tool"
+        )
+
+        if st.button("Search", type="primary", key="websearch_btn"):
+            if not query:
+                st.error("Please enter a query.")
+            elif st.session_state['websearch_api_key'] is None:
+                st.error("Please enter an API key.")
+            else:
+                perform_websearch(load_client(), query, results_to_return)

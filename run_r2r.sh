@@ -27,7 +27,7 @@ else
         ollama pull mxbai-embed-large
     fi
 
-    # Set num_ctx to 24000 for llama3.1
+    # Set num_ctx to 16000/24000 for llama3.1
     # https://r2r-docs.sciphi.ai/self-hosting/local-rag
     echo "Setting context window for llama3.1 to 24000 tokens..."
     echo -e 'FROM llama3.1\nPARAMETER num_ctx 24000' > Modelfile
@@ -67,6 +67,7 @@ then
     pip install -r requirements.txt
 else
     echo "Warning: requirements.txt not found. Skipping package installation."
+    exit 1
 fi
 
 # Export environment variables

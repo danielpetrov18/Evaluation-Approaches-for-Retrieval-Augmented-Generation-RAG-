@@ -1,15 +1,15 @@
-"""Enables the user to manage prompts with GUI."""
+"""The backend of prompts management."""
 
 # pylint: disable=R1732
 # pylint: disable=W0718
 
 import tempfile
 import dataclasses
+from typing import Union, Dict
+
 import yaml
-from r2r import (
-    R2RException,
-    R2RClient
-)
+from r2r import R2RException, R2RClient
+
 import streamlit as st
 from streamlit.errors import Error
 from streamlit.runtime.uploaded_file_manager import UploadedFile
@@ -19,7 +19,7 @@ class MyPrompt:
     """Custom class to group prompt information."""
     name: str
     template: str
-    input_types: dict
+    input_types: Dict[str, Union[str, Dict]]
 
 def list_prompts(client: R2RClient):
     """List all available prompts"""
@@ -34,7 +34,7 @@ def list_prompts(client: R2RClient):
         else:
             st.info("No prompts found.")
     except R2RException as r2re:
-        st.error(f"Error listing prompts: {str(r2re)}")
+        st.error(f"Error listing prompts: {r2re.message}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
@@ -65,7 +65,7 @@ def create_prompt(client: R2RClient, file: UploadedFile):
     except ValueError as ve:
         st.error(f"Error creating prompt: {str(ve)}")
     except R2RException as r2re:
-        st.error(f"Error creating prompt: {str(r2re)}")
+        st.error(f"Error creating prompt: {r2re.message}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
@@ -85,7 +85,7 @@ def delete_prompt(client:R2RClient, name: str):
     except Exception as exc:
         st.error(f"Unexpected error: {str(exc)}")
 
-def _load_prompt_from_yaml(filepath: str) -> MyPrompt | None:
+def _load_prompt_from_yaml(filepath: str) -> Union[MyPrompt,None]:
     """
     Loads a prompt from a YAML file.
 
@@ -97,7 +97,7 @@ def _load_prompt_from_yaml(filepath: str) -> MyPrompt | None:
         filepath (str): The path to the YAML file containing the prompt data.
 
     Returns:
-        MyPrompt: Instance containing the name, template, and input types.
+        MyPrompt or None: Instance containing the name, template, and input types.
 
     Raises:
         ValueError: If the YAML file is invalid.
@@ -108,7 +108,7 @@ def _load_prompt_from_yaml(filepath: str) -> MyPrompt | None:
             data = yaml.safe_load(f)
 
         # There should be exactly one top-level key that represents the prompt name.
-        if not isinstance(data, dict) or len(data.keys()) != 1:
+        if not isinstance(data, Dict) or len(data.keys()) != 1:
             raise ValueError(
                 "YAML file must contain exactly one top-level key representing the prompt name!"
             )

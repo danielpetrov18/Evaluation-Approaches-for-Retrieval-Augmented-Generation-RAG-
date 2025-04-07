@@ -13,7 +13,7 @@ def check_health(client: R2RClient):
         message = client.system.health().results.message
         st.success(f"Service status: {message}")
     except R2RException as r2re:
-        st.error(f"Error checking health: {str(r2re)}")
+        st.error(f"Error checking health: {r2re.message}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
@@ -22,7 +22,7 @@ def check_health(client: R2RClient):
 def check_status(client: R2RClient):
     """Check status"""
     try:
-        with st.spinner(text="Fetching system status..."):
+        with st.spinner(text="Fetching system status...", show_time=True):
             status = client.system.status().results
 
         col1, col2 = st.columns(2)
@@ -40,7 +40,7 @@ def check_status(client: R2RClient):
 
         st.caption(f"Last updated: {_get_current_time()}")
     except R2RException as r2re:
-        st.error(f"Error fetching status: {str(r2re)}")
+        st.error(f"Error fetching status: {r2re.message}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
@@ -62,13 +62,13 @@ def check_settings(client: R2RClient):
         else:
             st.info("No backend settings found.")
     except R2RException as r2re:
-        st.error(f"Error fetching settings: {str(r2re)}")
+        st.error(f"Error fetching settings: {r2re.message}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
         st.error(f"Unexpected error: {str(exc)}")
 
-def _format_uptime(seconds):
+def _format_uptime(seconds: float) -> str:
     """Convert seconds to a human-readable format."""
     days, remainder = divmod(seconds, 86400)
     hours, remainder = divmod(remainder, 3600)
@@ -86,6 +86,6 @@ def _format_uptime(seconds):
 
     return ", ".join(parts)
 
-def _get_current_time():
+def _get_current_time() -> str:
     """Return current time formatted nicely."""
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")

@@ -4,7 +4,7 @@
 
 import streamlit as st
 from st_app import load_client
-from backend.indices import (
+from backend.index import (
     list_indices,
     create_idx,
     delete_idx
@@ -53,9 +53,8 @@ if __name__ == "__page__":
             label="Upload YAML Index File",
             type=["yaml", "yml"]
         )
-        create_btn = st.button("Create Index", key="create_index_btn")
 
-        if create_btn:
+        if st.button(label="Create Index", key="create_index_btn"):
             if not uploaded_file:
                 st.error("Please upload a YAML file to create an index.")
             else:

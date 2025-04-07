@@ -93,6 +93,18 @@ def check_conversation_exists(client: R2RClient):
     except Exception as exc:
         st.error(str(exc))
 
+def set_new_prompt(client: R2RClient, prompt_name: str):
+    """After making sure the prompt exists we select it for future RAG completions"""
+    try:
+        prompt_obj = client.prompts.retrieve(prompt_name).results
+        st.session_state['selected_prompt'] = prompt_name
+        st.session_state['prompt_template'] = prompt_obj.template
+        st.success(body=f"Selected prompt: {prompt_name}")
+    except R2RException as r2re:
+        st.error(str(r2re))
+    except Exception as e:
+        st.error(str(e))
+
 def add_message(client: R2RClient, msg: dict):
     """Adding a new message to a conversation."""
     try:
@@ -153,7 +165,7 @@ def submit_query(client: R2RClient) -> Generator:
     try:
         search_settings = {
             "use_semantic_search": True,
-            "limit": 5,
+            "limit": st.session_state['top_k'],
             "offset": 0,
             "include_metadatas": False,
             "include_scores": True,
@@ -166,13 +178,14 @@ def submit_query(client: R2RClient) -> Generator:
         generator = client.retrieval.rag(
             query = enhanced_query,
             rag_generation_config = {
-                "temperature": st.session_state['rag_generation_config']['temperature'],
-                "top_p": st.session_state['rag_generation_config']['top_p'],
-                "max_tokens_to_sample": st.session_state['rag_generation_config']['max_tokens_to_sample'],
+                "temperature": st.session_state['temperature'],
+                "top_p": st.session_state['top_p'],
+                "max_tokens_to_sample": st.session_state['max_tokens'],
                 "stream": True # You must specify this explicitly. In config file it doesn't run.
             },
             search_mode = "custom",
             search_settings = search_settings,
+            task_prompt=st.session_state['prompt_template'],
         )
 
         return generator

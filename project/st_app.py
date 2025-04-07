@@ -124,5 +124,17 @@ if __name__ == "__main__":
     if 'ingestion_config' not in st.session_state:
         st.session_state['ingestion_config'] = load_client().system.settings().results.config['ingestion']
 
+    # Default prompt name that is used by R2R when interacting with /rag endpoint
+    if 'selected_prompt' not in st.session_state:
+        st.session_state['selected_prompt'] = "rag"
+
+    if 'prompt_template' not in st.session_state:
+        st.session_state['prompt_template'] = load_client().prompts.retrieve(
+            st.session_state['selected_prompt']
+        ).results.template
+
+    if 'websearch_api_key' not in st.session_state:
+        st.session_state['websearch_api_key'] = None
+
     # Run selected page
     page.run()
