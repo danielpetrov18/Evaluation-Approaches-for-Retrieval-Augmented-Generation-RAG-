@@ -13,6 +13,7 @@ import json
 import datetime
 from uuid import uuid4
 from pathlib import Path
+from typing import List
 import requests
 import pandas as pd
 import streamlit as st
@@ -21,7 +22,7 @@ from r2r import R2RClient, R2RException
 
 def list_conversations(
     client: R2RClient,
-    ids: list[str] = None,
+    ids: List[str] = None,
     offset: int = 0,
     limit: int = 100
 ):

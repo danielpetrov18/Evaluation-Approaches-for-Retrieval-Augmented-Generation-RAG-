@@ -6,7 +6,11 @@
 # pylint: disable=R0903
 
 import json
-from typing import  Generator
+from typing import (
+    Generator,
+    Union,
+    List
+)
 import ollama
 import numpy as np
 from r2r import (
@@ -45,7 +49,7 @@ class Message(BaseModel):
 # which are of importance for the caching behaviour. Since client cannot be pickled/serialized.
 # https://docs.streamlit.io/develop/api-reference/caching-and-state/st.cache_data
 @st.cache_data(ttl=60)  # Cache for 60 seconds
-def retrieve_conversation(_client: R2RClient, conversation_id: str) -> list[Message] | None:
+def retrieve_conversation(_client: R2RClient, conversation_id: str) -> Union[List[Message],None]:
     """Make sure that the conversation exists and return it."""
     try:
         conversation = _client.conversations.retrieve(conversation_id).results

@@ -13,7 +13,7 @@ from streamlit.navigation.page import StreamlitPage
 
 # ttl of None signifies that it doesn't expire
 @st.cache_resource(ttl=None)
-def load_client() -> R2RClient:
+def load_client():
     """Loads the client necessary to interact with the backend."""
     return R2RClient(
         base_url='http://localhost:7272',
@@ -94,12 +94,6 @@ if __name__ == "__main__":
     if "exports_dir" not in st.session_state:
         st.session_state['exports_dir'] = "./exports"
 
-    if "bearer_token" not in st.session_state:
-        st.session_state['bearer_token'] = load_client().users.login(
-            email = "admin@example.com",
-            password = "change_me_immediately"
-        ).results.access_token.token
-
     if "conversation_id" not in st.session_state:
         st.session_state['conversation_id'] = None
 
@@ -135,6 +129,12 @@ if __name__ == "__main__":
 
     if 'websearch_api_key' not in st.session_state:
         st.session_state['websearch_api_key'] = None
+
+    if "bearer_token" not in st.session_state:
+        st.session_state['bearer_token'] = load_client().users.login(
+            email = "admin@example.com",
+            password = "change_me_immediately"
+        ).results.access_token.token
 
     # Run selected page
     page.run()

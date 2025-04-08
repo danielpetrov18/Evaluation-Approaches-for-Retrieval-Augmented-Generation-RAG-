@@ -5,7 +5,7 @@
 
 import streamlit as st
 from st_app import load_client
-from backend.retrieval import (
+from backend.chat import (
     retrieve_conversation,
     check_conversation_exists,
     set_new_prompt,
@@ -68,7 +68,8 @@ if __name__ == "__page__":
         if st.button(label="Confirm", key="new_prompt_btn"):
             if new_prompt_name == st.session_state['selected_prompt']:
                 st.error("Please enter a different prompt name.")
-            set_new_prompt(load_client(), new_prompt_name.strip())
+            else:
+                set_new_prompt(load_client(), new_prompt_name.strip())
 
     # Load conversation messages if we have a conversation ID and no messages loaded yet
     if st.session_state['conversation_id'] and not st.session_state.messages:

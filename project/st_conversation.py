@@ -6,7 +6,7 @@
 import re
 import streamlit as st
 from st_app import load_client
-from backend.conversations import (
+from backend.conversation import (
     list_conversations,
     fetch_messages,
     export_conversations,

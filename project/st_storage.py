@@ -1,7 +1,7 @@
 """
 GUI support for interacting with documents.
 There's also support for performing a web scrape.
-There's additionally a tab to perform a simple web search to gather URLs and a small summary.
+There's additionally a tab to perform a simple web search to gather URLs and a response.
 """
 
 # pylint: disable=E0401
@@ -27,7 +27,7 @@ if __name__ == "__page__":
     with st.sidebar:
         with st.popover(
             label="Delete all documents",
-            help="Remove all documents from knowledge base",
+            help="Remove all documents from the knowledge base",
             icon="🗑️"
         ):
             delete_all_docs_btn = st.button(
@@ -56,7 +56,7 @@ if __name__ == "__page__":
         with col1:
             offset = st.number_input("Offset", min_value=0, value=0, step=10)
         with col2:
-            limit = st.number_input("Limit", min_value=1, max_value=100, value=10, step=10)
+            limit = st.number_input("Limit", min_value=1, max_value=1000, value=10, step=10)
 
         doc_ids = st.text_area(
             label="Document IDs",
@@ -68,7 +68,7 @@ if __name__ == "__page__":
         if doc_ids:
             doc_ids = [doc.strip() for doc in doc_ids.split("\n")]
 
-        if st.button("Fetch Documents", type="primary"):
+        if st.button("Fetch Documents", type="primary", key="fetch_docs_btn"):
             fetch_documents(load_client(), doc_ids, offset, limit)
 
     with t_chunks:
@@ -148,30 +148,19 @@ if __name__ == "__page__":
             placeholder="Ex. exported_docs"
         )
 
-        filetype_col, ingestion_status_col = st.columns(2)
+        ingestion_status_filter = st.selectbox(
+            label="Ingestion status to filter on",
+            options=["all", "success", "embedding", "parsing", "failed"],
+            help="If left on `all` it selects all possible documents"
+        )
 
-        with filetype_col:
-            filetype_filter = st.selectbox(
-                label="File type to filter on",
-                options=["all", "csv", "txt", "pdf", "docx", "json"],
-                help="If left on `all` it selects all possible documents"
-            )
-
-        with ingestion_status_col:
-            ingestion_status_filter = st.selectbox(
-                label="Ingestion status to filter on",
-                options=["all", "success", "embedding", "parsing", "failed"],
-                help="If left on `all` it selects all possible documents"
-            )
-
-        if st.button("Export Documents", type="primary"):
+        if st.button("Export Documents", type="primary", key="export_docs_btn"):
             if not files_csv_out:
                 st.warning("Please enter a file name")
             else:
                 export_docs_to_csv(
                     load_client(),
                     files_csv_out.strip(),
-                    filetype_filter,
                     ingestion_status_filter
                 )
 
@@ -245,4 +234,16 @@ if __name__ == "__page__":
             elif st.session_state['websearch_api_key'] is None:
                 st.error("Please enter an API key.")
             else:
-                perform_websearch(load_client(), query, results_to_return)
+                with st.spinner("Performing web search...", show_time=True):
+                    result, urls = perform_websearch(query, results_to_return)
+
+                formatted_urls = ""
+                for i, url in enumerate(urls, 0):
+                    formatted_urls += f"{i}. [{url}]({url})\n"
+
+                st.markdown(f"""### Response
+{result}
+
+### Relevant URLs:
+{formatted_urls}
+                """)

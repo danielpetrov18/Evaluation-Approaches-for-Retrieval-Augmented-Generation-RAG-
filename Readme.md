@@ -2,17 +2,17 @@
 
 ## About The Project
 
-This is my Bachelor's thesis project at the University of Vienna, where I explore **evaluation techniques for Retrieval-Augmented Generation (RAG) systems**. The project leverages **Ollama** for running large language models locally, **R2R** for abstracting RAG workflows, and **Streamlit** for an interactive UI.
+This is my Bachelor's thesis project at the University of Vienna, where I explore **evaluation techniques for Retrieval-Augmented Generation (RAG) systems**. The project leverages **Ollama** for running large language models locally, **R2R** for abstracting RAG workflows, and **Streamlit** for an interactive UI. Additionally, **3 different frameworks for evaluation** are used.
 
 The primary goal is to assess different RAG evaluation frameworks, including **RAGAs**, to analyze how well retrieval enhances responses. Various of different **evaluation metrics** are to be used to achieve that.
 
 ### Built With
 
-[![Python][Python-img]][Python-url] [![Docker][Docker-img]][Docker-url] [![Ollama][Ollama-img]][Ollama-url] [![R2R][R2R-img]][R2R-url] [![Streamlit][Streamlit-img]][Streamlit-url] [![RAGAs][RAGAs-img]][RAGAs-url] [![Unstructured][Unstructured-img]][Unstructured-url]
+[![Python][Python-img]][Python-url] [![Docker][Docker-img]][Docker-url] [![Ollama][Ollama-img]][Ollama-url] [![R2R][R2R-img]][R2R-url] [![Streamlit][Streamlit-img]][Streamlit-url] [![RAGAs][RAGAs-img]][RAGAs-url] [![DeepEval][DeepEval-img]][DeepEval-url]
 
 ### Prerequisites
 
-* Check if `python` is **installed** on your system. Make sure it is `3.12` and above.
+* Check if `python` is **installed** on your system. Make sure it is `3.11` and above.
 
 ```sh
 python3 --version
@@ -25,44 +25,6 @@ curl -fsSL https://ollama.com/install.sh | sh
 ```
 
 * Finally, you will need to have docker. If not go to [Docker](https://www.docker.com/) and install the version appropriate for your OS.
-
-### Structure
-
-   ```sh
-   .
-   ├── docker-compose.yaml
-   ├── env # Environment variables
-   ├── project
-   │   ├── backend # The main R2R Functionality
-   │   │   ├── __init__.py
-   │   │   ├── config.toml
-   │   │   ├── conversations.py
-   │   │   ├── documents.py
-   │   │   ├── indices.py
-   │   │   ├── prompts.py
-   │   │   ├── retrieval.py
-   │   │   └── settings.py
-   │   ├── exports # One can export documents, conversations, etc
-   │   ├── ragas # Evaluation using RAGAs
-   │   │   ├── evaluate.ipynb
-   │   │   ├── generate_dataset.ipynb
-   │   ├── .streamlit
-   │   ├── st_app.py
-   │   ├── st_chat.py
-   │   ├── st_conversation.py
-   │   ├── st_index.py
-   │   ├── st_prompt.py
-   │   ├── st_settings.py
-   │   └── st_storage.py
-   ├── Readme.md
-   ├── requirements.txt # All dependencies
-   ├── run_r2r.sh
-   ├── run_streamlit.sh
-   └── services
-      └── unstructured # Service for ingestion
-         ├── Dockerfile
-         └── main.py
-   ```
 
 ### Usage
 
@@ -123,7 +85,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 ## Contact
 
-Daniel Petrov - daniel.petrov18@protonmail.com
+Daniel Petrov - <daniel.petrov18@protonmail.com>
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
@@ -137,7 +99,7 @@ Daniel Petrov - daniel.petrov18@protonmail.com
 [R2R-img]: https://img.shields.io/badge/R2R-black.svg?style=for-the-badge&logo=data:image/png;base64,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&logoColor=black
 [Streamlit-url]: https://streamlit.io/
 [Streamlit-img]: https://img.shields.io/badge/Streamlit-black.svg?style=for-the-badge&logo=streamlit&logoSize=auto&logoColor=red
-[Unstructured-url]: https://unstructured.io/
-[Unstructured-img]: https://img.shields.io/badge/Unstructured-white.svg?style=for-the-badge&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAFHUlEQVR4nOxYeWxU1Re+y5vpzHToQn8F8oPSlsUiXShFgbaAXZClggLBSgADRhGJNqGGKFRNUKxAiGENSAyLpQqExRZpWAoqpUhLpzVMEyTs1ikdFguIzLzt3mueo8Ob1zcMY0jaP+b7Z96c7yzfnHfeve8OZ7nMg64E1NkCtAgJCoSQoEAICQoEzh8hH6nEI8fAyGhy7iygFKcM9VLkfDNw/YkzMhW3mmrUPwn17quOJXYbbTgFEwbgvAIIocfIKCVHKrw+sE88Th3Wsa7fDonFc2jLFSX7vh3yri0+9Sq+EWaOJ011AADp00W0odaHra8RCnOp7ZS4+C1ycM9DghJpw3Jp+WJx4Rxpw3Ly/aHgOhQAsiQUzTJXNXRk6MVfgDWSe6fEmDgQWsK9dsgZzFUN8uFvpdL3dQM9+I8zhPIKYHSM8MHbgDENxb0wHaVmCFOy+MkjPF0MLrNfxmJlbQ7lF19vASazhoQmS9gXe2jdCXb1UodIZigqMdtaYXx/aePKJyYIT5giLnrd/eJIWv0dN+4lncg+8cZl6wGjGrt8rEqYkS+8+xq129DgIcEKgv52eyZJ5Gglu9GGnsnCaT6PA2luAm4XHj5KKX+0Eg1KQ30TfRzOnKRN9TAuAU+cChFWU7S1hTY3chOmBi2os9DlFsaQoEAICQoEv1uHVL4ZSCKwhOO8AhTbS02Rc2fZr5e5idOYLMtlm7hps2FUtI/DmZOkrgaGd8OTpqOe//fa5b1l7P49zzWM7cVNerljXb+PvSu9J4xLAPfuMELM1Xb1riTt2EQOV5i+PsJ43p0cZaq2o35PPWS3rZdK30NZuazNwdpvmw7Ued8F+OI57NplZrfBZ7NRUkrYx2uD6BAAwLh0DUpOd6fG0PPNOGPkIzy9YIRI60oNn6wzzJzHRFEu2wjQw6kwrf6KXrnAP59m2l4FTSbdDI8SJK0vBTwPukWifkmPo0bB3Xbwx12Unac032g0vLHwcQP/xaOGGnaPpRfPcfMXaUYEmMOZs5URwq63KF9VdxNEx4Du/yMHdivdenBfWFpMr1x4YoK4WW8aikrk8s1MFNR2PGYcu9vO56fwhXkoK1c9thAhQ8lKecNn7nHp7pynae0xEBkdlCC/Q01On0DJQ4AlnNbVoLRhMCJKzdLfb9H6GmC24Ox8aDRqYun13+jP9dAagTKfg8YwNcVcD2hTHcrMgRgHJ6iz0OUWxpCgQAgJCgT9lZredJLKnYZ5xcp6va8cp6SjpBQvS+prqL0RQIAGpeFR+drYW05SsdNzjbLzsOo9X/pytfIRFoZzJ6K4RN3S+h1iToe0YonnWt66ltptapb8cEjaspbUHhfmT5f2lnWIbZVWLFE2/MbT7KZTTSn2owfkfeX8+KHk9I9BCAoIPHy0aftBPHU2rT2u68C9usAwr5jLGa+xGz5aZa78CU9+RVyz7EkKImdO8nMnk/070IjRug7igkKhaJa/cJScDpytupT+DMFukco0tFyFsT3Z7RvAGql1iI6B4VYQ1Z0rnKubwdzggBYrANqDtnJP798jh/fDQan6WvUFJQxAORP4gmHuzERojcCjx2rDBg42fr4VQChX7tLN4M5KdKX3kHZv09iFGWPdQ3uxO+3GD1fpl/Z7cqWENtUDkUcZmdD3bE/bHEAUUXw/6rgGZIIS+vsEuh7QS+f/yd47DsX08FLE3vh3+yNgwgDv/0aPK6iz0OUWxpCgQAgJCoQuJ+ivAAAA//9XXP2G9+bddQAAAABJRU5ErkJggg==&logoSize=auto
 [RAGAs-url]: https://docs.ragas.io/en/stable/
 [RAGAs-img]: https://img.shields.io/badge/Ragas-black.svg?style=for-the-badge&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAADNElEQVR42u2avW4TQRDHc3EQ6QJEQXQ0vAMtFVJyuyDRUfHV8gRIiDQgKkQRg2h4BSQaoKQAFO8awkeAAl4CUST2eZa59f/sTc54t0jubiOvNJrx+s6Zn/93M7s5z00aRsnEei3m547SMEoksSU8b71OL3L8mZW5Ey0MLqm3RkvDyefWHs13IoIxm2vHOPlvFkSLXQA9iw7GvJcMIhnEqpGx7xsVFwxARK7INpQYkJJEMcJAkREIPOXKUDwwZRA28sFEo0gkMH6QSGD8IJHA+EGigvGDhMOQEklDQfwwpgSTJhGAlGDcpvnUXWhGAeLCwPex0HziwjQGJEoYP4gfhjwwtYFUAFNvH3GXMKQkhcGkSbM6uyrmRQZPbGEwWiSNUYSU2OX4D2KbLMfEMU0pAG0Xph6QclL3TSdd4oS28H4PMLlak2F0GaZOkAwg1+zx3XSZ40+A6E1ThpRE0wQM7pm6QW6Ov9nVJX790SapRY/9EEYDQvv7TOUgNAa5gSSOW9+RJzneyiGIYYbHACawadajCEBIiVZugDnF819G94wWuQ+rZoCpDcQAYuS1XObEv0IRC4ObPximUhDaB+LG1F1bYYBtoxxlUABCm2blN7sLgpLaQjU7zfEPVKmehdfTlaGSMocEQnsVue6CTIRR6RmOf9pztchQ1aiCVXNYQwTIbfyxRU5ugc9ZyL0TL6IYnOXXv1DNBuxDFpob7rb5EEByw9rKNsHVE4GPKy6gUQ6gaghM24U5UBDSgpBQNvTiN9tDUvIu+3Wev2dNCfZsSq6zz997ZZRTiv2bswxf2oZbAA5SEWJfwNjLBNe9Iesdw3xxDM6rbqeJ/8ZPBHHkJygyyLs4+gWbHBvmyc6LzKNIKEy4MrTn+YgESLXm388EwJgPVpHvjiJUKwyUoX0wpEUAjBLv8CEZW9Ug/moW/lRXPi92ge5N3hgYLR5PB9EAUeI8W/FBO2x9qFO39TmnHeR1C5dY6z8wlwqYq6zEX5TORpnb/Tk/C+KDOccqPWL/gu0N2+s6DTm8JCUemE2xgj3QtJsekjV7+CHcH9ewtUz3ctKY5LtXEuqIlu3yszEbsxE8/gFo+tDaHmgtXAAAAABJRU5ErkJggg==&logoSize=auto
+[DeepEval-url]: https://docs.confident-ai.com/docs/getting-started
+[DeepEval-img]: https://img.shields.io/badge/DeepEval-black.svg?style=for-the-badge&logo=data:image/png;base64,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&logoSize=auto
