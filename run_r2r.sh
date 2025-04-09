@@ -5,6 +5,19 @@ set -e
 
 echo "Starting initialization script..."
 
+# Export environment variables
+echo "Setting environment variables..."
+for env_file in env/*.env
+do
+    if [ -f "$env_file" ]
+    then
+        echo "Loading variables from $env_file"
+        set -a # automatically export all variables
+        source "$env_file"
+        set +a
+    fi
+done
+
 # Check if Ollama is running
 if ! pgrep -x "ollama" > /dev/null
 then
@@ -69,19 +82,6 @@ else
     echo "Warning: requirements.txt not found. Skipping package installation."
     exit 1
 fi
-
-# Export environment variables
-echo "Setting environment variables..."
-for env_file in env/*.env
-do
-    if [ -f "$env_file" ]
-    then
-        echo "Loading variables from $env_file"
-        set -a # automatically export all variables
-        source "$env_file"
-        set +a
-    fi
-done
 
 # Start the application
 echo "Starting application..."

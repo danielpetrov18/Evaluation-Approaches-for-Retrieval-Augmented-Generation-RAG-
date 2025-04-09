@@ -4,13 +4,17 @@ tools = ["local_search"]
   [agent.generation_config]
   model = "ollama/llama3.1"
 
+[logging]
+level="DEBUG"
+
 [app]
 project_name = "bachelor"
+default_max_documents_per_user = 1_000
+default_max_chunks_per_user = 100_000
+default_max_upload_size = 10_000_000 # 10 MB
 
 fast_llm = "ollama/llama3.1"    # LLM used for internal operations, like deriving conversation names
 quality_llm = "ollama/llama3.1" # LLM used for user-facing output, like RAG replies
-vlm = "ollama/llama3.2-vision"  # LLM used for ingesting visual inputs
-audio_lm = "ollama/llama3.1"    # LLM used for transcription
 
 [auth]
 provider = "r2r"  # currently only "r2r" | "supabase" are supported
@@ -44,9 +48,11 @@ concurrent_request_limit = 2
 provider = "postgres"
 
 [embedding]
-provider = "ollama"
-base_model = "mxbai-embed-large"
+provider = "litellm"
+base_model = "ollama/mxbai-embed-large"
 base_dimension = 1_024
 batch_size = 32
 add_title_as_prefix = true
 concurrent_request_limit = 2
+rerank_url = "http://localhost:8080"
+rerank_model = "huggingface/BAAI/bge-reranker-large"

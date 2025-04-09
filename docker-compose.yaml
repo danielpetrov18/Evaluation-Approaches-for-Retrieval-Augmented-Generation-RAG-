@@ -11,7 +11,25 @@ services:
       - 'postgres_data:/var/lib/postgresql/data'
     networks:
       - r2r_network
+
+  reranker:
+    image: 'ghcr.io/huggingface/text-embeddings-inference:86-1.6'
+    container_name: hf-reranker
+    ports:
+      - '8080:80'
+    volumes:
+      - 'reranker_data:/data'
+    command: --model-id ${RE_RANKER_MODEL}
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    runtime: nvidia
+    restart: unless-stopped
+    networks:
+      - r2r_network
+
 volumes:
   postgres_data:
+  reranker_data:
+
 networks:
   r2r_network:
