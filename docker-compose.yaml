@@ -12,17 +12,20 @@ services:
     networks:
       - r2r_network
 
+  # https://github.com/huggingface/text-embeddings-inference
   reranker:
-    image: 'ghcr.io/huggingface/text-embeddings-inference:86-1.6'
+    image: 'ghcr.io/huggingface/text-embeddings-inference:1.7'
     container_name: hf-reranker
     ports:
       - '8080:80'
     volumes:
       - 'reranker_data:/data'
-    command: --model-id ${RE_RANKER_MODEL}
+    # https://huggingface.co/docs/text-embeddings-inference/cli_arguments
+    command: --model-id ${RE_RANKER_MODEL} --max-batch-tokens 16384 --auto-truncate
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
     runtime: nvidia
+    pull_policy: always
     restart: unless-stopped
     networks:
       - r2r_network
