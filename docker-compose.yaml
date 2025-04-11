@@ -5,8 +5,18 @@ services:
     env_file:
       - ./env/pgvector-db.env
     ports:
-      - '5432:5432'
-    restart: unless-stopped
+      - '127.0.0.1:5432:5432'
+    pull_policy: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"] # The user is configurable from "pgvector-db.env"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: on-failure
+    command: >
+      postgres
+      -c max_connections=1024
     volumes:
       - 'postgres_data:/var/lib/postgresql/data'
     networks:
@@ -16,20 +26,92 @@ services:
   reranker:
     image: 'ghcr.io/huggingface/text-embeddings-inference:1.7'
     container_name: hf-reranker
-    ports:
-      - '8080:80'
-    volumes:
-      - 'reranker_data:/data'
-    # https://huggingface.co/docs/text-embeddings-inference/cli_arguments
-    command: --model-id ${RE_RANKER_MODEL} --max-batch-tokens 16384 --auto-truncate
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
+    env_file:
+      - ./env/reranker.env
+    # ports:
+    #   - '127.0.0.1:8080:80'
     runtime: nvidia
     pull_policy: always
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: on-failure
+    # https://huggingface.co/docs/text-embeddings-inference/cli_arguments
+    command: --model-id ${RE_RANKER_MODEL} --max-batch-tokens 16384 --auto-truncate
+    volumes:
+      - 'reranker_data:/data'
     networks:
       - r2r_network
 
+  unstructured:
+    image: ragtoriches/unst-prod
+    container_name: unstructured
+    pull_policy: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7275/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: on-failure
+    networks:
+      - r2r_network
+    
+  r2r:
+    image: sciphiai/r2r:3.5.11
+    container_name: r2r
+    pull_policy: always
+    env_file:
+      - ./env/r2r.env
+    ports:
+      - "127.0.0.1:7272:7272"
+    command: uvicorn core.main.app_entry:app --host ${R2R_HOST} --port ${R2R_PORT}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7272/v3/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: on-failure
+    networks:
+      - r2r_network
+    volumes:
+      # Custom configuration file. To make sure it's available inside the container.
+      - ./project/backend/config.toml:/app/custom_config_ollama.toml
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      pgvector:
+        condition: service_healthy
+      reranker:
+        condition: service_started
+      unstructured:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./project
+    image: frontend:latest # Give a tag after the image is built
+    container_name: frontend
+    env_file:
+      - ./env/rag.env
+    ports:
+      - "127.0.0.1:8501:8501"
+    restart: on-failure
+    networks:
+      - r2r_network
+    volumes:
+      # Make sure that exported files in container are reflected on local device
+      - ./project/exports:/frontend/exports
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      r2r:
+        condition: service_healthy
+    
 volumes:
   postgres_data:
   reranker_data:

@@ -16,7 +16,7 @@ from streamlit.navigation.page import StreamlitPage
 def load_client():
     """Loads the client necessary to interact with the backend."""
     return R2RClient(
-        base_url='http://localhost:7272',
+        base_url='http://r2r:7272', # Since when running in compose we can target a name
         timeout=600
     )
 

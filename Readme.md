@@ -28,6 +28,32 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 ### Usage
 
+* Make sure that `ufw - uncomplicated firewall` is turned of, if available on the system.
+
+* Also make sure **Ollama** is available under `0.0.0.0`, otherwise even with `host.docker.internal` one cannot reach it from inside any of the containers. To modify it: `sudo nano /etc/systemd/system/ollama.service
+`
+
+Example:
+
+```bash
+[Unit]
+Description=Ollama Service
+After=network-online.target
+
+[Service]
+# Make sure it's available not only on localhost, otherwise R2R in container cannot reach it
+ExecStart=/usr/local/bin/ollama serve --host=0.0.0.0
+User=ollama
+Group=ollama
+Restart=always
+RestartSec=3
+Environment="PATH=<path>
+Environment="OLLAMA_DEBUG=1" # Optional
+
+[Install]
+WantedBy=default.target
+```
+
 1. Clone the repo
 
    ```sh
@@ -40,36 +66,23 @@ curl -fsSL https://ollama.com/install.sh | sh
    cd Evaluation-Approaches-for-Retrieval-Augmented-Generation-RAG-
    ```
 
-3. To start R2R
+3. To start the application
 
    ```sh
-   chmod u+x run_r2r.sh
+   chmod u+x run.sh
    # This will make sure that:
-   # 1. Ollama has the required models and is running
-   # 2. Docker is running
-   # 3. Create a virtual environment and install dependencies
-   # 4. Activate virtual environment
-   # 5. Export environment variables
-   # 6. Finally, start the r2r service
-   ./run_r2r.sh   
+   #  1. All environment variables are exported.
+   #  2. Ollama is running and has the proper models installed.
+   #  3. Docker is running and start all containers.
+   #  4. Nvidia container toolkit is available, if not download it
+   ./run.sh   
    ```
 
-4. To be able to interact with the backend over a GUI
+4. For performing an evaluation. Example with **RAGAs**
 
    ```sh
-   chmod u+x run_streamlit.sh
-   # Assuming you have followed the previous step:
-   # 1. Activate virtual environment
-   # 2. Export environment variables
-   # 3. Start the streamlit server
-   # 4. Navigate to http://localhost:8501 in your browser
-   ./run_streamlit.sh
-   ```
-
-5. For performing an evaluation. Example with RAGAs
-
-   ```sh
-   cd project && cd ragas
+   # From root of project
+   cd ragas
    # generate a dataset by using the generate_dataset notebook
    # thereafter select metrics https://docs.ragas.io/en/latest/concepts/metrics/available_metrics/
    # use the evaluate notebook with your selected metrics
@@ -80,8 +93,8 @@ curl -fsSL https://ollama.com/install.sh | sh
 * ✅ Local LLM Execution – Uses **Ollama** to run models locally
 * ✅ RAG Pipeline Automation – **R2R** simplifies the RAG workflow
 * ✅ **Streamlit** – Easy-to-use interface for interacting with the system
-* ✅ Evaluation with **RAGAs** – Assessing RAG performance using multiple evaluation metrics
-* ✅ Pre-built `Shell Scripts` – Automates model setup, environment configuration, and server startup
+* ✅ Evaluation with **RAGAs**, **DeepEval** – Assessing RAG performance using multiple evaluation metrics and synthetic data generation
+* ✅ Pre-built `Shell Script` – Automates model setup, environment configuration, and server startup
 
 ## Contact
 
