@@ -6,37 +6,27 @@
 # pylint: disable=R0903
 
 import json
-from typing import (
-    Generator,
-    Union,
-    List
-)
-from ollama import (
-    Client,
-    Options
-)
+from typing import Generator, Union, List
+
 import numpy as np
-from r2r import (
-    R2RClient,
-    R2RException,
-    MessageEvent
-)
 import streamlit as st
 from streamlit.errors import Error
+from ollama import Client, Options
 from pydantic import BaseModel, Field
+from r2r import R2RClient, R2RException, MessageEvent
 from shared.api.models.retrieval.responses import SSEEventBase
 
 @st.cache_resource
-def load_ollama_client():
+def ollama_client():
     """
     Load Ollama client. 
-    Have in mind that this will be containerized and will try to connect the hosting device.
+    Have in mind that this will be containerized and will try to connect to the host.
     `host.docker.internal` will enable exactly that communication from inside the container.
     """
     return Client(host=st.session_state['ollama_api_base'])
 
 @st.cache_resource
-def load_ollama_options():
+def ollama_options():
     """Load Ollama options. The values here can be tweaked in rag.env file."""
     return Options(
         temperature=st.session_state['temperature'],
@@ -49,6 +39,9 @@ def load_ollama_options():
 class Message(BaseModel):
     """
     Represents a chat message with embedding information.
+    This class is relevant for my custom implementation of the history.
+    It holds embedding information. When searching for relevant messages from previous
+    interactions we will perform semantic similarity on those embeddings.
     
     Attributes:
         id: Unique identifier for the message
@@ -67,13 +60,19 @@ class Message(BaseModel):
         frozen = True  # Makes instances immutable
         extra = "forbid" # Prevents additional fields not defined in model
 
-
-# When using an underscore the client won't be part of the arguments passed to the function
-# which are of importance for the caching behaviour. Since client cannot be pickled/serialized.
-# https://docs.streamlit.io/develop/api-reference/caching-and-state/st.cache_data
 @st.cache_data(ttl=60)  # Cache for 60 seconds
 def retrieve_conversation(_client: R2RClient, conversation_id: str) -> Union[List[Message],None]:
-    """Make sure that the conversation exists and return it."""
+    """
+                          ^
+                          |
+                          |
+    When using an underscore the client won't be part of the arguments passed to the function
+    which are of importance for the caching behaviour. Since client cannot be pickled/serialized.
+    https://docs.streamlit.io/develop/api-reference/caching-and-state/st.cache_data
+    
+    Make sure that the conversation exists and return it.
+    This method also makes sure that R2R messages are converted into my own Message class.
+    """
     try:
         conversation = _client.conversations.retrieve(conversation_id).results
         msgs = [
@@ -88,7 +87,7 @@ def retrieve_conversation(_client: R2RClient, conversation_id: str) -> Union[Lis
         ]
         return msgs
     except R2RException as r2re:
-        st.error(f"Invalid conversation: {str(r2re)}")
+        st.error(f"Invalid conversation: {r2re.message}")
         return None
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
@@ -114,7 +113,7 @@ def check_conversation_exists(client: R2RClient):
                     status_code=404
                 )
     except R2RException as r2re:
-        st.error(str(r2re))
+        st.error(r2re.message)
     except Error as e:
         st.error(str(e))
     except Exception as exc:
@@ -128,7 +127,7 @@ def set_new_prompt(client: R2RClient, prompt_name: str):
         st.session_state['prompt_template'] = prompt_obj.template
         st.success(body=f"Selected prompt: {prompt_name}")
     except R2RException as r2re:
-        st.error(str(r2re))
+        st.error(r2re.message)
     except Exception as e:
         st.error(str(e))
 
@@ -166,7 +165,7 @@ def add_message(client: R2RClient, msg: dict):
             st.session_state.messages.append(new_msg)
 
     except R2RException as r2re:
-        st.error(str(r2re))
+        st.error(r2re.message)
         raise R2RException(str(r2re), r2re.status_code) from r2re
     except Exception as e:
         st.error(str(e))

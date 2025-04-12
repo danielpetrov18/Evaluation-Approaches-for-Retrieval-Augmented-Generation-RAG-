@@ -12,7 +12,7 @@ The primary goal is to assess different RAG evaluation frameworks, including **R
 
 ### Prerequisites
 
-* Check if `python` is **installed** on your system. Make sure it is `3.11` and above.
+* Check if `python` is **installed** on your system. Make sure it is at least `3.11`.
 
 ```sh
 python3 --version

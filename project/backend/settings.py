@@ -8,7 +8,7 @@ from streamlit.errors import Error
 from r2r import R2RException, R2RClient
 
 def check_health(client: R2RClient):
-    """Check health"""
+    """Check health. Should return OK."""
     try:
         message = client.system.health().results.message
         st.success(f"Service status: {message}")
@@ -20,16 +20,38 @@ def check_health(client: R2RClient):
         st.error(f"Unexpected error: {str(exc)}")
 
 def check_status(client: R2RClient):
-    """Check status"""
+    """Check status. Gives information like uptime and memory usage."""
     try:
         with st.spinner(text="Fetching system status...", show_time=True):
             status = client.system.status().results
 
+            # Calculate deltas to represent changes
+            if 'previous_cpu_usage' not in st.session_state:
+                # First run, no delta to display
+                st.session_state['previous_cpu_usage'] = status.cpu_usage
+                st.session_state['previous_memory_usage'] = status.memory_usage
+                cpu_delta = None
+                memory_delta = None
+            else:
+                # Calculate delta from previous values
+                cpu_delta = status.cpu_usage - st.session_state['previous_cpu_usage']
+                memory_delta = status.memory_usage - st.session_state['previous_memory_usage']
+                st.session_state['previous_cpu_usage'] = status.cpu_usage
+                st.session_state['previous_memory_usage'] = status.memory_usage
+
         col1, col2 = st.columns(2)
 
         with col1:
-            st.metric(label="CPU Usage", value=f"{status.cpu_usage}%")
-            st.metric(label="Memory Usage", value=f"{status.memory_usage}%")
+            st.metric(
+                label="CPU Usage",
+                value=f"{status.cpu_usage}%",
+                delta=f"{cpu_delta:.1f}%" if cpu_delta is not None else None
+            )
+            st.metric(
+                label="Memory Usage",
+                value=f"{status.memory_usage}%",
+                delta=f"{memory_delta:.1f}%" if memory_delta is not None else None
+            )
 
         with col2:
             st.markdown("### Time Information")

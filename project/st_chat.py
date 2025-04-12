@@ -4,7 +4,7 @@
 # pylint: disable=C0103
 
 import streamlit as st
-from st_app import load_client
+from st_app import r2r_client
 from backend.chat import (
     retrieve_conversation,
     check_conversation_exists,
@@ -40,17 +40,19 @@ if __name__ == "__page__":
         if st.button("Confirm", type="primary", key="conv_id_btn"):
             if not selected_conversation_id:
                 st.warning("Please enter a conversation ID")
+            elif selected_conversation_id == st.session_state['conversation_id']:
+                st.warning("Please select a different conversation")
             else:
-                msgs = retrieve_conversation(load_client(), selected_conversation_id)
-                if msgs and st.session_state['conversation_id'] != selected_conversation_id:
+                msgs = retrieve_conversation(r2r_client(), selected_conversation_id)
+                if msgs:
                     st.session_state['conversation_id'] = selected_conversation_id
                     st.session_state.messages = msgs
                     st.session_state['parent_id'] = st.session_state.messages[-1].id
-                    st.rerun()
+                    st.rerun() # To display messages
 
         # A button to start a new conversation
         if st.button(
-            "New Conversation",
+            label="New Conversation",
             key="new_conv_btn",
             help="Use this if there's already a selected conversation. Otherwise submit a query."
         ):
@@ -66,15 +68,18 @@ if __name__ == "__page__":
         )
 
         if st.button(label="Confirm", key="new_prompt_btn"):
-            if new_prompt_name == st.session_state['selected_prompt']:
+            if not new_prompt_name:
+                st.error("Please enter a prompt name.")
+            elif new_prompt_name == st.session_state['selected_prompt']:
                 st.error("Please enter a different prompt name.")
             else:
-                set_new_prompt(load_client(), new_prompt_name.strip())
+                set_new_prompt(r2r_client(), new_prompt_name.strip())
+                st.success(body=f"Selected prompt: {new_prompt_name}")
 
     # Load conversation messages if we have a conversation ID and no messages loaded yet
     if st.session_state['conversation_id'] and not st.session_state.messages:
         with st.spinner("Loading conversation..."):
-            messages = retrieve_conversation(load_client(), st.session_state['conversation_id'])
+            messages = retrieve_conversation(r2r_client(), st.session_state['conversation_id'])
             if messages:
                 st.session_state.messages = messages
                 st.session_state['parent_id'] = st.session_state.messages[-1].id
@@ -94,12 +99,12 @@ if __name__ == "__page__":
             st.write(query)
 
         # If there was no conversation id a new conversation will be created
-        check_conversation_exists(load_client())
+        check_conversation_exists(r2r_client())
 
-        add_message(load_client(), {"role": "user", "content": query})
+        add_message(r2r_client(), {"role": "user", "content": query})
 
         with st.chat_message("assistant", avatar="🤖"):
-            response_generator = submit_query(load_client())
+            response_generator = submit_query(r2r_client())
             response = st.write_stream(extract_completion(response_generator))
 
-        add_message(load_client(), {"role": "assistant", "content": response})
+        add_message(r2r_client(), {"role": "assistant", "content": response})

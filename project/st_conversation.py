@@ -5,7 +5,7 @@
 
 import re
 import streamlit as st
-from st_app import load_client
+from st_app import r2r_client
 from backend.conversation import (
     list_conversations,
     fetch_messages,
@@ -76,7 +76,7 @@ if __name__ == "__page__":
             filter_ids = [id.strip() for id in filter_ids.split('\n')]
 
         if conversations_btn:
-            list_conversations(load_client(), filter_ids, offset, limit)
+            list_conversations(r2r_client(), filter_ids, offset, limit)
 
     with t_conv_msgs:
         st.markdown("**Conversation messages**")
@@ -96,7 +96,7 @@ if __name__ == "__page__":
             if not conversation_id:
                 st.warning("Please enter a conversation ID")
             else:
-                fetch_messages(load_client(), conversation_id, include_metadata)
+                fetch_messages(r2r_client(), conversation_id, include_metadata)
 
     with t_exp_conversations:
         st.markdown("**Export Conversations Metadata to CSV**")

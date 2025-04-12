@@ -11,5 +11,4 @@ COPY . .
 
 EXPOSE 8501
 
-# streamlit run st_app.py
 CMD ["streamlit", "run", "st_app.py"]

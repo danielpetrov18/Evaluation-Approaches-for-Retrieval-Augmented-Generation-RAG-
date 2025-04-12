@@ -88,7 +88,7 @@ def delete_idx(client: R2RClient, name: str):
 
         st.success(body=result)
     except R2RException as r2re:
-        st.error(f"Error deleting index: {str(r2re)}")
+        st.error(f"Error deleting index: {r2re.message}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
@@ -143,10 +143,10 @@ def _construct_index_config(
     # https://towardsdatascience.com/similarity-search-part-4-hierarchical-navigable-small-world-hnsw-2aad4fe87d37/
 
     if index_method not in ('hnsw', 'ivf_flat'):
-        raise ValueError('[-] Invalid index method, only hnsw and ivf_flat are supported! [-]')
+        raise ValueError('Invalid index method, only hnsw and ivf_flat are supported!')
 
     if index_measure not in ('ip_distance', 'l2_distance', 'cosine_distance'):
-        raise ValueError('[-] Only ip_distance, l2_distance and cosine_distance are supported!')
+        raise ValueError('Only ip_distance, l2_distance and cosine_distance are supported!')
 
     config = {
         # According to the documentation it should be vectors. However, it doesn't work.

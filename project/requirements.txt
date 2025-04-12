@@ -1,5 +1,5 @@
 pandas==2.2.3
-r2r[core]==3.5.9
+r2r[core]==3.5.11
 streamlit==1.43.2
 ipykernel==6.29.5
 unstructured[pdf]==0.17.2

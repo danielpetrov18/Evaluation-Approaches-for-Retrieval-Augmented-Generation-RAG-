@@ -13,7 +13,7 @@ import json
 import datetime
 from uuid import uuid4
 from pathlib import Path
-from typing import List
+from typing import List, Dict
 import requests
 import pandas as pd
 import streamlit as st
@@ -80,7 +80,7 @@ def list_conversations(
             else:
                 st.info("No conversations found")
     except R2RException as r2re:
-        st.error(f"Error checking conversations: {str(r2re)}")
+        st.error(f"Error checking conversations: {r2re.message}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
@@ -103,7 +103,7 @@ def update_conversation(client: R2RClient, conversation_id: str, input_name_key:
         st.session_state["page_number"] = 0
         st.success(f"Updated name of {conversation_id} to {update_resp.name}!")
     except R2RException as r2re:
-        st.error(f"Error updating conversation: {str(r2re)}")
+        st.error(f"Error updating conversation: {r2re.message}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
@@ -114,9 +114,9 @@ def delete_conversation(client: R2RClient, conversation_id: str):
     try:
         client.conversations.delete(conversation_id)
         st.session_state["page_number"] = 0
-        st.success(body=f"Deleted conversation: {conversation_id}", icon="🗑️")
+        st.success(body=f"Deleted conversation: {conversation_id}")
     except R2RException as r2re:
-        st.error(f"Error deleting conversation: {str(r2re)}")
+        st.error(f"Error deleting conversation: {r2re.message}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
@@ -148,7 +148,7 @@ def fetch_messages(client: R2RClient, conversation_id: str, display_metadata: bo
                         st.json(obj.metadata)
             st.info("You've reached the end of the messages list.")
     except R2RException as r2re:
-        st.error(f"Error fetching messages: {str(r2re)}")
+        st.error(f"Error fetching messages: {r2re.message}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:

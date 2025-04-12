@@ -1,14 +1,20 @@
-"""GUI support for managing indices."""
+"""
+GUI support for managing indices.
+Indices can make semantic search much faster and efficient.
+Both HNSW and IVF_FLAT are supported.
+
+https://r2r-docs.sciphi.ai/api-and-sdks/indices/indices
+"""
 
 # pylint: disable=E0401
 
 import streamlit as st
-from st_app import load_client
 from backend.index import (
     list_indices,
     create_idx,
     delete_idx
 )
+from st_app import r2r_client
 
 if __name__ == "__page__":
     st.title("📊 Indices")
@@ -25,7 +31,7 @@ if __name__ == "__page__":
         st.markdown("**List Indices**")
 
         if st.button(label="Fetch Indices", key="fetch_indices_btn"):
-            list_indices(load_client())
+            list_indices(r2r_client())
 
     with tab_create:
         st.markdown("**Create Index from YAML**")
@@ -58,7 +64,7 @@ if __name__ == "__page__":
             if not uploaded_file:
                 st.error("Please upload a YAML file to create an index.")
             else:
-                create_idx(load_client(), uploaded_file)
+                create_idx(r2r_client(), uploaded_file)
 
     with tab_delete:
         st.markdown("**Delete Index by Name**")
@@ -72,4 +78,4 @@ if __name__ == "__page__":
             if not del_index_name.strip():
                 st.error("Please provide an index name to delete.")
             else:
-                delete_idx(load_client(), del_index_name.strip())
+                delete_idx(r2r_client(), del_index_name.strip())

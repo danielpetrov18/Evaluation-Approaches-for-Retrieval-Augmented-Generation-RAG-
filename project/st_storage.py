@@ -10,9 +10,9 @@ There's additionally a tab to perform a simple web search to gather URLs and a r
 
 import streamlit as st
 from st_app import (
-    load_client,
-    load_ollama_client,
-    load_ollama_options
+    r2r_client,
+    ollama_client,
+    ollama_options
 )
 from backend.storage import (
     delete_all_documents,
@@ -21,7 +21,6 @@ from backend.storage import (
     ingest_file,
     perform_webscrape,
     export_docs_to_csv,
-    export_chunks_to_csv,
     perform_websearch
 )
 
@@ -38,17 +37,16 @@ if __name__ == "__page__":
                 label="Confirm deletion",
                 key="delete_all_docs_btn",
                 on_click=delete_all_documents,
-                args=(load_client(), )
+                args=(r2r_client(), )
             )
 
-    t_list, t_chunks, t_file_ingest, t_webscrape, t_export_docs, t_export_chunks, t_websearch = st.tabs(
+    t_list, t_chunks, t_file_ingest, t_webscrape, t_export_docs, t_websearch = st.tabs(
         [
-            "List Documents",
-            "List chunks",
+            "List Docs",
+            "List Chunks",
             "Ingest File",
-            "Webscrape URLs",
-            "Export Documents",
-            "Export Chunks",
+            "Webscrape",
+            "Export Docs",
             "Web Search"
         ]
     )
@@ -73,7 +71,7 @@ if __name__ == "__page__":
             doc_ids = [doc.strip() for doc in doc_ids.split("\n")]
 
         if st.button("Fetch Documents", type="primary", key="fetch_docs_btn"):
-            fetch_documents(load_client(), doc_ids, offset, limit)
+            fetch_documents(r2r_client(), doc_ids, offset, limit)
 
     with t_chunks:
         st.markdown("**List Chunks**")
@@ -107,14 +105,14 @@ if __name__ == "__page__":
             if not document_id_chunks:
                 st.error("Please provide a document id.")
             else:
-                fetch_document_chunks(load_client(), document_id_chunks, offset, limit)
+                fetch_document_chunks(r2r_client(), document_id_chunks, offset, limit)
 
     with t_file_ingest:
         st.markdown("**Ingest Document**")
 
         uploaded_file = st.file_uploader(
             "Choose a file to upload",
-            type=["txt", "pdf", "docx", "csv", "md", "html"]
+            type=["txt", "pdf", "docx", "csv", "md", "html", "json"]
         )
 
         metadata = st.text_area(
@@ -127,7 +125,7 @@ if __name__ == "__page__":
             if not uploaded_file:
                 st.error("Please upload a file.")
             else:
-                ingest_file(load_client(), uploaded_file, metadata)
+                ingest_file(r2r_client(), uploaded_file, metadata)
 
     with t_webscrape:
         st.markdown("**Perform Web Scrape**")
@@ -142,7 +140,7 @@ if __name__ == "__page__":
             if not uploaded_url_file:
                 st.error("Please upload a file containing URLs.")
             else:
-                perform_webscrape(load_client(), uploaded_url_file)
+                perform_webscrape(r2r_client(), uploaded_url_file)
 
     with t_export_docs:
         st.markdown("**Export Documents**")
@@ -163,26 +161,9 @@ if __name__ == "__page__":
                 st.warning("Please enter a file name")
             else:
                 export_docs_to_csv(
-                    load_client(),
+                    r2r_client(),
                     files_csv_out.strip(),
                     ingestion_status_filter
-                )
-
-    with t_export_chunks:
-        st.markdown("**Export Chunks**")
-
-        chunks_csv_out = st.text_input(
-            label='Name of output file (without extension)',
-            placeholder="Ex. exported_chunks"
-        )
-
-        if st.button("Export Chunks", type="primary"):
-            if not chunks_csv_out:
-                st.warning("Please enter a file name")
-            else:
-                export_chunks_to_csv(
-                    load_client(),
-                    chunks_csv_out
                 )
 
     with t_websearch:
@@ -243,8 +224,8 @@ if __name__ == "__page__":
             else:
                 with st.spinner("Performing web search...", show_time=True):
                     result, urls = perform_websearch(
-                        load_ollama_client(),
-                        load_ollama_options(),
+                        ollama_client(),
+                        ollama_options(),
                         query,
                         results_to_return
                     )

@@ -16,15 +16,10 @@ default_max_upload_size = 10_000_000 # 10 MB
 fast_llm = "ollama/llama3.1"    # LLM used for internal operations, like deriving conversation names
 quality_llm = "ollama/llama3.1" # LLM used for user-facing output, like RAG replies
 
-[auth]
-provider = "r2r"  # currently only "r2r" | "supabase" are supported
-require_authentication = false  # set to true to enforce authentication
-require_email_verification = false  # set to true to require email verification
-default_admin_email = "admin@example.com"
-default_admin_password = "change_me_immediately"
-access_token_lifetime_in_minutes = 3600  # 60 hours
-refresh_token_lifetime_in_days = 7  # 7 days
-secret_key = "s3cr3t"  # Used for JWT token signing
+# Reasoning model, used for `research` agent
+reasoning_llm = "ollama/llama3.1"
+# Planning model, used for `research` agent
+planning_llm = "ollama/llama3.1"
 
 [completion]
 provider = "litellm"
@@ -60,3 +55,17 @@ base_dimension = 1024
 batch_size = 32
 add_title_as_prefix = true
 concurrent_request_limit = 2
+
+[ingestion]
+provider = "unstructured_local"
+strategy = "auto"
+chunking_strategy = "by_title"
+new_after_n_chars = 512
+max_characters = 1_024
+combine_under_n_chars = 128
+overlap = 20
+chunk_overlap = 64
+chunk_size = 1024
+chunks_for_document_summary = 16
+document_summary_model = "ollama/llama3.1"
+automatic_extraction = false

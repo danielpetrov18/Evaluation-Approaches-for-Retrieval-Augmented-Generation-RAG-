@@ -1,12 +1,16 @@
 """
-This module holds all the available pages of the frontend part of the application.
+This module holds all the available pages of the application.
 Every resource defined in the main page can be accessed by all pages.
+For that reason I use caching mechanism for faster page loading.
 """
 
 import os
 import typing as t
+from ollama import (
+    Client,
+    Options
+)
 from r2r import R2RClient
-from ollama import Client, Options
 import streamlit as st
 from streamlit.navigation.page import StreamlitPage
 
@@ -14,24 +18,31 @@ from streamlit.navigation.page import StreamlitPage
 
 # ttl of None signifies that it doesn't expire
 @st.cache_resource(ttl=None)
-def load_client():
-    """Loads the client necessary to interact with the backend."""
+def r2r_client():
+    """
+    Loads the client necessary to interact with the backend.
+    R2R has a RESTful API which acts as a server and using this client
+    we can interact with it. It sends requests and gets responses behind the scenes.
+    """
+
+    # Since when running in compose we can the name of the container as a URL.
     return R2RClient(
-        base_url='http://r2r:7272', # Since when running in compose we can target a name
+        base_url='http://r2r:7272',
         timeout=600
     )
 
 @st.cache_resource
-def load_ollama_client():
+def ollama_client():
     """
     Load Ollama client. 
-    Have in mind that this will be containerized and will try to connect the hosting device.
+    Have in mind that this will be containerized and will try to connect to the hosting device.
     `host.docker.internal` will enable exactly that communication from inside the container.
+    If you want to run it on the local machine, use `localhost` instead - in the env file.
     """
     return Client(host=st.session_state['ollama_api_base'])
 
 @st.cache_resource
-def load_ollama_options():
+def ollama_options():
     """Load Ollama options. The values here can be tweaked in rag.env file."""
     return Options(
         temperature=st.session_state['temperature'],
@@ -43,7 +54,7 @@ def load_ollama_options():
 
 
 def get_pages() -> t.List[StreamlitPage]:
-    """Defines main pages."""
+    """Defines main pages of the application."""
     return [
         st.Page(
             page="st_chat.py",
@@ -138,14 +149,21 @@ if __name__ == "__main__":
         st.session_state["max_relevant_messages"] = int(os.getenv("MAX_RELEVANT_MESSAGES"))
 
     if 'ingestion_config' not in st.session_state:
-        st.session_state['ingestion_config'] = load_client().system.settings().results.config['ingestion']
+        st.session_state['ingestion_config'] = r2r_client().system.settings().results.config['ingestion']
+
+        # Since the config is a snapshot not an actual instance of the config
+        new_ingestion_config = st.session_state['ingestion_config']
+        new_ingestion_config['chunk_size'] = st.session_state['chunk_size']
+        new_ingestion_config['chunk_overlap'] = st.session_state['chunk_overlap']
+
+        st.session_state['ingestion_config'] = new_ingestion_config
 
     # Default prompt name that is used by R2R when interacting with /rag endpoint
     if 'selected_prompt' not in st.session_state:
         st.session_state['selected_prompt'] = "rag"
 
     if 'prompt_template' not in st.session_state:
-        st.session_state['prompt_template'] = load_client().prompts.retrieve(
+        st.session_state['prompt_template'] = r2r_client().prompts.retrieve(
             st.session_state['selected_prompt']
         ).results.template
 
@@ -153,7 +171,7 @@ if __name__ == "__main__":
         st.session_state['websearch_api_key'] = None
 
     if "bearer_token" not in st.session_state:
-        st.session_state['bearer_token'] = load_client().users.login(
+        st.session_state['bearer_token'] = r2r_client().users.login(
             email = "admin@example.com",
             password = "change_me_immediately"
         ).results.access_token.token

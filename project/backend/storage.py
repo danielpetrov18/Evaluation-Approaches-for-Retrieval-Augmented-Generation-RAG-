@@ -26,31 +26,10 @@ from streamlit.errors import Error
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 from langchain.docstore.document import Document
-from langchain_community.document_loaders import (
-    AsyncHtmlLoader,
-    UnstructuredFileLoader
-)
-from langchain_text_splitters import TokenTextSplitter
+from langchain_community.document_loaders import AsyncHtmlLoader
 
 @st.cache_resource
-def load_unstructured(filepath: str):
-    """Load object to to extract text from files."""
-    return UnstructuredFileLoader(
-        file_path=filepath,
-        mode="single",
-        unstructured_kwargs=st.session_state['ingestion_config']
-    )
-
-@st.cache_resource
-def load_token_splitter():
-    """Load TokenTextSplitter."""
-    return TokenTextSplitter(
-        chunk_size = st.session_state['chunk_size'],
-        chunk_overlap = st.session_state['chunk_overlap']
-    )
-
-@st.cache_resource
-def load_ascraper(urls: List[str]):
+def ascrapper(urls: List[str]):
     """Load object to retrieve data from the internet"""
     return AsyncHtmlLoader(
         web_path=urls,
@@ -58,7 +37,7 @@ def load_ascraper(urls: List[str]):
     )
 
 @st.cache_resource
-def load_tools() -> List[Dict[str, Union[str, Dict]]]:
+def ollama_tools() -> List[Dict[str, Union[str, Dict]]]:
     """Single tool available to be called by Ollama"""
     return [
         {
@@ -98,13 +77,18 @@ def delete_all_documents(client: R2RClient):
     except Exception as exc:
         st.error(f"Unexpected error: {str(exc)}")
 
-def fetch_documents(client: R2RClient, ids: List[str], offset: int, limit: int):
+def fetch_documents(
+    client: R2RClient,
+    ids: List[str],
+    offset: int,
+    limit: int
+):
     """Retrieve documents. For each document there's a delete and update metadata buttons."""
     try:
         selected_files = client.documents.list(ids, offset, limit).results
         if selected_files:
             for i, doc in enumerate(selected_files):
-                with st.expander(label=f"{i + 1}: {doc.metadata['filename']}", expanded=False):
+                with st.expander(label=f"{i + 1}: {doc.title}", expanded=False):
                     st.json(doc)
 
                     delete_col, update_metadata_col = st.columns(2)
@@ -213,17 +197,15 @@ def fetch_document_chunks(client: R2RClient, document_id: str, offset: int, limi
 def ingest_file(client: R2RClient, file: UploadedFile, metadata: dict):
     """
     This method takes a file in binary format. Saves it in the tmp folder.
-    Thereafter, the text is extracted and split using token splitter.
-    Finally, it gets ingested. Alternatively, one can ingest the document
-    directly, however I prefer the token splitter since the chunks make sense to me.
-    If you use the R2R unstructured service, you can ingest directly.
+    Thereafter, the text is extracted and split. Finally, embeded vectors are created
+    and stored in the database.
     """
     # Do it outside because of the finally clause
     temp_filepath = os.path.join(tempfile.gettempdir(), file.name)
     try:
         # Make sure file doesn't already exist.
         for doc in client.documents.list().results:
-            if doc.metadata["filename"] == file.name:
+            if doc.title == file.name:
                 st.error("File already exists!")
                 return
 
@@ -234,21 +216,14 @@ def ingest_file(client: R2RClient, file: UploadedFile, metadata: dict):
             st.error("Failed to save file or file is empty.")
             return
 
-        loader = load_unstructured(filepath=temp_filepath)
-        chunks: List[Document] = loader.load_and_split(load_token_splitter())
-        txt_chunks: List[str] = [chunk.page_content for chunk in chunks]
-
         with st.spinner(text="Ingesting document...", show_time=True):
             if isinstance(metadata, str):
                 metadata = json.loads(metadata)
 
-            combined_metadata = {**chunks[0].metadata, **metadata}
-            combined_metadata["filename"] = file.name
-
             ingest_resp = client.documents.create(
-                chunks=txt_chunks,
-                ingestion_mode="fast",
-                metadata=combined_metadata,
+                file_path=temp_filepath,
+                metadata=metadata,
+                ingestion_config=st.session_state['ingestion_config'],
                 run_with_orchestration=True
             ).results
             st.success(ingest_resp.message)
@@ -282,30 +257,27 @@ def perform_webscrape(client: R2RClient, file: UploadedFile):
                 st.write('Fetched data...')
 
                 for document in documents:
-                    with tempfile.NamedTemporaryFile(delete=True, suffix=".html") as temp_file:
-                        temp_file.write(document.page_content.encode('utf-8'))
+                    # Save file temporarily
+                    temp_filepath = os.path.join(tempfile.gettempdir(), file.name)
+                    with open(file=temp_filepath, mode="wb") as temp_file:
+                        temp_file.write(document.page_content)
                         temp_file.flush()
 
-                        loader = load_unstructured(filepath=temp_file.name)
-                        loaded_document = loader.load()[0]
+                    try:
+                        chunks_ing_resp = client.documents.create(
+                            file_path=temp_file,
+                            ingestion_mode='fast',
+                            metadata=document.metadata,
+                            run_with_orchestration=True
+                        ).results
+                        st.success(f"{document.metadata['source']}: {chunks_ing_resp.message}")
+                    except R2RException as r2re:
+                        st.error(f"Error {document.metadata['source']}: {r2re.message}")
+                    finally:
+                        if os.path.exists(temp_filepath):
+                            os.remove(temp_filepath)
 
-                        token_splitter = load_token_splitter()
-                        doc_chunks = token_splitter.split_documents([loaded_document])
-
-                        chunks_text = [chunk.page_content for chunk in doc_chunks]
-                        document.metadata['filename'] = f"{document.metadata['title']}.txt"
-
-                        try:
-                            chunks_ing_resp = client.documents.create(
-                                chunks=chunks_text,
-                                ingestion_mode='fast',
-                                metadata=document.metadata,
-                                run_with_orchestration=True
-                            ).results
-                            st.success(f"{document.metadata['source']}: {chunks_ing_resp.message}")
-                        except R2RException as r2re:
-                            st.error(f"Error {document.metadata['source']}: {r2re.message}")
-                        time.sleep(5) # Wait for ingestion
+                    time.sleep(5) # Wait for ingestion
                 st.info("Completed URL ingestion process")
             else:
                 st.error("No valid URLs found in file")
@@ -350,21 +322,6 @@ def export_docs_to_csv(client: R2RClient, filename: str, ingestion_status: str):
     except Exception as exc:
         st.error(f"Unexpected error: {str(exc)}")
 
-def export_chunks_to_csv(client: R2RClient, filename: str):
-    """Export all chunks that is going to be used as context for generating data with DeepEval"""
-    try:
-        chunks = [chunk.text for chunk in client.chunks.list().results]
-        df = pd.DataFrame(chunks, columns=["chunk_content"])
-        filepath = Path(st.session_state['exports_dir']) / f"{filename}.csv"
-        df.to_csv(filepath, index=False)
-        st.success("Successfully exported chunks!")
-    except R2RException as r2re:
-        st.error(f"Error: {r2re.message}")
-    except Error as e:
-        st.error(f"Unexpected streamlit error: {str(e)}")
-    except Exception as exc:
-        st.error(f"Unexpected error: {str(exc)}")
-
 def perform_websearch(
     ollama_client: Client,
     options: Options,
@@ -387,7 +344,7 @@ def perform_websearch(
                     'content': query
                 }
             ],
-            tools=load_tools()  # Pass the structured tools object
+            tools=ollama_tools()  # Pass the structured tools object
         )
 
         if "message" in response and "tool_calls" in response["message"]:
@@ -480,8 +437,8 @@ def _langsearch_websearch_tool(query: str, count: int) -> tuple[str, List[str]]:
 
 def _fetch_data_from_urls(scrape_urls: List[str]) -> List[Document]:
     """Fetches data from the provided URLs asynchronously."""
-    ascraper = load_ascraper(scrape_urls)
-    web_documents = _run_async_function(ascraper.aload())
+    scraper = ascrapper(scrape_urls)
+    web_documents = _run_async_function(scraper.aload())
     return web_documents
 
 def _extract_urls(file: UploadedFile) -> List[str]:

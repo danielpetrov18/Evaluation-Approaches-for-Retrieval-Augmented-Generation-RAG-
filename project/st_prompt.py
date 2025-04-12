@@ -1,10 +1,15 @@
-"""Enables the user to manage prompts with GUI."""
+"""
+Enables the user to manage prompts with GUI.
+Prompt templating can significantly improve the quality of responses.
+It's work trying out different prompts for RAG to see which one works best.
+Prompts can be defined in YAML format. Check out the prompts page in the frontend.
+"""
 
 # pylint: disable=E0401
 # pylint: disable=C0301
 
 import streamlit as st
-from st_app import load_client
+from st_app import r2r_client
 from backend.prompt import (
     list_prompts,
     create_prompt,
@@ -26,7 +31,7 @@ if __name__ == "__page__":
         st.markdown("**List Prompts**")
 
         if st.button(label="Fetch Prompt List", key="fetch_prompts_btn"):
-            list_prompts(load_client())
+            list_prompts(r2r_client())
 
     with tab_create:
         st.markdown("**Create Prompt from YAML**")
@@ -71,7 +76,7 @@ if __name__ == "__page__":
             if uploaded_file is None:
                 st.error(body="Please upload a YAML file.")
             else:
-                create_prompt(load_client(), uploaded_file)
+                create_prompt(r2r_client(), uploaded_file)
 
     with tab_delete:
         st.markdown("**Delete Prompt by Name**")
@@ -85,4 +90,4 @@ if __name__ == "__page__":
             if not del_prompt_name.strip():
                 st.error("Please enter a prompt name.")
             else:
-                delete_prompt(load_client(), del_prompt_name.strip())
+                delete_prompt(r2r_client(), del_prompt_name.strip())
