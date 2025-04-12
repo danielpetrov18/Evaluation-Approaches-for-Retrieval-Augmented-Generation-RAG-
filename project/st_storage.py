@@ -9,7 +9,11 @@ There's additionally a tab to perform a simple web search to gather URLs and a r
 # pylint: disable=C0301
 
 import streamlit as st
-from st_app import load_client
+from st_app import (
+    load_client,
+    load_ollama_client,
+    load_ollama_options
+)
 from backend.storage import (
     delete_all_documents,
     fetch_documents,
@@ -196,8 +200,11 @@ if __name__ == "__page__":
                     st.error("Please enter an API key.")
                 elif 'sk-' not in new_api_key:
                     st.error("Please enter a valid API key.")
+                elif st.session_state['websearch_api_key'] == new_api_key:
+                    st.error("Please enter a new API key.")
                 else:
                     st.session_state['websearch_api_key'] = new_api_key
+                    st.success("API key saved.")
 
         with st.expander("Instructions on how to use it", expanded=True, icon="📖"):
             st.markdown("""
@@ -235,7 +242,12 @@ if __name__ == "__page__":
                 st.error("Please enter an API key.")
             else:
                 with st.spinner("Performing web search...", show_time=True):
-                    result, urls = perform_websearch(query, results_to_return)
+                    result, urls = perform_websearch(
+                        load_ollama_client(),
+                        load_ollama_options(),
+                        query,
+                        results_to_return
+                    )
 
                 formatted_urls = ""
                 for i, url in enumerate(urls, 0):

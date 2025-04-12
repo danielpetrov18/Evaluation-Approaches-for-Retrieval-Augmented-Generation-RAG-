@@ -11,7 +11,10 @@ from typing import (
     Union,
     List
 )
-import ollama
+from ollama import (
+    Client,
+    Options
+)
 import numpy as np
 from r2r import (
     R2RClient,
@@ -22,6 +25,26 @@ import streamlit as st
 from streamlit.errors import Error
 from pydantic import BaseModel, Field
 from shared.api.models.retrieval.responses import SSEEventBase
+
+@st.cache_resource
+def load_ollama_client():
+    """
+    Load Ollama client. 
+    Have in mind that this will be containerized and will try to connect the hosting device.
+    `host.docker.internal` will enable exactly that communication from inside the container.
+    """
+    return Client(host=st.session_state['ollama_api_base'])
+
+@st.cache_resource
+def load_ollama_options():
+    """Load Ollama options. The values here can be tweaked in rag.env file."""
+    return Options(
+        temperature=st.session_state['temperature'],
+        top_p=st.session_state['top_p'],
+        top_k=st.session_state['top_k'],
+        num_ctx=24000, # This is hard-coded by default.
+        format="json", # This should also be json to enforce proper output
+    )
 
 class Message(BaseModel):
     """
@@ -230,12 +253,9 @@ def _get_enhanced_query(query: str) -> str:
     Returns:
         Enhanced query with relevant context
     """
-    # Take all assistant messages which are relevant for context
-    assistant_messages = [msg for msg in st.session_state.messages if msg.role == "assistant"]
-
     relevant_messages = _get_relevant_messages(
         query_embedding = st.session_state.messages[-1].embedding,
-        history = assistant_messages
+        history = st.session_state['messages']
     )
 
     if not relevant_messages:
@@ -266,16 +286,12 @@ def _compute_embedding(text: str) -> list[float]:
         List of floats representing the vector embedding of the given text
     """
     try:
-        # Since this function can be used for batch processing, it returns a list of embeddings.
-        # We only one the first one.
-        response = ollama.embed(
-            model = st.session_state['embedding_model'],
-            input = text
+        result = load_ollama_client().embeddings(
+            model=st.session_state['embedding_model'],
+            prompt=text,
+            options=load_ollama_options()
         )
-        return response['embeddings'][0]
-    except ollama.ResponseError as oe:
-        st.error(f"Ollama error computing embeddings: {oe.error}")
-        raise ollama.ResponseError(oe.error) from oe
+        return result['embedding']
     except Exception as e:
         st.error(f"Unexpected error computing embeddings: {e}")
         raise Exception(str(e)) from e
@@ -381,8 +397,12 @@ def _summarize_context(history_summary_prompt: str) -> str:
     Returns:
         str: Summarized context
     """
-    resp = ollama.generate(st.session_state['chat_model'], history_summary_prompt)['response']
-    return resp
+    result = load_ollama_client().generate(
+        model=st.session_state['chat_model'],
+        prompt=history_summary_prompt,
+        options=load_ollama_options()
+    )
+    return result['response']
 
 def _enhance_user_query(query: str, context_summary: str) -> str:
     """

@@ -58,11 +58,6 @@ def load_ascraper(urls: List[str]):
     )
 
 @st.cache_resource
-def load_ollama_client():
-    """Load Ollama client."""
-    return Client(host="http://localhost:11434")
-
-@st.cache_resource
 def load_tools() -> List[Dict[str, Union[str, Dict]]]:
     """Single tool available to be called by Ollama"""
     return [
@@ -370,25 +365,21 @@ def export_chunks_to_csv(client: R2RClient, filename: str):
     except Exception as exc:
         st.error(f"Unexpected error: {str(exc)}")
 
-def perform_websearch(query: str, results_to_return: int) -> tuple[str, List[str]]:
+def perform_websearch(
+    ollama_client: Client,
+    options: Options,
+    query: str,
+    results_to_return: int
+) -> tuple[str, List[str]]:
     """
     Uses the following API https://langsearch.com/ to perform a web search.
     Then we can receive the results and use them as context for generating data.
     However, this doesn't use R2R, but simple Ollama with a tool call.
     """
     try:
-        llm = load_ollama_client()
-        options = Options(
-            temperature=st.session_state['temperature'],
-            top_p=st.session_state['top_p'],
-            top_k=st.session_state['top_k'],
-            num_ctx=24000,
-            format="json",
-        )
-
         # Call the model with the properly formatted tools
-        response = llm.chat(
-            model="llama3.1:latest",
+        response = ollama_client.chat(
+            model=st.session_state['chat_model'],
             options=options,
             messages=[
                 {
@@ -407,8 +398,8 @@ def perform_websearch(query: str, results_to_return: int) -> tuple[str, List[str
                     )
 
                     # Continue the conversation with the tool results
-                    final_response = llm.chat(
-                        model="llama3.1:latest",
+                    final_response = ollama_client.chat(
+                        model=st.session_state['chat_model'],
                         options=options,
                         messages=[
                             {

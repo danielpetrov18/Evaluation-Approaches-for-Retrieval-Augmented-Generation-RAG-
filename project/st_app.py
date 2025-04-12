@@ -5,8 +5,9 @@ Every resource defined in the main page can be accessed by all pages.
 
 import os
 import typing as t
-import streamlit as st
 from r2r import R2RClient
+from ollama import Client, Options
+import streamlit as st
 from streamlit.navigation.page import StreamlitPage
 
 # pylint: disable=C0301
@@ -19,6 +20,27 @@ def load_client():
         base_url='http://r2r:7272', # Since when running in compose we can target a name
         timeout=600
     )
+
+@st.cache_resource
+def load_ollama_client():
+    """
+    Load Ollama client. 
+    Have in mind that this will be containerized and will try to connect the hosting device.
+    `host.docker.internal` will enable exactly that communication from inside the container.
+    """
+    return Client(host=st.session_state['ollama_api_base'])
+
+@st.cache_resource
+def load_ollama_options():
+    """Load Ollama options. The values here can be tweaked in rag.env file."""
+    return Options(
+        temperature=st.session_state['temperature'],
+        top_p=st.session_state['top_p'],
+        top_k=st.session_state['top_k'],
+        num_ctx=24000, # This is hard-coded by default.
+        format="json", # This should also be json to enforce proper output
+    )
+
 
 def get_pages() -> t.List[StreamlitPage]:
     """Defines main pages."""
@@ -135,6 +157,9 @@ if __name__ == "__main__":
             email = "admin@example.com",
             password = "change_me_immediately"
         ).results.access_token.token
+
+    if "ollama_api_base" not in st.session_state:
+        st.session_state['ollama_api_base'] = os.getenv("OLLAMA_API_BASE")
 
     # Run selected page
     page.run()
