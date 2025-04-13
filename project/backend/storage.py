@@ -11,7 +11,6 @@ import os
 import time
 import asyncio
 import tempfile
-from uuid import uuid4
 from pathlib import Path
 from typing import List, Dict, Union
 
@@ -91,33 +90,13 @@ def fetch_documents(
                 with st.expander(label=f"{i + 1}: {doc.title}", expanded=False):
                     st.json(doc)
 
-                    delete_col, update_metadata_col = st.columns(2)
-
-                    with delete_col:
-                        with st.popover(label="Delete document", icon="🗑️"):
-                            delete_doc_btn = st.button(
-                                label="Confirm deletion",
-                                key=f"delete_document_{i}",
-                                on_click=delete_document,
-                                args=(client, doc.id, )
-                            )
-
-                    with update_metadata_col:
-                        with st.popover(label="Update metadata", icon="✏️"):
-                            updated_metadata_key = str(uuid4())
-                            metadata_str = st.text_area(
-                                label="Update metadata",
-                                key=updated_metadata_key,
-                                value=json.dumps(doc.metadata, indent=4),
-                                height=150
-                            )
-
-                            update_metadata_btn = st.button(
-                                label="Confirm update",
-                                key=f"update_metadata_btn_{i}",
-                                on_click=update_metadata,
-                                args=(client, doc.id, updated_metadata_key)
-                            )
+                    with st.popover(label="Delete document", icon="🗑️"):
+                        delete_doc_btn = st.button(
+                            label="Confirm deletion",
+                            key=f"delete_document_{i}",
+                            on_click=delete_document,
+                            args=(client, doc.id, )
+                        )
 
             if len(selected_files) < limit:
                 st.info("You've reached the end of the documents.")
@@ -137,30 +116,6 @@ def delete_document(client: R2RClient, document_id: str):
         st.success(f"Successfully deleted document: {document_id}")
     except R2RException as r2re:
         st.error(f"Error when deleting document: {r2re.message}")
-    except Error as e:
-        st.error(f"Unexpected streamlit error: {str(e)}")
-    except Exception as exc:
-        st.error(f"Unexpected error: {str(exc)}")
-
-def update_metadata(client: R2RClient, document_id: str, updated_metadata_key: str):
-    """Update or add fields to metadata of a document"""
-    try:
-        metadata = st.session_state[updated_metadata_key]
-
-        key_value_pairs = []
-        if metadata:
-            metadata = json.loads(metadata)
-            key_value_pairs = [{k: v} for k, v in metadata.items()]
-
-        client.documents.append_metadata(
-            id=document_id,
-            metadata=key_value_pairs
-        )
-        st.success("Successfully updated metadata")
-    except json.JSONDecodeError as jde:
-        st.error(f"Error: {str(jde)}")
-    except R2RException as r2re:
-        st.error(f"Error: {r2re.message}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
@@ -211,6 +166,7 @@ def ingest_file(client: R2RClient, file: UploadedFile, metadata: dict):
 
         with open(file=temp_filepath, mode="wb") as temp_file:
             temp_file.write(file.getbuffer())
+            temp_file.flush()
 
         if not os.path.exists(temp_filepath) or os.path.getsize(temp_filepath) == 0:
             st.error("Failed to save file or file is empty.")
@@ -256,28 +212,39 @@ def perform_webscrape(client: R2RClient, file: UploadedFile):
                 documents = _fetch_data_from_urls(urls)
                 st.write('Fetched data...')
 
+                # Make sure there's no document with that specific source
+                sources = [
+                    doc.metadata.get('source', 'unknown')
+                    for doc in client.documents.list().results
+                ]
+
                 for document in documents:
                     # Save file temporarily
-                    temp_filepath = os.path.join(tempfile.gettempdir(), file.name)
-                    with open(file=temp_filepath, mode="wb") as temp_file:
-                        temp_file.write(document.page_content)
+                    with tempfile.NamedTemporaryFile(delete=True, suffix=".txt") as temp_file:
+                        temp_file.write(document.page_content.encode('utf-8'))
                         temp_file.flush()
 
-                    try:
-                        chunks_ing_resp = client.documents.create(
-                            file_path=temp_file,
-                            ingestion_mode='fast',
-                            metadata=document.metadata,
-                            run_with_orchestration=True
-                        ).results
-                        st.success(f"{document.metadata['source']}: {chunks_ing_resp.message}")
-                    except R2RException as r2re:
-                        st.error(f"Error {document.metadata['source']}: {r2re.message}")
-                    finally:
-                        if os.path.exists(temp_filepath):
-                            os.remove(temp_filepath)
+                        try:
+                            # Make sure there's no document with that specific source
+                            if document.metadata['source'] in sources:
+                                st.error(
+                                    f"Document {document.metadata['source']} already exists"
+                                )
+                                continue
 
-                    time.sleep(5) # Wait for ingestion
+                            # No summary will be generated
+                            # If you want a summary switch to custom mode
+                            chunks_ing_resp = client.documents.create(
+                                file_path=temp_file.name,
+                                ingestion_mode='fast',
+                                metadata=document.metadata,
+                                run_with_orchestration=True
+                            ).results
+                            st.success(f"{document.metadata['source']}: {chunks_ing_resp.message}")
+                            time.sleep(5) # Wait for ingestion to complete
+                        except R2RException as r2re:
+                            st.error(f"Error {document.metadata['source']}: {r2re.message}")
+
                 st.info("Completed URL ingestion process")
             else:
                 st.error("No valid URLs found in file")

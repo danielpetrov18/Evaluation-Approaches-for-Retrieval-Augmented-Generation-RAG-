@@ -28,7 +28,7 @@ def r2r_client():
     # Since when running in compose we can the name of the container as a URL.
     return R2RClient(
         base_url='http://r2r:7272',
-        timeout=600
+        timeout=1800 # 30 minutes
     )
 
 @st.cache_resource

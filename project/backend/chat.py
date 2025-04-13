@@ -6,7 +6,7 @@
 # pylint: disable=R0903
 
 import json
-from typing import Generator, Union, List
+from typing import Generator, Union, List, Dict
 
 import numpy as np
 import streamlit as st
@@ -52,7 +52,7 @@ class Message(BaseModel):
     id: str = Field(..., min_length=1)
     role: str = Field(..., min_length=1)  # ... means required/not nullable
     content: str = Field(..., min_length=1)  # min_length=1 ensures non-empty string
-    embedding: list[float] = Field(...)
+    embedding: List[float] = Field(...)
 
     # https://docs.pydantic.dev/1.10/usage/model_config/
     class Config:
@@ -61,7 +61,7 @@ class Message(BaseModel):
         extra = "forbid" # Prevents additional fields not defined in model
 
 @st.cache_data(ttl=60)  # Cache for 60 seconds
-def retrieve_conversation(_client: R2RClient, conversation_id: str) -> Union[List[Message],None]:
+def retrieve_messages(_client: R2RClient, conversation_id: str) -> Union[List[Message],None]:
     """
                           ^
                           |
@@ -119,19 +119,21 @@ def check_conversation_exists(client: R2RClient):
     except Exception as exc:
         st.error(str(exc))
 
-def set_new_prompt(client: R2RClient, prompt_name: str):
+def set_new_prompt(client: R2RClient, prompt_name: str) -> bool:
     """After making sure the prompt exists we select it for future RAG completions"""
     try:
         prompt_obj = client.prompts.retrieve(prompt_name).results
         st.session_state['selected_prompt'] = prompt_name
         st.session_state['prompt_template'] = prompt_obj.template
-        st.success(body=f"Selected prompt: {prompt_name}")
+        return True
     except R2RException as r2re:
         st.error(r2re.message)
+        return False
     except Exception as e:
         st.error(str(e))
+        return False
 
-def add_message(client: R2RClient, msg: dict):
+def add_message(client: R2RClient, msg: Dict[str, str]):
     """Adding a new message to a conversation."""
     try:
         embedding = _compute_embedding(msg['content'])
@@ -173,15 +175,17 @@ def add_message(client: R2RClient, msg: dict):
 
 def submit_query(client: R2RClient) -> Generator:
     """
-    Submit a query to the language model (LLM) and retrieve the response.
-    If a new conversation is initiated, the conversation ID is stored in the session state.
-    Otherwise we just continue with the existing conversation.
+    Submit a query to the LLM and retrieve the response.
+    This method is first going to select relevant messages as a history.
+    Those will be used to augment the query and then the LLM will be asked to generate a response.
+    R2R will then retrieve relevant chunks using semantic similarity, then the chunks will be
+    re-ranked and finally all the chunks will be used to generate the final response.
 
     Args:
         client (R2RClient): The client used to interact with the LLM.
 
     Returns:
-        str: The content of the first message in the response from the LLM.
+        Generator: Response from the LLM as a generator.
     
     Raises:
         R2RException: If there's an error related to the R2R system.
@@ -204,6 +208,7 @@ def submit_query(client: R2RClient) -> Generator:
         generator = client.retrieval.rag(
             query = enhanced_query,
             rag_generation_config = {
+                "model": f"ollama/{st.session_state['chat_model']}",
                 "temperature": st.session_state['temperature'],
                 "top_p": st.session_state['top_p'],
                 "max_tokens_to_sample": st.session_state['max_tokens'],
@@ -254,7 +259,7 @@ def _get_enhanced_query(query: str) -> str:
     """
     relevant_messages = _get_relevant_messages(
         query_embedding = st.session_state.messages[-1].embedding,
-        history = st.session_state['messages']
+        history = st.session_state['messages'][:-1] # Get all messages except the last
     )
 
     if not relevant_messages:
@@ -270,7 +275,7 @@ def _get_enhanced_query(query: str) -> str:
     return _enhance_user_query(query, context_summary)
 
 @st.cache_data(ttl=None)
-def _compute_embedding(text: str) -> list[float]:
+def _compute_embedding(text: str) -> List[float]:
     """
     Compute the vector embedding of a given text using the selected Ollama model.
     
@@ -285,10 +290,10 @@ def _compute_embedding(text: str) -> list[float]:
         List of floats representing the vector embedding of the given text
     """
     try:
-        result = load_ollama_client().embeddings(
+        result = ollama_client().embeddings(
             model=st.session_state['embedding_model'],
             prompt=text,
-            options=load_ollama_options()
+            options=ollama_options()
         )
         return result['embedding']
     except Exception as e:
@@ -296,7 +301,7 @@ def _compute_embedding(text: str) -> list[float]:
         raise Exception(str(e)) from e
 
 @st.cache_data(ttl=None)
-def _compute_similarity(embedding1: list[float], embedding2: list[float]) -> float:
+def _compute_similarity(embedding1: List[float], embedding2: List[float]) -> float:
     """
     Compute the cosine similarity between two vector embeddings.
     
@@ -318,10 +323,9 @@ def _compute_similarity(embedding1: list[float], embedding2: list[float]) -> flo
     vec2 = np.array(embedding2)
     return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
 
-def _get_relevant_messages(query_embedding: list[float], history: list[Message]) -> list[dict]:
+def _get_relevant_messages(query_embedding: List[float], history: List[Message]) -> List[Dict]:
     """
     Find messages in the history that are relevant to the given query.
-    I assume only assistant messages can be relevant since they are generated by the model.
     
     Args:
         query_embedding: Embedding of the current users query
@@ -354,7 +358,7 @@ def _get_relevant_messages(query_embedding: list[float], history: list[Message])
 
     return relevant_messages
 
-def _construct_history_summary_prompt(query: str, relevant_history: list[dict]) -> str:
+def _construct_history_summary_prompt(query: str, relevant_history: List[Dict]) -> str:
     """
     Construct an augmented prompt that includes relevant historical context.
     This is going to be used by the Ollama model to generate a summary of the relevant history.
@@ -369,19 +373,31 @@ def _construct_history_summary_prompt(query: str, relevant_history: list[dict]) 
     """
     prompt_parts = []
     if relevant_history:
-        prompt_parts.append("Relevant conversation history:")
+        prompt_parts.append("# Context Summarization Task")
+        prompt_parts.append("You are helping to summarize relevant parts of a conversation history that relate to the current question.")
+        prompt_parts.append("\n## Relevant conversation history:")
+
         for i, item in enumerate(relevant_history):
             content = item['message'].content
             role = item['message'].role
             similarity = item['similarity']
             prompt_parts.append(
-                f"{i+1}. [{role} message (similarity: {similarity:.2f})]: {content}"
+                f"{i+1}. [{role.upper()} (relevance: {similarity:.2f})]:\n{content}\n{'_' * 40}"
             )
+
         prompt_parts.append(
-            "\nPlease summarize the history context concisely which is relevant to the current question:"
+            "\n## Instructions:\n" +
+            "1. Extract key information from the conversation history above\n" +
+            "2. Only include details relevant to answering the current question\n" +
+            "3. Preserve specific facts, data points, and context\n" +
+            "4. Keep your summary concise (3-5 sentences maximum)\n" +
+            "5. Format in clear, simple language\n"
         )
 
-    prompt_parts.append(f"Current question: {query}")
+    prompt_parts.append(f"\n## Current question:\n{query}")
+
+    if relevant_history:
+        prompt_parts.append("\n## Your summary of relevant context (be concise):")
 
     result = "\n".join(prompt_parts)
     return result
@@ -396,11 +412,12 @@ def _summarize_context(history_summary_prompt: str) -> str:
     Returns:
         str: Summarized context
     """
-    result = load_ollama_client().generate(
+    result = ollama_client().generate(
         model=st.session_state['chat_model'],
         prompt=history_summary_prompt,
-        options=load_ollama_options()
+        options=ollama_options()
     )
+
     return result['response']
 
 def _enhance_user_query(query: str, context_summary: str) -> str:

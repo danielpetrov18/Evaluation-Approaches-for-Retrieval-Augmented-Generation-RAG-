@@ -11,9 +11,8 @@ import io
 import os
 import json
 import datetime
-from uuid import uuid4
 from pathlib import Path
-from typing import List, Dict
+from typing import List
 import requests
 import pandas as pd
 import streamlit as st
@@ -40,37 +39,13 @@ def list_conversations(
                 ):
                     st.json(conversation)
 
-                    update_col, delete_col = st.columns(2)
-
-                    with update_col:
-                        with st.popover(
-                            label="Rename conversation",
-                            icon="✏️"
-                        ):
-                            new_name_key = str(uuid4())
-                            new_name = st.text_input(
-                                label="Rename conversation",
-                                placeholder="Enter new name",
-                                key=new_name_key
-                            )
-                            update_conv_btn = st.button(
-                                label="Update Name",
-                                key=f"update_conversation_{i}",
-                                on_click=update_conversation,
-                                args=(client, conversation.id, new_name_key)
-                            )
-
-                    with delete_col:
-                        with st.popover(
-                            label="Delete conversation",
-                            icon="🗑️",
-                        ):
-                            delete_conv_btn = st.button(
-                                label="Confirm deletion",
-                                key=f"delete_conversation_{i}",
-                                on_click=delete_conversation,
-                                args=(client, conversation.id,)
-                            )
+                    with st.popover(label="Delete conversation", icon="🗑️"):
+                        delete_conv_btn = st.button(
+                            label="Confirm deletion",
+                            key=f"delete_conversation_{i}",
+                            on_click=delete_conversation,
+                            args=(client, conversation.id,)
+                        )
 
             if len(conversations) < limit:
                 st.info("You've reached the end of the conversations list.")
@@ -81,29 +56,6 @@ def list_conversations(
                 st.info("No conversations found")
     except R2RException as r2re:
         st.error(f"Error checking conversations: {r2re.message}")
-    except Error as e:
-        st.error(f"Unexpected streamlit error: {str(e)}")
-    except Exception as exc:
-        st.error(f"Unexpected error: {str(exc)}")
-
-def update_conversation(client: R2RClient, conversation_id: str, input_name_key: str):
-    """
-    Change the name of an existing conversation.
-    
-    Since I had problems with this particular functionality I decided to capture
-    the new name from the widget since it's automatically stored in the session
-    state by Streamlit.
-    """
-    try:
-        new_name = st.session_state[input_name_key]
-        update_resp = client.conversations.update(
-            id=conversation_id,
-            name=new_name
-        ).results
-        st.session_state["page_number"] = 0
-        st.success(f"Updated name of {conversation_id} to {update_resp.name}!")
-    except R2RException as r2re:
-        st.error(f"Error updating conversation: {r2re.message}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
@@ -183,7 +135,7 @@ def export_conversations(conversations_ids: str, out: str):
         }
 
         response = requests.post(
-            url='http://127.0.0.1:7272/v3/conversations/export',
+            url='http://r2r:7272/v3/conversations/export',
             headers=headers,
             json=payload,
             timeout=5
@@ -226,7 +178,7 @@ def export_messages(out: str, filters: dict = None):
         }
 
         response = requests.post(
-            url='http://127.0.0.1:7272/v3/conversations/export_messages',
+            url='http://r2r:7272/v3/conversations/export_messages',
             headers={
                 'Authorization': f'Bearer {st.session_state['bearer_token']}',
                 "Content-Type": "application/json",
