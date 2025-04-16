@@ -94,3 +94,7 @@ Modelfile
 .deepeval*
 
 .pytest_cache
+
+*.json
+
+data
