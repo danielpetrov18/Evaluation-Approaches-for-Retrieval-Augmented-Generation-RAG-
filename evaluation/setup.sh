@@ -14,6 +14,6 @@ source eval/bin/activate
 
 # Install dependencies
 pip3 install --upgrade pip
-pip3 install -r requirements.txt
+pip3 install --upgrade -r requirements.txt
 
 echo "Environment is set and ready to be used. In your notebook select the kernel 'eval'."
