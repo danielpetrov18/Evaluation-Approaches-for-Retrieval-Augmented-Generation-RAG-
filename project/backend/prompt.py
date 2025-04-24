@@ -1,5 +1,4 @@
-"""The backend of prompts management."""
-
+# pylint: disable=C0114
 # pylint: disable=R1732
 # pylint: disable=W0718
 

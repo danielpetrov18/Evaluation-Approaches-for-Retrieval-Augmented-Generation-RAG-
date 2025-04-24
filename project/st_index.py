@@ -1,5 +1,4 @@
 """
-GUI support for managing indices.
 Indices can make semantic search much faster and efficient.
 Both HNSW and IVF_FLAT are supported.
 

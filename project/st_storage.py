@@ -1,12 +1,7 @@
-"""
-GUI support for interacting with documents.
-There's also support for performing a web scrape.
-There's additionally a tab to perform a simple web search to gather URLs and a response.
-"""
-
-# pylint: disable=E0401
 # pylint: disable=C0103
+# pylint: disable=C0114
 # pylint: disable=C0301
+# pylint: disable=E0401
 
 import streamlit as st
 from st_app import (
@@ -40,16 +35,14 @@ if __name__ == "__page__":
                 args=(r2r_client(), )
             )
 
-    t_list, t_chunks, t_file_ingest, t_webscrape, t_export_docs, t_websearch = st.tabs(
-        [
-            "List Docs",
-            "List Chunks",
-            "Ingest File",
-            "Webscrape",
-            "Export Docs",
-            "Web Search"
-        ]
-    )
+    t_list, t_chunks, t_file_ingest, t_webscrape, t_export_docs, t_websearch = st.tabs([
+        "List Docs",
+        "List Chunks",
+        "Ingest File",
+        "Webscrape",
+        "Export Docs",
+        "Web Search"
+    ])
 
     with t_list:
         st.markdown("**List Documents**")
@@ -68,7 +61,7 @@ if __name__ == "__page__":
         )
 
         if doc_ids:
-            doc_ids = [doc.strip() for doc in doc_ids.split("\n")]
+            doc_ids: list[str] = [doc.strip() for doc in doc_ids.split("\n")]
 
         if st.button("Fetch Documents", type="primary", key="fetch_docs_btn"):
             fetch_documents(r2r_client(), doc_ids, offset, limit)
@@ -111,7 +104,7 @@ if __name__ == "__page__":
         st.markdown("**Ingest Document**")
 
         uploaded_file = st.file_uploader(
-            "Choose a file to upload",
+            label="Choose a file to upload",
             type=["txt", "pdf", "docx", "csv", "md", "html", "json"]
         )
 

@@ -1,5 +1,4 @@
-"""Simple file for separating the GUI from the logic as much as possible."""
-
+# pylint: disable=C0114
 # pylint: disable=W0718 -> disable too-broad of an exception
 
 import datetime
@@ -69,7 +68,11 @@ def check_status(client: R2RClient):
         st.error(f"Unexpected error: {str(exc)}")
 
 def check_settings(client: R2RClient):
-    """Check settings"""
+    """
+    Check settings.
+    All of the settings can be configured under `/project/backend/config.toml`.
+    If not specified, default values are used implicitly by R2R.
+    """
     try:
         settings = client.system.settings().results.config
         if settings:

@@ -1,7 +1,6 @@
-"""Main page of the app where one can interact with the LLM."""
-
-# pylint: disable=E0401
 # pylint: disable=C0103
+# pylint: disable=C0114
+# pylint: disable=E0401
 
 import streamlit as st
 from st_app import r2r_client
@@ -19,10 +18,7 @@ if __name__ == "__page__":
 
     with st.sidebar:
         if st.session_state['conversation_id']:
-            st.markdown(
-                f"**Selected conversation:**<br>{st.session_state['conversation_id']}",
-                unsafe_allow_html=True
-            )
+            st.markdown(f"**Selected conversation:**  \n{st.session_state['conversation_id']}")
         else:
             st.markdown("**No conversation selected**")
 
@@ -30,7 +26,7 @@ if __name__ == "__page__":
             label="Pick a conversation",
             placeholder="Ex. conversation_id",
             key="conversation_id_input",
-            help="By selecting an existing one, the context and previous interactions are loaded",
+            help="By selecting an existing one, the previous interactions are loaded",
             value=st.session_state['conversation_id']
         )
 

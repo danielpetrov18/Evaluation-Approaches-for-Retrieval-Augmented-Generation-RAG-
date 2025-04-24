@@ -1,31 +1,30 @@
 """
 This module holds all the available pages of the application.
-Every resource defined in the main page can be accessed by all pages.
-For that reason I use caching mechanism for faster page loading.
+Every resource defined in the main page can be accessed by all other pages.
+
+The caching mechanism provided by `streamlit` is being used for efficiency.
 """
 
 import os
 import typing as t
-from ollama import (
-    Client,
-    Options
-)
 from r2r import R2RClient
+from ollama import Client, Options
 import streamlit as st
 from streamlit.navigation.page import StreamlitPage
 
 # pylint: disable=C0301
 
-# ttl of None signifies that it doesn't expire
-@st.cache_resource(ttl=None)
+@st.cache_resource(ttl=None) # ttl of None signifies that it doesn't expire
 def r2r_client():
     """
-    Loads the client necessary to interact with the backend.
-    R2R has a RESTful API which acts as a server and using this client
-    we can interact with it. It sends requests and gets responses behind the scenes.
+    `R2R` works by starting a server at specified host and port.
+    After starting the server a RESTful API is exposed.
+    One can interact with it either using raw HTTP requests or the `r2r` client.
+    
+    Since the `R2R` service is going to run in a docker container, one can specify
+    the name of the container as a hostname.
     """
 
-    # Since when running in compose we can the name of the container as a URL.
     return R2RClient(
         base_url='http://r2r:7272',
         timeout=1800 # 30 minutes
@@ -34,24 +33,28 @@ def r2r_client():
 @st.cache_resource
 def ollama_client():
     """
-    Load Ollama client. 
-    Have in mind that this will be containerized and will try to connect to the hosting device.
-    `host.docker.internal` will enable exactly that communication from inside the container.
-    If you want to run it on the local machine, use `localhost` instead - in the env file.
+    This client will be required when interacting with the Ollama server.
+
+    In this project I use the Ollama-client in two different modules:
+        - In the `chat` for creating embeddings
+        - In the `storage` for invoking a tool
+
+    If running the project locally the hostname would be `localhost`.
+    Since this is a containerized application, the hostname should be `host.docker.internal`.
+    To modify that behaviour, modify the variable `OLLAMA_API_BASE` in the `env/rag.env` file.
     """
     return Client(host=st.session_state['ollama_api_base'])
 
 @st.cache_resource
 def ollama_options():
-    """Load Ollama options. The values here can be tweaked in rag.env file."""
+    """Options that are going to be used by the Ollama client."""
     return Options(
         temperature=st.session_state['temperature'],
         top_p=st.session_state['top_p'],
         top_k=st.session_state['top_k'],
-        num_ctx=24000, # This is hard-coded by default.
-        format="json", # This should also be json to enforce proper output
+        num_ctx=st.session_state["context_window_size"],
+        format="json", # This should be json to enforce proper output
     )
-
 
 def get_pages() -> t.List[StreamlitPage]:
     """Defines main pages of the application."""
@@ -96,11 +99,11 @@ def get_pages() -> t.List[StreamlitPage]:
     ]
 
 if __name__ == "__main__":
-    pages = get_pages()
+    pages: t.List[StreamlitPage] = get_pages()
 
     # Register pages. Creates the navigation menu for the application.
     # This page is an entrypoint and as such serves as a page router.
-    page = st.navigation(pages)
+    page: StreamlitPage = st.navigation(pages)
 
     # ====== TWEAK VALUES BELOW TO ACHIEVE BEST PERFORMANCE ======
 
@@ -141,6 +144,9 @@ if __name__ == "__main__":
 
     if "embedding_model" not in st.session_state:
         st.session_state["embedding_model"] = os.getenv("EMBEDDING_MODEL")
+
+    if "context_window_size" not in st.session_state:
+        st.session_state["context_window_size"] = int(os.getenv("LLM_CONTEXT_WINDOW_TOKENS"))
 
     if "similarity_threshold" not in st.session_state:
         st.session_state["similarity_threshold"] = float(os.getenv("SIMILARITY_THRESHOLD"))

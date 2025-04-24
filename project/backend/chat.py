@@ -1,5 +1,4 @@
-"""Abstracts away the interaction with the underlying LLM."""
-
+# pylint: disable=C0114
 # pylint: disable=C0301
 # pylint: disable=W0718
 # pylint: disable=W0719
@@ -19,21 +18,27 @@ from shared.api.models.retrieval.responses import SSEEventBase
 @st.cache_resource
 def ollama_client():
     """
-    Load Ollama client. 
-    Have in mind that this will be containerized and will try to connect to the host.
-    `host.docker.internal` will enable exactly that communication from inside the container.
+    This client will be required when interacting with the Ollama server.
+
+    In this project I use the Ollama-client in two different modules:
+        - In the `chat` for creating embeddings
+        - In the `storage` for invoking a tool
+
+    If running the project locally the hostname would be `localhost`.
+    Since this is a containerized application, the hostname should be `host.docker.internal`.
+    To modify that behaviour, modify the variable `OLLAMA_API_BASE` in the `env/rag.env` file.
     """
     return Client(host=st.session_state['ollama_api_base'])
 
 @st.cache_resource
 def ollama_options():
-    """Load Ollama options. The values here can be tweaked in rag.env file."""
+    """Options that are going to be used by the Ollama client."""
     return Options(
         temperature=st.session_state['temperature'],
         top_p=st.session_state['top_p'],
         top_k=st.session_state['top_k'],
-        num_ctx=24000, # This is hard-coded by default.
-        format="json", # This should also be json to enforce proper output
+        num_ctx=st.session_state["context_window_size"],
+        format="json", # This should be json to enforce proper output
     )
 
 class Message(BaseModel):
@@ -41,7 +46,7 @@ class Message(BaseModel):
     Represents a chat message with embedding information.
     This class is relevant for my custom implementation of the history.
     It holds embedding information. When searching for relevant messages from previous
-    interactions we will perform semantic similarity on those embeddings.
+    interactions we will perform semantic similarity search on those embeddings.
     
     Attributes:
         id: Unique identifier for the message
@@ -97,10 +102,13 @@ def retrieve_messages(_client: R2RClient, conversation_id: str) -> Union[List[Me
         return None
 
 def check_conversation_exists(client: R2RClient):
-    """Making sure that a conversation exists. If not we create one."""
+    """
+    Making sure that a conversation exists. If not we create one.
+    
+    If the id is empty -> create a new one and use it
+        This is the case when the user starts a new conversation
+    """
     try:
-        # If the id is empty -> create a new one and use it
-        # This is the case when the user starts a new conversation
         if not st.session_state['conversation_id']:
             st.session_state['conversation_id'] = client.conversations.create().results.id
             st.session_state.messages = []
@@ -134,7 +142,12 @@ def set_new_prompt(client: R2RClient, prompt_name: str) -> bool:
         return False
 
 def add_message(client: R2RClient, msg: Dict[str, str]):
-    """Adding a new message to a conversation."""
+    """
+    Adding a new message to a conversation.
+    
+    For each added message an embedding is computed.
+    It is then used when quering for relevant messages from previous interactions.
+    """
     try:
         embedding = _compute_embedding(msg['content'])
 
@@ -173,13 +186,13 @@ def add_message(client: R2RClient, msg: Dict[str, str]):
         st.error(str(e))
         raise Exception from e
 
-def submit_query(client: R2RClient) -> Generator:
+def submit_query(client: R2RClient) -> Generator[SSEEventBase, None, None]:
     """
-    Submit a query to the LLM and retrieve the response.
-    This method is first going to select relevant messages as a history.
-    Those will be used to augment the query and then the LLM will be asked to generate a response.
-    R2R will then retrieve relevant chunks using semantic similarity, then the chunks will be
-    re-ranked and finally all the chunks will be used to generate the final response.
+    * This method is first going to select relevant messages as a history.
+    * Those will be used to augment the query and then the `LLM` will be asked to generate a response.
+    * R2R will then retrieve relevant chunks using semantic similarity.
+    * The retrieved chunks will be re-ranked.
+    * Finally all the chunks will be used to generate the final response.
 
     Args:
         client (R2RClient): The client used to interact with the LLM.
@@ -193,7 +206,7 @@ def submit_query(client: R2RClient) -> Generator:
         Exception: For any other unexpected errors.
     """
     try:
-        search_settings = {
+        search_settings: dict = {
             "use_semantic_search": True,
             "limit": st.session_state['top_k'],
             "offset": 0,
@@ -202,10 +215,10 @@ def submit_query(client: R2RClient) -> Generator:
             "search_strategy": "vanilla",
         }
 
-        # Augmented query where I try to store context/relevant history
-        enhanced_query = _get_enhanced_query(st.session_state.messages[-1].content)
+        # Augmented query which should include additional data if any is found
+        enhanced_query: str = _get_enhanced_query(st.session_state.messages[-1].content)
 
-        generator = client.retrieval.rag(
+        generator: Generator[SSEEventBase, None, None] = client.retrieval.rag(
             query = enhanced_query,
             rag_generation_config = {
                 "model": f"ollama/{st.session_state['chat_model']}",
@@ -220,7 +233,6 @@ def submit_query(client: R2RClient) -> Generator:
         )
 
         return generator
-
     except R2RException as r2re:
         st.error(f"An error while querying LLM: {str(r2re)}")
         raise r2re
@@ -283,7 +295,6 @@ def _compute_embedding(text: str) -> List[float]:
         text: Text to compute the embedding for the text input
     
     Raises:
-        ollama.ResponseError: If there is an error in the Ollama response
         Exception: If there is an error computing the embedding
     
     Returns:
@@ -326,6 +337,12 @@ def _compute_similarity(embedding1: List[float], embedding2: List[float]) -> flo
 def _get_relevant_messages(query_embedding: List[float], history: List[Message]) -> List[Dict]:
     """
     Find messages in the history that are relevant to the given query.
+    
+    This method iterates over all the provided messages in the history.
+    For each message, it computes the cosine similarity between the query embedding.
+    If the given message has a similarity exceeding the threshold, it is considered relevant.
+    The `relevant` messages are then sorted in descending order, based on their similarity scores.
+    Finally, we make sure that only the `TOP_K` messages are kept.
     
     Args:
         query_embedding: Embedding of the current users query
@@ -392,6 +409,7 @@ def _construct_history_summary_prompt(query: str, relevant_history: List[Dict]) 
             "3. Preserve specific facts, data points, and context\n" +
             "4. Keep your summary concise (3-5 sentences maximum)\n" +
             "5. Format in clear, simple language\n"
+            "6. DO NOT add any further explanations or clarifications\n"
         )
 
     prompt_parts.append(f"\n## Current question:\n{query}")

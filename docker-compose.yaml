@@ -4,8 +4,6 @@ services:
     container_name: pgvector-db
     env_file:
       - ./env/pgvector-db.env
-    # ports:
-    #   - '127.0.0.1:5432:5432'
     pull_policy: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -28,12 +26,10 @@ services:
     container_name: hf-reranker
     env_file:
       - ./env/reranker.env
-    # ports:
-    #   - '127.0.0.1:8080:80'
     runtime: nvidia
     pull_policy: always
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
       interval: 20s
       timeout: 5s
       retries: 5
@@ -87,13 +83,14 @@ services:
       pgvector:
         condition: service_healthy
       reranker:
-        condition: service_started
+        condition: service_healthy
       unstructured:
         condition: service_healthy
 
   frontend:
     build:
       context: ./project
+      dockerfile: Dockerfile
     image: frontend:latest # Give a tag after the image is built
     container_name: frontend
     env_file:

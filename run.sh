@@ -40,10 +40,10 @@ else
         ollama pull "$EMBEDDING_MODEL"
     fi
 
-    # Set num_ctx to 16000/24000 for chat model
+    # Set num_ctx to 16000-32000 for chat model
     # https://r2r-docs.sciphi.ai/self-hosting/local-rag
-    echo "Setting context window for \"$CHAT_MODEL\" to 24000 tokens..."
-    echo -e "FROM $CHAT_MODEL\nPARAMETER num_ctx 24000" > Modelfile
+    echo "Setting context window for \"$CHAT_MODEL\" to \"$LLM_CONTEXT_WINDOW_TOKENS\" tokens..."
+    echo -e "FROM $CHAT_MODEL\nPARAMETER num_ctx $LLM_CONTEXT_WINDOW_TOKENS" > Modelfile
     ollama create "$CHAT_MODEL" -f Modelfile
     echo "Model configuration complete."
 fi

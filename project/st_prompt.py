@@ -1,7 +1,6 @@
 """
-Enables the user to manage prompts with GUI.
 Prompt templating can significantly improve the quality of responses.
-It's work trying out different prompts for RAG to see which one works best.
+It's worth trying out different prompts for RAG to see which one works best.
 Prompts can be defined in YAML format. Check out the prompts page in the frontend.
 """
 

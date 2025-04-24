@@ -1,7 +1,6 @@
-"""GUI to manage conversations."""
-
-# pylint: disable=E0401
+# pylint: disable=C0114
 # pylint: disable=C0301
+# pylint: disable=E0401
 
 import re
 import streamlit as st

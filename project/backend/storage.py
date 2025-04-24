@@ -1,11 +1,11 @@
-"""Backend functionality for interacting with documents."""
-
+# pylint: disable=C0114
+# pylint: disable=C0301
 # pylint: disable=E0401
+# pylint: disable=R0914
+# pylint: disable=R1732
 # pylint: disable=W0612
 # pylint: disable=W0718
 # pylint: disable=W0719
-# pylint: disable=R0914
-# pylint: disable=R1732
 
 import os
 import time
@@ -29,7 +29,10 @@ from langchain_community.document_loaders import AsyncHtmlLoader
 
 @st.cache_resource
 def ascrapper(urls: List[str]):
-    """Load object to retrieve data from the internet"""
+    """
+    This object is used to retrieve data from the internet using the specified URLs.
+    It does so asynchronously. You can experiment with other parsers.
+    """
     return AsyncHtmlLoader(
         web_path=urls,
         default_parser="lxml"
@@ -37,7 +40,11 @@ def ascrapper(urls: List[str]):
 
 @st.cache_resource
 def ollama_tools() -> List[Dict[str, Union[str, Dict]]]:
-    """Single tool available to be called by Ollama"""
+    """
+    Custom tool, which can be used by `Ollama`.
+    After submitting a request to the `ollama` client, the response will contain the tool calls.
+    From there one can call the `langsearch_websearch_tool`
+    """
     return [
         {
             "type": "function",
@@ -82,7 +89,7 @@ def fetch_documents(
     offset: int,
     limit: int
 ):
-    """Retrieve documents. For each document there's a delete and update metadata buttons."""
+    """Retrieve documents. For each document there's a delete button."""
     try:
         selected_files = client.documents.list(ids, offset, limit).results
         if selected_files:
@@ -151,12 +158,12 @@ def fetch_document_chunks(client: R2RClient, document_id: str, offset: int, limi
 
 def ingest_file(client: R2RClient, file: UploadedFile, metadata: dict):
     """
-    This method takes a file in binary format. Saves it in the tmp folder.
-    Thereafter, the text is extracted and split. Finally, embeded vectors are created
-    and stored in the database.
+    This method takes a file in binary format and saves it in the tmp folder.
+    Thereafter, the text is extracted and split.
+    Finally, embeddings are generated and stored in the database with additional metadata.
     """
-    # Do it outside because of the finally clause
-    temp_filepath = os.path.join(tempfile.gettempdir(), file.name)
+
+    temp_filepath = os.path.join(tempfile.gettempdir(), file.name) # Do it outside because of the finally clause
     try:
         # Make sure file doesn't already exist.
         for doc in client.documents.list().results:
@@ -164,6 +171,7 @@ def ingest_file(client: R2RClient, file: UploadedFile, metadata: dict):
                 st.error("File already exists!")
                 return
 
+        # Save content to temp file
         with open(file=temp_filepath, mode="wb") as temp_file:
             temp_file.write(file.getbuffer())
             temp_file.flush()
@@ -206,48 +214,49 @@ def perform_webscrape(client: R2RClient, file: UploadedFile):
     ):
         try:
             urls = _extract_urls(file)
-            if len(urls) > 0:
-                st.write('Extracted URLs...')
-
-                documents = _fetch_data_from_urls(urls)
-                st.write('Fetched data...')
-
-                # Make sure there's no document with that specific source
-                sources = [
-                    doc.metadata.get('source', 'unknown')
-                    for doc in client.documents.list().results
-                ]
-
-                for document in documents:
-                    # Save file temporarily
-                    with tempfile.NamedTemporaryFile(delete=True, suffix=".txt") as temp_file:
-                        temp_file.write(document.page_content.encode('utf-8'))
-                        temp_file.flush()
-
-                        try:
-                            # Make sure there's no document with that specific source
-                            if document.metadata['source'] in sources:
-                                st.error(
-                                    f"Document {document.metadata['source']} already exists"
-                                )
-                                continue
-
-                            # No summary will be generated
-                            # If you want a summary switch to custom mode
-                            chunks_ing_resp = client.documents.create(
-                                file_path=temp_file.name,
-                                ingestion_mode='fast',
-                                metadata=document.metadata,
-                                run_with_orchestration=True
-                            ).results
-                            st.success(f"{document.metadata['source']}: {chunks_ing_resp.message}")
-                            time.sleep(5) # Wait for ingestion to complete
-                        except R2RException as r2re:
-                            st.error(f"Error {document.metadata['source']}: {r2re.message}")
-
-                st.info("Completed URL ingestion process")
-            else:
+            if len(urls) == 0:
                 st.error("No valid URLs found in file")
+                return
+
+            st.write('Extracted URLs...')
+
+            documents = _fetch_data_from_urls(urls)
+            st.write('Fetched data...')
+
+            # Make sure there's no document with that specific source
+            sources = [
+                doc.metadata.get('source', 'unknown')
+                for doc in client.documents.list().results
+            ]
+
+            for document in documents:
+                # Save file temporarily
+                with tempfile.NamedTemporaryFile(delete=True, suffix=".txt") as temp_file:
+                    temp_file.write(document.page_content.encode('utf-8'))
+                    temp_file.flush()
+
+                    try:
+                        # Make sure there's no document with that specific source
+                        if document.metadata['source'] in sources:
+                            st.error(
+                                f"Document {document.metadata['source']} already exists"
+                            )
+                            continue
+
+                        # No summary will be generated
+                        # If you want a summary switch to custom mode
+                        chunks_ing_resp = client.documents.create(
+                            file_path=temp_file.name,
+                            ingestion_mode='fast',
+                            metadata=document.metadata,
+                            run_with_orchestration=True
+                        ).results
+                        st.success(f"{document.metadata['source']}: {chunks_ing_resp.message}")
+                        time.sleep(5) # Wait for ingestion to complete
+                    except R2RException as r2re:
+                        st.error(f"Error {document.metadata['source']}: {r2re.message}")
+
+            st.info("Completed URL ingestion process")
         except R2RException as r2re:
             st.error(f"Error: {r2re.message}")
         except ValueError as ve:
@@ -347,8 +356,10 @@ def perform_websearch(
         return "Nothing found", []
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
+        return "Nothing found", []
     except Exception as exc:
         st.error(f"Unexpected error: {str(exc)}")
+        return "Nothing found", []
 
 def _langsearch_websearch_tool(query: str, count: int) -> tuple[str, List[str]]:
     """Performs a web search and returns the data in a formated way."""
@@ -403,13 +414,11 @@ def _langsearch_websearch_tool(query: str, count: int) -> tuple[str, List[str]]:
         return f"Search API request failed, ({response.status_code}: {response.text})", []
 
 def _fetch_data_from_urls(scrape_urls: List[str]) -> List[Document]:
-    """Fetches data from the provided URLs asynchronously."""
     scraper = ascrapper(scrape_urls)
     web_documents = _run_async_function(scraper.aload())
     return web_documents
 
 def _extract_urls(file: UploadedFile) -> List[str]:
-    """Extracts URLs from a provided CSV file for web scrapping."""
     if file is None:
         raise FileNotFoundError("File not found")
 
@@ -433,7 +442,6 @@ def _extract_urls(file: UploadedFile) -> List[str]:
     return extracted_urls
 
 def _run_async_function(coroutine):
-    """Run an async function inside a synchronous Streamlit app."""
     return asyncio.run(coroutine)
 
 def _remove_duplicate_urls(urls: List[str]) -> List[str]:

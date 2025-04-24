@@ -1,11 +1,8 @@
-"""
-This modules helps the user to keep track of conversations and manage them.
-"""
-
-# pylint: disable=W0612
-# pylint: disable=W0718
+# pylint: disable=C0114
 # pylint: disable=E0601
 # pylint: disable=R0914
+# pylint: disable=W0612
+# pylint: disable=W0718
 
 import io
 import os

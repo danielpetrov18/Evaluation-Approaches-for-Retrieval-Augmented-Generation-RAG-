@@ -1,5 +1,4 @@
-"""Showcases settings and system information."""
-
+# pylint: disable=C0114
 # pylint: disable=E0401 -> disable relative import error
 
 import streamlit as st

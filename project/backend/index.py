@@ -1,5 +1,4 @@
-"""Encapsulates all required logic for managing indices in R2R."""
-
+# pylint: disable=C0114
 # pylint: disable=W0718
 # pylint: disable=R1732
 
