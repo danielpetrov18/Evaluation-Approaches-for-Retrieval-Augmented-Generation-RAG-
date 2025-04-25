@@ -31,10 +31,10 @@ class MyContextPrecisionPrompt(PydanticPrompt[QAC, Verification]):
 
     @override
     def to_string(self, data: Optional[InputModel] = None) -> str:
-        return f"""##Task
+        return f"""Task:
 {self.instruction}
 
-Example 1:
+Example:
 Input:
 {self.examples[0][0].question}
 
