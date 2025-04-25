@@ -15,7 +15,7 @@ from ragas.metrics._context_recall import (
 InputModel = TypeVar("InputModel", bound=BaseModel)
 
 class MyContextRecallPrompt(PydanticPrompt[QCA, ContextRecallClassifications]):
-    name: str = "context_recall_classification"
+    name: str = "custom_context_recall_classification"
     instruction: str = "Given a context, and an answer, analyze each sentence in the answer and classify if the sentence can be attributed to the given context or not."
     input_model = QCA
     output_model = ContextRecallClassifications
