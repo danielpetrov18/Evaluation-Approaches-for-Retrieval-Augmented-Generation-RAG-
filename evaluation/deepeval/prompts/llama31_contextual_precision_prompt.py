@@ -36,11 +36,11 @@ Example:
             "verdict": "no",
             "reason": "'There was a cat' is not at all relevant to the topic of winning a Nobel Prize."
         }}
-    ]  
+    ]
 }}
 Since you are going to generate a verdict for each context, the number of 'verdicts' SHOULD BE STRICTLY EQUAL to that of the contexts.
 **
-        
+   
 Input:
 {input}
 
