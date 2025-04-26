@@ -50,11 +50,11 @@ class MyContextRecallPrompt(PydanticPrompt[QCA, ContextRecallClassifications]):
 
     @override
     def to_string(self, data: Optional[InputModel] = None) -> str:
-        return f"""Task:
+        return f"""## Task:
 {self.instruction}
 
-Example:
-Input:
+--- EXAMPLES: ---
+Question:
 {self.examples[0][0].question}
 
 Context:
@@ -65,6 +65,7 @@ Answer:
 
 Output:
 {self.examples[0][1].model_dump_json(indent=4, exclude_none=True)}
+{'-'*40}
 
 **IMPORTANT:
 1. Make sure the output is always in JSON format.
@@ -77,7 +78,7 @@ Output:
 **
 
 Now perform the same for the following:
-Input:
+Question:
 {data.question}
 
 Context:

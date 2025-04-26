@@ -44,15 +44,16 @@ class MyContextEntitiesRecallPrompt(PydanticPrompt[StringIO, EntitiesList]):
 
     @override
     def to_string(self, data: Optional[InputModel] = None) -> str:
-        return f"""Task:
+        return f"""## Task:
 {self.instruction}
 
-Example:
-Input text:
+--- EXAMPLES: ---
+INPUT:
 {self.examples[0][0].text}
 
-Output:
+OUTPUT:
 {self.examples[0][1].model_dump_json(indent=4, exclude_none=True)}
+{'-'*40}
 
 **IMPORTANT:
 1. Make sure the output is always in JSON format.
@@ -62,7 +63,7 @@ Output:
 **
 
 Now perform the same for the following:
-Text Input:
+INPUT:
 {data.text}
 
 JSON: 
