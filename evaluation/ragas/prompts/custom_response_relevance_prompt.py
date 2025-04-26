@@ -2,7 +2,7 @@
 # pylint: disable=C0115
 # pylint: disable=C0301
 
-from typing import override, Optional, TypeVar
+from typing import Optional, TypeVar
 
 from pydantic import BaseModel
 from ragas.prompt import PydanticPrompt
@@ -42,7 +42,6 @@ A noncommittal answer is one that is evasive, vague, or ambiguous. For example, 
         ),
     ]
 
-    @override
     def to_string(self, data: Optional[ResponseRelevanceInput] = None) -> str:
         return f"""## Task:
 {self.instruction}

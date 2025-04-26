@@ -2,7 +2,7 @@
 # pylint: disable=C0115
 # pylint: disable=C0301
 
-from typing import override, Optional, TypeVar
+from typing import Optional, TypeVar
 
 from pydantic import BaseModel
 from ragas.prompt import PydanticPrompt
@@ -48,7 +48,6 @@ class MyContextRecallPrompt(PydanticPrompt[QCA, ContextRecallClassifications]):
         ),
     ]
 
-    @override
     def to_string(self, data: Optional[InputModel] = None) -> str:
         return f"""## Task:
 {self.instruction}
