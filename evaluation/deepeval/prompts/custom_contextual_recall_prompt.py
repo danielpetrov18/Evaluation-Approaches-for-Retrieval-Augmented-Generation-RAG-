@@ -6,7 +6,7 @@
 from typing import List
 from deepeval.metrics.contextual_recall import ContextualRecallTemplate
 
-class Llama31ContextualRecallTemplate(ContextualRecallTemplate):
+class MyContextualRecallTemplate(ContextualRecallTemplate):
 
     @staticmethod
     def generate_verdicts(expected_output: str, retrieval_context: List[str]) -> str:
@@ -15,7 +15,7 @@ class Llama31ContextualRecallTemplate(ContextualRecallTemplate):
         return f"""You are evaluating the quality of a retrieval system. Your task is to determine whether each sentence in the expected output can be attributed to any information in the retrieval context.
 
 Instructions:
-1. For each sentence, decide if it can be attributed to any part of the retrieval context.
+1. For each sentence in the expected output, decide if it can be attributed to any part of the retrieval context.
 2. Verdict must be EXACTLY "yes" or "no" - nothing else.
     - Answer 'yes' if the sentence can be attributed to any parts of the retrieval context, else answer 'no'.
 3. Provide a brief reason that explains your verdict.
@@ -25,7 +25,7 @@ Example expected output:
 "The product costs $50. It includes a 30-day warranty. Shipping takes 3-5 business days."
 
 Example retrieval context:
-Node 1: "Our product is priced at $50 with free shipping that takes 3-5 business days."
+Node 1: "Our product is priced at $50 with free shipping that takes 10-15 business days."
 Node 2: "All products include a 30-day limited warranty and a satisfaction guarantee."
 
 Example response:
@@ -40,8 +40,8 @@ Example response:
             "reason": "The sentence 'It includes a 30-day warranty' is supported by Node 2 which mentions 'All products include a 30-day limited warranty...'"
         }},
         {{
-            "verdict": "yes",
-            "reason": "The sentence 'Shipping takes 3-5 business days' is supported by Node 1 which states '...shipping that takes 3-5 business days.'"
+            "verdict": "no",
+            "reason": "The sentence 'Shipping takes 3-5 business days' is not supported by any of the nodes. It actually contradicts information available in Node 1 which states '...shipping that takes 10-15 business days.'"
         }}
     ]
 }}

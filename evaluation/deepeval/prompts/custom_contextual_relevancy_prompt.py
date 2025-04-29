@@ -5,11 +5,12 @@
 
 from deepeval.metrics.contextual_relevancy.template import ContextualRelevancyTemplate
 
-class Llama31ContextualRelevancyTemplate(ContextualRelevancyTemplate):
+class MyContextualRelevancyTemplate(ContextualRelevancyTemplate):
 
     @staticmethod
     def generate_verdicts(input: str, context: str):
-        return f"""**TASK**: Based on the input and context, please generate a JSON object to indicate whether each statement found in the context is relevant to the provided input.
+        return f"""Your task is to determine for each statement in the context, whether or not it was remotely useful in arriving at the input.
+Based on the input and context, please generate a JSON object to indicate whether each statement found in the context is relevant to the provided input.
 The JSON will be a list of 'verdicts', with 2 mandatory fields: 'verdict' and 'statement', and 1 optional field: 'reason'.
 
 Instructions:
@@ -17,9 +18,15 @@ Instructions:
 2. For each extracted statement, determine whether it is relevant to the input
     - If so, the verdict key should be 'yes'
     - If not, the verdict key should be 'no' (provide a reason as to why it is not relevant and quote the irrelevant parts of the statement)
+3. Do not use any of your prior knowledge, accept all the information at face value
 
 **
-IMPORTANT: Please make sure to only return in JSON format.
+IMPORTANT:
+- Please make sure to only return in JSON format.
+- DO NOT provide any further explanations or clarifications.
+- Each statement should be a complete, standalone claim without pronouns.
+- Break down complex sentences into multiple simple statements.
+
 Example Context: "Einstein won the Nobel Prize for his discovery of the photoelectric effect. He won the Nobel Prize in 1968. There was a cat."
 Example Input: "What were some of Einstein's achievements?"
 

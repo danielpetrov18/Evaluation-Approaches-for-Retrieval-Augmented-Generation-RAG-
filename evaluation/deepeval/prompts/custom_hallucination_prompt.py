@@ -6,7 +6,7 @@
 from typing import List
 from deepeval.metrics.hallucination import HallucinationTemplate
 
-class Llama31HallucinationTemplate(HallucinationTemplate):
+class MyHallucinationTemplate(HallucinationTemplate):
 
     @staticmethod
     def generate_verdicts(actual_output: str, contexts: List[str]):
