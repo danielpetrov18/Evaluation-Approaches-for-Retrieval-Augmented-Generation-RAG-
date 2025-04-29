@@ -27,7 +27,7 @@ Example output:
 **IMPORTANT:
 - Ambiguous statements and single words can also be considered as statements
 - Return ONLY a JSON output, with the "statements" key mapping to an array of strings
-- Do not provide any further explanations or clarifications.  
+- Do not provide any further explanations or clarifications.
 **
 
 Analyze the following text and extract statements:
@@ -92,7 +92,6 @@ Correct JSON response:
 * The number of verdict objects MUST EQUAL the number of statements.
 **
 
-Now analyze the following input and statements and generate the correct JSON response:
 Input: {input}
 
 Statements: {statements}

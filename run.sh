@@ -75,5 +75,5 @@ then
     exit 1
 else
     echo "Docker is running. Starting containers with docker-compose..."
-    docker compose up --build
+    docker compose up
 fi
