@@ -24,6 +24,7 @@ source r2r_venv/bin/activate
 # Check if dependencies need to be installed
 if [ ! -f "r2r_venv/.dependencies_installed" ]; then
     echo "Installing dependencies..."
+    # ========= THIS VERSION NEEDS TO BE EQUIVALENT TO THE ONE IN THE /project FOLDER =========
     pip3 install "r2r[core]==3.5.11"
     # Create a marker file to indicate dependencies are installed
     touch r2r_venv/.dependencies_installed

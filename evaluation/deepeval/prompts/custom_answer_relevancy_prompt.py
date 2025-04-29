@@ -1,15 +1,15 @@
 # pylint: disable=C0114
+# pylint: disable=C0115
 # pylint: disable=C0301
 # pylint: disable=W0622
 
 from deepeval.metrics.answer_relevancy import AnswerRelevancyTemplate
 
-class Llama31AnswerRelevancyTemplate(AnswerRelevancyTemplate):
-    """Optimized template for answer relevancy metric with Llama 3.1 8B."""
+class MyAnswerRelevancyTemplate(AnswerRelevancyTemplate):
 
     @staticmethod
     def generate_statements(actual_output: str):
-        return f"""Extract all statements from this text. Return ONLY a JSON with "statements" as a list. Do not provide any further explanations.
+        return f"""Your task is to analyze a text and extract statements from it.
 
 Example text:
 "Our laptop has a Retina display and 12-hour battery."
@@ -22,7 +22,15 @@ Example output:
     ]
 }}
 
-Text to analyze:
+===== END OF EXAMPLE ======
+
+**IMPORTANT:
+- Ambiguous statements and single words can also be considered as statements
+- Return ONLY a JSON output, with the "statements" key mapping to an array of strings
+- Do not provide any further explanations or clarifications.  
+**
+
+Analyze the following text and extract statements:
 {actual_output}
 
 JSON output:
@@ -30,18 +38,7 @@ JSON output:
 
     @staticmethod
     def generate_verdicts(input: str, statements: str) -> str:
-        return f"""For the provided list of statements, determine whether each statement is relevant to address the input.
-Please generate a list of JSON with two keys: `verdict` and `reason`.
-
-The 'verdict' key should STRICTLY be either a 'yes', 'idk' or 'no'. 
-    - Answer 'yes' if the statement is relevant to addressing the original input 
-    - Answer 'no' if the statement is irrelevant
-    - Answer 'idk' if it is ambiguous (eg., not directly relevant but could be used as a supporting point to address the input).
-
-The 'reason' is the reason for the verdict.
-Provide a 'reason' ONLY if the answer is 'no'. 
-
-IMPORTANT: The number of verdict objects MUST EQUAL the number of statements.
+        return f"""Your task is to determine for each statement, whether or not it is relevant to address the input. Please generate a list of JSON with two keys: `verdict` and `reason`.
 
 Example input: What features does the new laptop have?
 
@@ -86,6 +83,16 @@ Correct JSON response:
     ]
 }}
 
+**IMPORTANT:
+* The 'verdict' key should STRICTLY be either a 'yes', 'idk' or 'no'.
+    - Answer 'yes' if the statement is relevant to addressing the original input
+    - Answer 'no' if the statement is irrelevant
+    - Answer 'idk' if it is ambiguous (eg., not directly relevant but could be used as a supporting point to address the input).
+* The 'reason' is the justification for the verdict. Provide one ONLY if the answer is 'no'.
+* The number of verdict objects MUST EQUAL the number of statements.
+**
+
+Now analyze the following input and statements and generate the correct JSON response:
 Input: {input}
 
 Statements: {statements}

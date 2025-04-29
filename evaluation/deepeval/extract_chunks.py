@@ -1,48 +1,137 @@
 """
 Simple script that I use for extracting chunks from documents.
-Those chunks are going to be as context for generating data with DeepEval.
+Those chunks are going to be used as context for generating data with DeepEval.
+The algorithm I follow:
+    1. I go over all the ingested documents
+    2. Select 3 or len(chunks) chunks at random for each document
+    3. For each chunk out ouf every document I select 4 other chunks using semantic similarity
+        (out of all the documents)
+    4. Finally, all 5 chunks are grouped together into a context
+    
+Alternatively, one can use the `generate_goldens_from_docs` in **DeepEval**.
+My justification for not using it is that `R2R` uses Postgress with pgvector.
+`DeepEval` uses chromadb. Additionally, they use different splitters, to chunk the documents.
+So to stay as close as possible to `R2R` I went with my own approach. (simplified)
 """
+
+# pylint: disable=C0116
 
 import os
 import sys
 import json
-from typing import List
-from r2r import R2RClient, R2RException
+import random
+from typing import List, Tuple, Dict
 
-CLIENT = R2RClient(
+import numpy as np
+from dotenv import load_dotenv
+from ollama import Client, Options
+from r2r import R2RClient, R2RException, ChunkResponse
+
+load_dotenv("../../env/rag.env")
+
+R2R_CLIENT = R2RClient(
     base_url="http://localhost:7272",
     timeout=600
 )
 
+OLLAMA_CLIENT = Client(host="http://localhost:11434")
+OLLAMA_OPTIONS = Options(
+    temperature=float(os.getenv("TEMPERATURE")),
+    top_p=float(os.getenv("TOP_P")),
+    top_k=int(os.getenv("TOP_K")),
+    num_ctx=int(os.getenv("LLM_CONTEXT_WINDOW_TOKENS")),
+    format="json", # This should be json to enforce proper output
+)
+
+# Retrieve this many chunks from a document at random
+CHUNKS_PER_DOCUMENT: int = 3
+
+CHUNKS_PER_CONTEXT: int = 5
+
+# For each chunk have the id as key and compute the embedding to the text
+CHUNKS_WITH_EMBEDDINGS: Dict[str, Tuple[str, List[float]]] = {}
+
 def ingest_files(folder_path: str = "data") -> None:
-    """Ingest all files from the folder."""
-
     for file in os.listdir(folder_path):
-        if file.endswith(".md") and file != "README.md":
-            filepath: str = os.path.join("data", file)
+        if not file.endswith(".md") or file == "README.md":
+            continue
 
-            try:
-                response = CLIENT.documents.create(
-                    file_path=filepath,
-                    run_with_orchestration=True
-                ).results
-                print(f"{filepath}: {response.message}")
-            except R2RException as r2re:
-                print("Error when creating document:", r2re.message)
+        filepath: str = os.path.join("data", file)
+        try:
+            response = R2R_CLIENT.documents.create(
+                file_path=filepath,
+                run_with_orchestration=True
+            ).results
+            print(f"{filepath}: {response.message}")
+        except R2RException as r2re:
+            print("Error when creating document:", r2re.message)
+
+def compute_embedding(text: str) -> List[float]:
+    return OLLAMA_CLIENT.embeddings(
+        model=os.getenv("EMBEDDING_MODEL"),
+        prompt=text,
+        options=OLLAMA_OPTIONS
+    )["embedding"]
+
+def compute_similarity(embedding1: List[float], embedding2: List[float]) -> float:
+    if len(embedding1) != len(embedding2):
+        raise ValueError("Embeddings must have the same length!")
+
+    vec1 = np.array(embedding1)
+    vec2 = np.array(embedding2)
+    return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+
+def retrieve_n_similar_chunks(current_chunk_id: str, n: int) -> List[str]:
+    similarities: Dict[str, float] = {}
+
+    for chunk_id, (chunk_text, embedding) in CHUNKS_WITH_EMBEDDINGS.items():
+        # We don't want to consider the same chunk relevant for the context
+        if chunk_id == current_chunk_id:
+            continue
+
+        similarity: float = compute_similarity(
+            embedding1 = CHUNKS_WITH_EMBEDDINGS[current_chunk_id][1],
+            embedding2 = embedding
+        )
+        similarities[chunk_text] = similarity
+
+    # Sort by similarity in descending order
+    most_similar = sorted(similarities.items(), key=lambda x: x[1], reverse=True)
+
+    # Get the top `n` chunk texts
+    top_n_chunks = [chunk_text for chunk_text, _ in most_similar[:n]]
+
+    return top_n_chunks
 
 def extract_context_chunks() -> List[List[str]]:
-    """Extracts all chunks from the documents and groups them together."""
+    contexts: List[List[str]] = []
 
-    document_chunks: List[List[str]] = []
-
-    for document in CLIENT.documents.list().results:
-        chunks = CLIENT.chunks.list_by_document(
+    for i, document in enumerate(R2R_CLIENT.documents.list().results):
+        # Fetch all chunks of a document
+        doc_chunks: List[ChunkResponse] = R2R_CLIENT.chunks.list_by_document(
             document_id=document.id
         ).results
-        chunks_txt = [chunk.text for chunk in chunks]
-        document_chunks.append(chunks_txt)
 
-    return document_chunks
+        chunk_ids: List[str] = [chunk.id for chunk in doc_chunks]
+
+        random_chunk_ids = list(chunk_id for chunk_id in random.sample(
+                chunk_ids,
+                min(CHUNKS_PER_DOCUMENT, len(chunk_ids))
+            )
+        )
+
+        for j, chunk_id in enumerate(random_chunk_ids):
+            initial_text: str = CHUNKS_WITH_EMBEDDINGS[chunk_id][0]
+            context: List[str] = [initial_text]
+            similar_chunks: List[str] = retrieve_n_similar_chunks(
+                chunk_id,
+                CHUNKS_PER_CONTEXT - 1
+            )
+            context.extend(similar_chunks)
+            contexts.append(context)
+            print(f"Extracted context {len(contexts)} from document {i + 1} and chunk {j + 1}")
+
+    return contexts
 
 if __name__ == "__main__":
     try:
@@ -53,6 +142,13 @@ if __name__ == "__main__":
 
     ingest_files()
     print("INGESTION STEP COMPLETED...")
+
+    # For every chunk in the database get its text 2 embedding mapping
+    for chunk_obj in R2R_CLIENT.chunks.list().results:
+        CHUNKS_WITH_EMBEDDINGS[chunk_obj.id] = (
+            chunk_obj.text,
+            compute_embedding(chunk_obj.text)
+        )
 
     context_chunks: List[List[str]] = extract_context_chunks()
     print("EXTRACTION STEP COMPLETED...")

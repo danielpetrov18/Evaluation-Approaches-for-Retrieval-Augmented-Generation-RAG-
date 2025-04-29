@@ -1,8 +1,9 @@
 """
 This script will be used after synthetic test data has been created using DeepEval.
+    (user_input, expected_output, context)
 R2R will be used to generate the actual response and retrieval context.
 The generated dataset will be augmented and saved into a json file.
-Finally, in the Notebook `generate` the final dataset will be uploaded the to Confident AI platform.
+Lastly, the final dataset will be uploaded the to Confident AI platform.
 """
 
 import os
@@ -15,15 +16,14 @@ from r2r import R2RClient, R2RException
 
 # Additionally, you can use another prompt.
 # If the selected prompt is not available, this prompt will be used.
-TEMPLATE = """You are a helpful assistant. Use only the information in the context below to answer the user's question.
+TEMPLATE = """You are a helpful assistant. Use only the information in the context to answer the user's question.
 
-Do not use any other knowledge you may have been trained on.
-
-If the context does not have the information needed to answer the question, say that you cannot answer based on the available information.
-
-Do not include citations or references to specific lines or parts of the context.
-
-Always keep your answer relevant and focused on the user's question.
+**IMPORANT:
+1. Do not use any other knowledge you may have been trained on.
+2. If the context does not have the information needed to answer the question, say that you cannot answer based on the available information.
+3. Do not include citations or references to specific lines or parts of the context.
+4. Always keep your answer relevant and focused on the user's question.
+**
 
 ### Context:
 {context}
@@ -31,7 +31,7 @@ Always keep your answer relevant and focused on the user's question.
 ### Query:
 {query}
 
-## Response:
+### Response:
 """
 
 if __name__ == "__main__":
@@ -41,6 +41,10 @@ if __name__ == "__main__":
         base_url="http://localhost:7272",
         timeout=600
     )
+
+    if client.system.health().results.message.lower() != "ok":
+        print("R2R server is not running or cannot be reached.")
+        sys.exit(1)
 
     if len(sys.argv) > 1:
         prompt_name = sys.argv[1]
@@ -69,8 +73,12 @@ if __name__ == "__main__":
     }
 
     goldens: list[dict] = []
-    with open(file="./deepeval_dataset.json", mode="r", encoding="utf-8") as f:
-        goldens = json.load(f)
+    try:
+        with open(file="./deepeval_dataset.json", mode="r", encoding="utf-8") as f:
+            goldens = json.load(f)
+    except FileNotFoundError:
+        print("File containing goldens not found.")
+        sys.exit(1)
 
     for i, golden in enumerate(goldens):
         try:
@@ -93,6 +101,6 @@ if __name__ == "__main__":
         except R2RException as r2re:
             print(f"Something went wrong when submitting query: {i} due to {str(r2re)}")
 
-    # Save the file into a json file
-    with open(file="./deepeval_dataset.json", mode="w", encoding="utf-8") as f:
+    # # Save the file into a json file
+    with open(file="./full_deepeval_dataset.json", mode="w", encoding="utf-8") as f:
         json.dump(goldens, f, ensure_ascii=False, indent=4)
