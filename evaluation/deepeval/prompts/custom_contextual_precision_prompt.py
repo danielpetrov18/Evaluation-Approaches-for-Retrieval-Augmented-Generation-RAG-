@@ -12,14 +12,13 @@ class MyContextualPrecisionTemplate(ContextualPrecisionTemplate):
     def generate_verdicts(
         input: str, expected_output: str, retrieval_context: List[str]
     ):
-        document_count_str = f" ({len(retrieval_context)} document{'s' if len(retrieval_context) > 1 else ''})"
         return f"""Your task is to determine for each node in the context, whether or not it was remotely useful in arriving at the expected output with respect to the input.
 
 **
 IMPORTANT: 
 - Please make sure to only return in JSON format, with the 'verdicts' key as a list of JSON. 
 - Each `verdict` key can have 2 values:
-    - Answer 'yes' if the context was useful in arriving at the expected output.
+    - Answer 'yes' if the context was even remotely useful in arriving at the expected output.
     - Answer 'no' otherwise
 - There should also be a `reason` key to justify the verdict. In your reason, you should aim to quote parts of the context.
 - Do not provide any further explanations or clarifications, just output the JSON.
@@ -48,13 +47,15 @@ Example:
 Since you are going to generate a verdict for each context, the number of 'verdicts' SHOULD BE STRICTLY EQUAL to that of the contexts.
 **
 
+Now generate a list of JSONs to indicate whether EACH context is remotely useful in arriving at the expected output with respect to the input:
+
 Input:
 {input}
 
 Expected output:
 {expected_output}
 
-Retrieval Context{document_count_str}:
+Retrieval Context:
 {retrieval_context}
 
 JSON:

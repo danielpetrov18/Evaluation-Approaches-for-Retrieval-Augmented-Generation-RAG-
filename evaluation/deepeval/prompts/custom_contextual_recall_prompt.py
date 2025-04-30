@@ -12,14 +12,13 @@ class MyContextualRecallTemplate(ContextualRecallTemplate):
     def generate_verdicts(expected_output: str, retrieval_context: List[str]) -> str:
         formatted_context = "\n".join([f"Node {i+1}: {ctx}" for i, ctx in enumerate(retrieval_context)])
 
-        return f"""You are evaluating the quality of a retrieval system. Your task is to determine whether each sentence in the expected output can be attributed to any information in the retrieval context.
+        return f"""Your task is to determine whether each sentence in the expected output can be attributed to any information in the retrieval context.
 
 Instructions:
 1. For each sentence in the expected output, decide if it can be attributed to any part of the retrieval context.
 2. Verdict must be EXACTLY "yes" or "no" - nothing else.
     - Answer 'yes' if the sentence can be attributed to any parts of the retrieval context, else answer 'no'.
 3. Provide a brief reason that explains your verdict.
-4. In your reason, mention which specific node number(s) in the retrieval context support your verdict.
 
 Example expected output:
 "The product costs $50. It includes a 30-day warranty. Shipping takes 3-5 business days."
@@ -54,6 +53,8 @@ Example response:
 - The number of verdicts MUST EQUAL the number of sentences in the expected output
 - DO NOT provide any further explanations or clarifications in your response (just JSON with verdicts)
 **
+
+Now generate the verdicts for the expected output below:
 
 Expected Output:
 {expected_output}

@@ -43,7 +43,7 @@ JSON OUTPUT:
     def generate_truths(retrieval_context: str, extraction_limit: Optional[int] = None) -> str:
         limit_text = "all factual truths" if extraction_limit is None else f"the {extraction_limit} most important factual truths"
 
-        return f"""TASK: Extract {limit_text} from the text. They all must be COHERENT and inferred from the provided text.
+        return f"""Your task is to extract {limit_text} from the text. They all must be COHERENT and inferred from the provided text.
 
 EXAMPLE INPUT:
 "Company X offers a 30-day refund policy for all customers."
@@ -74,7 +74,9 @@ JSON OUTPUT:
 
     @staticmethod
     def generate_verdicts(claims: List[str], retrieval_context: str) -> str:
-        return f"""TASK: Determine if each claim is supported by the context.
+        return f"""Your task is to determine if EACH claim contradicts a particular fact in the retrieval context.
+Claims need to be classified as either 'yes', 'no', or 'idk', depending on whether the claim contradicts any fact in the retrieval context.
+If the answer is no, a `reason` is to be provided, otherwise NO `reason` is to be provided.
 
 EXAMPLE:
 Example retrieval contexts: "Einstein won the Nobel Prize for his discovery of the photoelectric effect. Einstein won the Nobel Prize in 1968. Einstein is a German Scientist."
@@ -116,6 +118,8 @@ Example OUTPUT:
 - Claims made using vague, suggestive, speculative language such as 'may have' does NOT count as a contradiction.
 - Claims that is not backed up due to a lack of information/is not mentioned in the retrieval contexts MUST be answered 'idk'.
 **
+
+Please classify the claims as 'yes', 'no', or 'idk':
 
 CONTEXT: {retrieval_context}
 

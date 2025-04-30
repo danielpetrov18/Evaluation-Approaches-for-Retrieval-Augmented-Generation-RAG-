@@ -9,7 +9,7 @@ class MyAnswerRelevancyTemplate(AnswerRelevancyTemplate):
 
     @staticmethod
     def generate_statements(actual_output: str):
-        return f"""Your task is to analyze a text and extract statements from it.
+        return f"""Your task is to extract statements from a provided text.
 
 Example text:
 "Our laptop has a Retina display and 12-hour battery."
@@ -21,16 +21,15 @@ Example output:
         "The laptop has a 12-hour battery."
     ]
 }}
-
 ===== END OF EXAMPLE ======
 
 **IMPORTANT:
 - Ambiguous statements and single words can also be considered as statements
 - Return ONLY a JSON output, with the "statements" key mapping to an array of strings
-- Do not provide any further explanations or clarifications.
+- Do not provide any further explanations or clarifications, just the JSON output
 **
 
-Analyze the following text and extract statements:
+Extract the statements from the following text:
 {actual_output}
 
 JSON output:
@@ -82,6 +81,7 @@ Correct JSON response:
         }}
     ]
 }}
+===== END OF EXAMPLE ======
 
 **IMPORTANT:
 * The 'verdict' key should STRICTLY be either a 'yes', 'idk' or 'no'.
@@ -90,7 +90,10 @@ Correct JSON response:
     - Answer 'idk' if it is ambiguous (eg., not directly relevant but could be used as a supporting point to address the input).
 * The 'reason' is the justification for the verdict. Provide one ONLY if the answer is 'no'.
 * The number of verdict objects MUST EQUAL the number of statements.
+* Do not provide any further explanations or clarifications, just the JSON output
 **
+
+Generate verdicts for the following input and list of statements:
 
 Input: {input}
 
