@@ -40,13 +40,16 @@ else
         ollama pull "$EMBEDDING_MODEL"
     fi
 
-    # Set num_ctx to 16000-32000 for chat model
+    # Set num_ctx only if Modelfile doesn't already exist
     # https://r2r-docs.sciphi.ai/self-hosting/local-rag
-    echo "Setting context window for \"$CHAT_MODEL\" to \"$LLM_CONTEXT_WINDOW_TOKENS\" tokens..."
-    echo -e "FROM $CHAT_MODEL\nPARAMETER num_ctx $LLM_CONTEXT_WINDOW_TOKENS" > Modelfile
-    ollama create "$CHAT_MODEL" -f Modelfile
-    echo "Model configuration complete."
-fi
+    if [ ! -f Modelfile ]; then
+        echo "Modelfile not found. Creating it with context window \"$LLM_CONTEXT_WINDOW_TOKENS\" tokens..."
+        echo -e "FROM $CHAT_MODEL\nPARAMETER num_ctx $LLM_CONTEXT_WINDOW_TOKENS" > Modelfile
+        ollama create "$CHAT_MODEL" -f Modelfile
+        echo "Model configuration complete."
+    else
+        echo "Modelfile already exists. Skipping model creation."
+    fi
 
 # Add NVIDIA container toolkit only if not already installed
 # https://huggingface.co/docs/text-embeddings-inference/quick_tour

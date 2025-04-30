@@ -82,10 +82,14 @@ WantedBy=default.target
 
    ```sh
    # From root of project
-   cd ragas
-   # generate a dataset by using the generate_dataset notebook
-   # thereafter select metrics https://docs.ragas.io/en/latest/concepts/metrics/available_metrics/
-   # use the evaluate notebook with your selected metrics
+   cd evaluation/ragas
+   # To generate a synthetic dataset:
+   #  -> Either use RAGAs
+   #  -> or what I do is generate it using DeepEval
+   # Make sure to run the `setup.sh` script to install all dependencies
+   # Select `eval` as your kernel in the notebook
+   # thereafter select metrics https://docs.ragas.io/en/latest/concepts/metrics/available_metrics/ or use all the metrics I've used
+   # The evaluation for the other frameworks is very similar (using a notebook with code + explanation)
    ```
 
 ### Features

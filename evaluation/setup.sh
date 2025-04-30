@@ -1,6 +1,7 @@
 #!/usr/bin/bash
 
-# Check if virtual environment `evaluation` already exists
+# Check if virtual environment `eval` already exists
+# This virtual environment will hold all the dependecies required by the evaluation frameworks
 if [ ! -d "eval" ]; then
     echo "Creating virtual environment..."
     python3 -m venv eval
