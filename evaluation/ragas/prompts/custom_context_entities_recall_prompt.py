@@ -43,16 +43,23 @@ class MyContextEntitiesRecallPrompt(PydanticPrompt[StringIO, EntitiesList]):
     ]
 
     def to_string(self, data: Optional[InputModel] = None) -> str:
-        return f"""## Task:
-{self.instruction}
+        return f"""{self.instruction}
 
---- EXAMPLES: ---
+======= EXAMPLES: =======
+Example 1:
 INPUT:
 {self.examples[0][0].text}
 
 OUTPUT:
 {self.examples[0][1].model_dump_json(indent=4, exclude_none=True)}
-{'-'*40}
+
+Example 2:
+INPUT:
+{self.examples[1][0].text}
+
+OUTPUT:
+{self.examples[1][1].model_dump_json(indent=4, exclude_none=True)}
+======= END OF EXAMPLES =======
 
 **IMPORTANT:
 1. Make sure the output is always in JSON format.
@@ -62,6 +69,7 @@ OUTPUT:
 **
 
 Now perform the same for the following:
+
 INPUT:
 {data.text}
 

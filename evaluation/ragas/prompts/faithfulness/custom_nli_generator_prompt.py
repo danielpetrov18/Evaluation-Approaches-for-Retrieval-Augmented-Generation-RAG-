@@ -17,7 +17,7 @@ InputModel = TypeVar("InputModel", bound=BaseModel)
 class MyNLIStatementPrompt(
     PydanticPrompt[NLIStatementInput, NLIStatementOutput]
 ):
-    instruction = "Your task is to judge the faithfulness of a series of statements based on a given context."
+    instruction = "Your task is to judge the faithfulness of a series of statements based on a given context. Verify if for each statement, whether or not it can be inferred from a context."
     input_model = NLIStatementInput
     output_model = NLIStatementOutput
     examples = [
@@ -53,10 +53,10 @@ class MyNLIStatementPrompt(
     ]
 
     def to_string(self, data: Optional[InputModel] = None) -> str:
-        return f"""### Task:
-{self.instruction}
+        return f"""{self.instruction}
 
---- EXAMPLES: ---
+======= EXAMPLES: =======
+Example 1:
 Context:
 {self.examples[0][0].context}
 
@@ -65,19 +65,21 @@ Statements:
 
 Output:
 {self.examples[0][1].model_dump_json(indent=4, exclude_none=True)}
-{'-'*40}
+======= END OF EXAMPLES =======
 
 **IMPORTANT:
 1. Make sure the output is always in JSON format.
 2. Each output object should contain a key "verdict"
-- If the statement can be directly inferred based on the context, the value of the "verdict" key should be 1.
-- If the statement can not be directly inferred based on the context, the value of the "verdict" key should be 0.
+    - If the statement can be directly inferred based on the context, the value of the "verdict" key should be 1.
+    - If the statement can not be directly inferred based on the context, the value of the "verdict" key should be 0.
 3. Each output object should contain an additional key "reason" that provides a reason for the verdict.
 4. Each output object should contain a further key "statement" that provides the statement being classified.
 5. DO NOT provide any further explanations or clarifications, just output the JSON.
+6. Do not use any other knowledge you may have been trained on.
 **
 
 Now perform the same for the following:
+
 Context:
 {data.context}
 

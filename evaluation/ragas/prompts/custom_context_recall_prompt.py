@@ -16,7 +16,7 @@ InputModel = TypeVar("InputModel", bound=BaseModel)
 
 class MyContextRecallPrompt(PydanticPrompt[QCA, ContextRecallClassifications]):
     name: str = "custom_context_recall_classification"
-    instruction: str = "Given a context, and an answer, analyze each sentence in the answer and classify if the sentence can be attributed to the given context or not."
+    instruction: str = "Given a question, context, and an answer, analyze each sentence in the answer and classify each sentence as either attributed to the context or not."
     input_model = QCA
     output_model = ContextRecallClassifications
     examples = [
@@ -49,10 +49,9 @@ class MyContextRecallPrompt(PydanticPrompt[QCA, ContextRecallClassifications]):
     ]
 
     def to_string(self, data: Optional[InputModel] = None) -> str:
-        return f"""## Task:
-{self.instruction}
+        return f"""{self.instruction}
 
---- EXAMPLES: ---
+======= EXAMPLES: =======
 Question:
 {self.examples[0][0].question}
 
@@ -64,7 +63,7 @@ Answer:
 
 Output:
 {self.examples[0][1].model_dump_json(indent=4, exclude_none=True)}
-{'-'*40}
+======= END OF EXAMPLES =======
 
 **IMPORTANT:
 1. Make sure the output is always in JSON format.
@@ -72,11 +71,13 @@ Output:
     - If the statement can be attributed to the context, the value of "attributed" should be 1.
     - If the statement cannot be attributed to the context, the value of "attributed" should be 0.
 3. Each output object should contain an additional key "reason" that provides a reason for the classification.
-4. Each output object should contain a further key "statement" that provides the statement being classified.
+4. Each output object should contain a further key "statement" that provides the statement being classified. This should be derived from the answer.
 5. DO NOT provide any further explanations or clarifications, just output the JSON.
+6. Do not use any other knowledge you may have been trained on.
 **
 
 Now perform the same for the following:
+
 Question:
 {data.question}
 

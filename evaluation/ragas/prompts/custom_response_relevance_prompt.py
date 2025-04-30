@@ -16,9 +16,7 @@ InputModel = TypeVar("InputModel", bound=BaseModel)
 class MyResponseRelevancePrompt(
     PydanticPrompt[ResponseRelevanceInput, ResponseRelevanceOutput]
 ):
-    instruction = """Generate a question for the given answer and identify if answer is noncommittal.
-Give noncommittal as 1 if the answer is noncommittal and 0 if the answer is committal.
-A noncommittal answer is one that is evasive, vague, or ambiguous. For example, "I don't know" or "I'm not sure" are noncommittal answers."""
+    instruction = "Generate a question for the given answer and identify if answer is noncommittal."
     input_model = ResponseRelevanceInput
     output_model = ResponseRelevanceOutput
     examples = [
@@ -43,26 +41,26 @@ A noncommittal answer is one that is evasive, vague, or ambiguous. For example, 
     ]
 
     def to_string(self, data: Optional[ResponseRelevanceInput] = None) -> str:
-        return f"""## Task:
-{self.instruction}
+        return f"""{self.instruction}
 
---- EXAMPLES: ---
-Input:
+======= EXAMPLES: =======
+Answer:
 {self.examples[0][0].response}
 
 Output:
 {self.examples[0][1].model_dump_json(indent=4, exclude_none=True)}
 
-Input:
+Answer:
 {self.examples[1][0].response}
 
 Output:
 {self.examples[1][1].model_dump_json(indent=4, exclude_none=True)}
-{'-'*40}
+======= END OF EXAMPLES =======
 
 **IMPORTANT:
 1. Make sure the output is always in JSON format.
 2. Clasify each response as noncommittal or committal.
+    - A noncommittal answer is one that is evasive, vague, or ambiguous. For example, "I don't know" or "I'm not sure" are noncommittal answers.
     - If the response is noncommittal, the value of the "noncommittal" key should be 1.
     - If the response is committal, the value of the "noncommittal" key should be 0.
 3. Each output object should contain an additional key "question" that provides a question for the response.
@@ -70,7 +68,8 @@ Output:
 **
 
 Now perform the same for the following:
-Input:
+
+Answer:
 {data.response}
 
 JSON:

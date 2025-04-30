@@ -17,10 +17,7 @@ class MyStatementGeneratorPrompt(
     PydanticPrompt[StatementGeneratorInput, StatementGeneratorOutput]
 ):
     instruction = (
-        """Extract simple factual statements from the answer text. For each statement: 
-1. express exactly one complete fact
-2. avoid using pronouns
-3. make it standalone without requiring context from other statements"""
+        "Given a question and answer pair break down the answer into one or more fully understandable statements. Ensure that no pronouns are used in any statement."
     )
     input_model = StatementGeneratorInput
     output_model = StatementGeneratorOutput
@@ -42,10 +39,9 @@ class MyStatementGeneratorPrompt(
     ]
 
     def to_string(self, data: Optional[StatementGeneratorInput] = None) -> str:
-        return f"""## Task:
-{self.instruction}
+        return f"""{self.instruction}
     
---- EXAMPLES: ---
+======= EXAMPLES: =======
 QUESTION:
 {self.examples[0][0].question}
 
@@ -54,7 +50,7 @@ ANSWER:
 
 OUTPUT:
 {self.examples[0][1].model_dump_json(indent=4, exclude_none=True)}
-{'-'*40}
+======= END OF EXAMPLES =======
 
 **IMPORTANT:
 1. Make sure the output is always in JSON format.
@@ -64,6 +60,7 @@ OUTPUT:
 **
 
 Now perform the same for the following:
+
 QUESTION:
 {data.question}
 

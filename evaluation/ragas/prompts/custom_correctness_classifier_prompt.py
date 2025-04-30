@@ -33,7 +33,8 @@ Provide a reason for each classification."""
             QuestionAnswerGroundTruth(
                 question="What is the boiling point of water?",
                 answer=[
-                    "The boiling point of water is 100 degrees Celsius at sea level."
+                    "The boiling point of water is 100 degrees Celsius at sea level.",
+                    "Water boils at 90 degrees Celsius on average in most cities.",
                 ],
                 ground_truth=[
                     "The boiling point of water is 100 degrees Celsius (212 degrees Fahrenheit) at sea level.",
@@ -47,7 +48,12 @@ Provide a reason for each classification."""
                         reason="This statement is directly supported by the ground truth which specifies the boiling point of water as 100 degrees Celsius at sea level.",
                     )
                 ],
-                FP=[],
+                FP=[
+                    StatementsWithReason(
+                        statement="Water boils at 90 degrees Celsius on average in most cities.",
+                        reason="This statement is not directly supported by the ground truth. While boiling point can change with altitude, the specific claim that water boils at 90°C in most cities is not mentioned or supported.",
+                    )
+                ],
                 FN=[
                     StatementsWithReason(
                         statement="The boiling point of water can change with altitude.",
@@ -59,10 +65,9 @@ Provide a reason for each classification."""
     ]
 
     def to_string(self, data: Optional[QuestionAnswerGroundTruth] = None) -> str:
-        return f"""## Task:
-{self.instruction}
+        return f"""{self.instruction}
 
---- EXAMPLES: ---
+======= EXAMPLES: =======
 Question:
 {self.examples[0][0].question}
 
@@ -74,7 +79,7 @@ Ground Truth:
 
 Output:
 {self.examples[0][1].model_dump_json(indent=4, exclude_none=True)}
-{'-'*40}
+======= END OF EXAMPLES =======
 
 **IMPORTANT:
 1. Make sure the output is always in JSON format.
@@ -84,6 +89,7 @@ Output:
 **
 
 Now perform the same for the following:
+
 Question:
 {data.question}
 
