@@ -2,5 +2,6 @@ deepeval # In order for DeepEval to be compatible with ConfidentAI, one requires
 ragas==0.2.15
 rapidfuzz # Used by some RAGAs metrics (non-LLM based ones)
 langchain-ollama==0.3.2
+unstructured
 ipykernel
 ipywidgets
