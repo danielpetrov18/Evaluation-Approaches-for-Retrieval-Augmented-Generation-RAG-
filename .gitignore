@@ -104,3 +104,5 @@ data
 
 # This is the name of the virtual environment used by all evaluation frameworks
 eval
+
+*.config
