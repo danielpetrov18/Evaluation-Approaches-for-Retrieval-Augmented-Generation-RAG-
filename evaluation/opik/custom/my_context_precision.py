@@ -224,7 +224,7 @@ JSON:
     def _parse_model_output(self, content: str, name: str) -> ScoreResult:
         try:
             dict_content: Dict = parsing_helpers.extract_json_content_or_raise(content)
-            score: float = dict_content["context_precision_score"]
+            score: float = float(dict_content["context_precision_score"])
 
             if not (0.0 <= score <= 1.0):
                 raise MetricComputationError(
