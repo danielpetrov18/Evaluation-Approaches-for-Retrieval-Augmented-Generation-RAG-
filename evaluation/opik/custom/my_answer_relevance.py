@@ -161,8 +161,7 @@ class MyAnswerRelevance(AnswerRelevance):
             ]
         )
 
-        return f"""
-You are an NLP evaluation expert. Your task is to assess how relevant the given answer is to the user's question.
+        return f"""You are an NLP evaluation expert. Your task is to assess how relevant the given answer is to the user's question.
 
 ###INSTRUCTIONS###
 
@@ -172,6 +171,8 @@ You are an NLP evaluation expert. Your task is to assess how relevant the given 
 - Return a JSON object containing 2 fields:
   - answer_relevance_score: a value between 0.0 and 1.0
   - reason: a short explanation for your verdict
+- DO NOT RETURN ANYTHING ELSE BESIDES THE JSON OBJECT
+- DO NOT PROVIDE ANY FURTHER EXPLANATIONS OR CLARIFICATIONS
 
 ###STEPS###
 
@@ -180,7 +181,7 @@ You are an NLP evaluation expert. Your task is to assess how relevant the given 
 3. Consider any off-topic information in the answer and reduce the score
 4. Assign a score and explain your reasoning
 
- ###EXAMPLE OUTPUT FORMAT###
+###EXAMPLE OUTPUT FORMAT###
 {{
     "answer_relevance_score": 0.85,
     "reason": "The answer addresses the user's query about the primary topic but includes redundant information which reduces the score."
