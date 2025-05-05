@@ -70,7 +70,7 @@ class MyContextPrecision(ContextPrecision):
         super().__init__(
             model=model,
             name=name,
-            few_shot_examples=few_shot_examples,
+            few_shot_examples=(few_shot_examples if few_shot_examples else FEW_SHOT_EXAMPLES),
             track=track,
             project_name=project_name,
         )
@@ -97,7 +97,7 @@ class MyContextPrecision(ContextPrecision):
             score_result.ScoreResult: A ScoreResult object containing the context precision score
             (between 0.0 and 1.0) and a reason for the score.
         """
-        llm_query = self._generate_query_no_context(
+        llm_query = self._generate_query(
             input=input,
             output=output,
             expected_output=expected_output,
@@ -134,7 +134,7 @@ class MyContextPrecision(ContextPrecision):
         Returns:
             score_result.ScoreResult: A ScoreResult object with the context precision score and reason.
         """
-        llm_query = self._generate_query_no_context(
+        llm_query = self._generate_query(
             input=input,
             output=output,
             expected_output=expected_output,
@@ -147,7 +147,7 @@ class MyContextPrecision(ContextPrecision):
 
         return self._parse_model_output(content=model_output, name=self.name)
 
-    def _generate_query_no_context(
+    def _generate_query(
         self,
         input: str,
         output: str,

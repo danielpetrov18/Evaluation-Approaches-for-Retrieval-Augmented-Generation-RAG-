@@ -16,17 +16,17 @@ The primary goal is to assess different evaluation frameworks, including **RAGAs
 
 ### Built With
 
-* **Programming language**:
+- **Programming language**:
 [![Python][Python-img]][Python-url]
-* **Containerization**:
+- **Containerization**:
 [![Docker][Docker-img]][Docker-url]
-* **LLM hosting**:
+- **LLM hosting**:
 [![Ollama][Ollama-img]][Ollama-url]
-* **RAG**:
+- **RAG**:
 [![R2R][R2R-img]][R2R-url]
-* **UI**:
+- **UI**:
 [![Streamlit][Streamlit-img]][Streamlit-url] 
-* **Evaluation**:
+- **Evaluation**:
 [![RAGAs][RAGAs-img]][RAGAs-url] [![DeepEval][DeepEval-img]][DeepEval-url] [![Opik][Opik-img]][Opik-url]
 
 ### Prerequisites
