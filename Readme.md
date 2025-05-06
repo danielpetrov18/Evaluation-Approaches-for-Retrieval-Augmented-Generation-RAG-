@@ -1,6 +1,6 @@
 # Evaluation Approaches for Retrieval Augmented Generation (RAG)
 
-### Table of Contents
+## Table of Contents
 
 - [About The Project](#about-the-project)
 - [Built With](#built-with)
@@ -38,19 +38,25 @@ The primary goal is to assess different evaluation frameworks, including **RAGAs
 
 ### Prerequisites
 
-* Check if `python` is **installed** on your system. Make sure it is at least `3.12`.
+- Check if `python` is **installed** on your system. Make sure it is at least `3.12`.
 
 ```sh
 python3 --version
 ```
 
-* Ollama also needs to be locally available. If not run:
+- Check if `pip` is **installed** on your system.
+
+```sh
+pip3 --version
+```
+
+- Ollama also needs to be locally available. If not run:
 
 ```sh
 curl -fsSL https://ollama.com/install.sh | sh
 ```
 
-* Finally, you will need to have docker. If not go to [Docker](https://www.docker.com/) and install the version appropriate for your OS.
+- Finally, you will need to have docker. If not go to [Docker](https://www.docker.com/) and install the version appropriate for your OS.
 
 ### Usage
 

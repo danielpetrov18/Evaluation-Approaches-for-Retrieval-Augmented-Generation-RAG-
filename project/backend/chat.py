@@ -11,9 +11,10 @@ import numpy as np
 import streamlit as st
 from streamlit.errors import Error
 from ollama import Client, Options
-from pydantic import BaseModel, Field
 from r2r import R2RClient, R2RException, MessageEvent
 from shared.api.models.retrieval.responses import SSEEventBase
+
+from .message import Message
 
 @st.cache_resource
 def ollama_client():
@@ -40,30 +41,6 @@ def ollama_options():
         num_ctx=st.session_state["context_window_size"],
         format="json", # This should be json to enforce proper output
     )
-
-class Message(BaseModel):
-    """
-    Represents a chat message with embedding information.
-    This class is relevant for my custom implementation of the history.
-    It holds embedding information. When searching for relevant messages from previous
-    interactions we will perform semantic similarity search on those embeddings.
-    
-    Attributes:
-        id: Unique identifier for the message
-        role: Role of the message sender (e.g., 'user', 'assistant')
-        content: The actual message content
-        embedding: Vector embedding of fixed length (1024 dimensions if using the mxbai-embed-large model)
-    """
-    id: str = Field(..., min_length=1)
-    role: str = Field(..., min_length=1)  # ... means required/not nullable
-    content: str = Field(..., min_length=1)  # min_length=1 ensures non-empty string
-    embedding: List[float] = Field(...)
-
-    # https://docs.pydantic.dev/1.10/usage/model_config/
-    class Config:
-        """Configuration for the message. A message cannot be modified once created."""
-        frozen = True  # Makes instances immutable
-        extra = "forbid" # Prevents additional fields not defined in model
 
 @st.cache_data(ttl=60)  # Cache for 60 seconds
 def retrieve_messages(_client: R2RClient, conversation_id: str) -> Union[List[Message],None]:
@@ -221,7 +198,7 @@ def submit_query(client: R2RClient) -> Generator[SSEEventBase, None, None]:
         generator: Generator[SSEEventBase, None, None] = client.retrieval.rag(
             query = enhanced_query,
             rag_generation_config = {
-                "model": f"ollama/{st.session_state['chat_model']}",
+                "model": f"ollama_chat/{st.session_state['chat_model']}",
                 "temperature": st.session_state['temperature'],
                 "top_p": st.session_state['top_p'],
                 "max_tokens_to_sample": st.session_state['max_tokens'],

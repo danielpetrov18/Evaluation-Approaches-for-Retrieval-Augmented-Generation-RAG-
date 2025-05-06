@@ -53,7 +53,7 @@ def ollama_options():
         top_p=st.session_state['top_p'],
         top_k=st.session_state['top_k'],
         num_ctx=st.session_state["context_window_size"],
-        format="json", # This should be json to enforce proper output
+        format="json", # This should be json to enforce proper output if required
     )
 
 def get_pages() -> t.List[StreamlitPage]:

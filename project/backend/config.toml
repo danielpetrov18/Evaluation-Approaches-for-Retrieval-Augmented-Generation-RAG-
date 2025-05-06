@@ -13,19 +13,21 @@ default_max_documents_per_user = 1_000
 default_max_chunks_per_user = 100_000
 default_max_upload_size = 10_000_000 # 10 MB
 
-fast_llm = "ollama/llama3.1"    # LLM used for internal operations, like deriving conversation names
-quality_llm = "ollama/llama3.1" # LLM used for user-facing output, like RAG replies
+fast_llm = "ollama_chat/llama3.1"    # LLM used for internal operations, like deriving conversation names
+quality_llm = "ollama_chat/llama3.1" # LLM used for user-facing output, like RAG replies
 
 # Reasoning model, used for `research` agent
-reasoning_llm = "ollama/llama3.1"
+reasoning_llm = "ollama_chat/llama3.1"
 # Planning model, used for `research` agent
-planning_llm = "ollama/llama3.1"
+planning_llm = "ollama_chat/llama3.1"
 
 [completion]
 provider = "litellm"
 concurrent_request_limit = 1
 
   [completion.generation_config]
+  # https://docs.litellm.ai/docs/providers/ollama#using-ollama-apichat
+  model = "ollama_chat/llama3.1"
   temperature = 0.1
   top_p = 1
   max_tokens_to_sample = 512
@@ -63,9 +65,9 @@ chunking_strategy = "by_title"
 new_after_n_chars = 512
 max_characters = 1_024
 combine_under_n_chars = 128
-overlap = 20
-chunk_overlap = 64
+overlap = 0
+chunk_overlap = 0
 chunk_size = 512
 chunks_for_document_summary = 16
-document_summary_model = "ollama/llama3.1"
+document_summary_model = "ollama_chat/llama3.1"
 automatic_extraction = false
