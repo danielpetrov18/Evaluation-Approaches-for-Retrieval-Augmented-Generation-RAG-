@@ -60,9 +60,9 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 ### Usage
 
-* Make sure that `ufw - uncomplicated firewall` is turned off, if available on the system.
+- Make sure that `ufw - uncomplicated firewall` is turned off, if available on the system.
 
-* Also make sure **Ollama** is available under `0.0.0.0`, otherwise even with `host.docker.internal` one cannot reach it from inside any of the containers. To modify it: `sudo nano /etc/systemd/system/ollama.service.`. Once modified use: `sudo systemctl reload ollama`. If that doesn't work try: `sudo systemctl reload-daemon`.
+- Also make sure **Ollama** is available under `0.0.0.0`, otherwise even with `host.docker.internal` one cannot reach it from inside any of the containers. To modify it: `sudo nano /etc/systemd/system/ollama.service.`. Once modified use: `sudo systemctl reload ollama`. If that doesn't work try: `sudo systemctl reload-daemon`.
 
 Example:
 

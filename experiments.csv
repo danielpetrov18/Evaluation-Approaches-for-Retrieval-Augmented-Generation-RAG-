@@ -1,0 +1,13 @@
+test_id,top_k,max_tokens_to_sample,chunk_size,chunk_overlap,chat_model,temperature,description
+1,5,512,512,0,llama3.1:8b,0,Baseline with minimal values
+2,10,768,1024,128,llama3.1:8b,0,Maximum retrieval quality
+3,5,512,512,0,llama3.1:8b-instruct-q4_1,0,Testing instruction tuning effect
+4,5,512,512,0,deepseek-r1:7b,0,Testing alternative model
+5,5,512,768,64,llama3.1:8b,0,Medium chunk size with overlap
+6,5,512,1024,128,llama3.1:8b,0,Large chunk size with max overlap
+7,5,512,512,0,llama3.1:8b,1,Testing high temperature creativity
+8,10,768,512,0,llama3.1:8b,0,Increased tokens with baseline chunking
+9,10,768,1024,128,llama3.1:8b-instruct-q4_1,0.5,Balanced creative instruction-tuned approach
+10,10,768,1024,128,deepseek-r1:7b,0.5,Alternative model with optimal retrieval settings
+11,5,768,768,64,llama3.1:8b,0.5,Mid-range balanced configuration
+12,10,512,768,64,deepseek-r1:7b,0,Instruction model with efficient token usage
