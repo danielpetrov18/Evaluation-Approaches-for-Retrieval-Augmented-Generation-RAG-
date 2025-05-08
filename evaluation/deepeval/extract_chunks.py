@@ -20,7 +20,7 @@ import os
 import sys
 import json
 import random
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Final
 
 import numpy as np
 from dotenv import load_dotenv
@@ -40,16 +40,26 @@ OLLAMA_OPTIONS = Options(
     top_p=float(os.getenv("TOP_P")),
     top_k=int(os.getenv("TOP_K")),
     num_ctx=int(os.getenv("LLM_CONTEXT_WINDOW_TOKENS")),
-    format="json", # This should be json to enforce proper output
 )
 
 # Retrieve this many chunks from a document at random
-CHUNKS_PER_DOCUMENT: int = 3
+CHUNKS_PER_DOCUMENT: Final[int] = 3
 
-CHUNKS_PER_CONTEXT: int = 5
+CHUNKS_PER_CONTEXT: Final[int] = 5
 
 # For each chunk have the id as key and compute the embedding to the text
 CHUNKS_WITH_EMBEDDINGS: Dict[str, Tuple[str, List[float]]] = {}
+
+def delete_files() -> None:
+    """
+    Delete all files prior ingestion since we test different `chunk_size` and `overlap` values.
+    During the ingestion phase `R2R` uses a `RecursiveCharacterTextSplitter` to chunk the documents.
+    So we need to make sure that the files get re-ingested each time, we run this script.
+    """
+
+    ids: List[str] = [document.id for document in R2R_CLIENT.documents.list().results]
+    for document_id in ids:
+        R2R_CLIENT.documents.delete(id=document_id)
 
 def ingest_files(folder_path: str = "data") -> None:
     for file in os.listdir(folder_path):
@@ -137,8 +147,21 @@ if __name__ == "__main__":
     try:
         json_filepath: str = sys.argv[1]
     except IndexError as ie:
-        print("USAGE: python extract_chunks.py <path> (without extension)")
+        print("USAGE: python extract_chunks.py <destination-filename> (without extension)")
         sys.exit(1)
+
+    print(f"""{'='*80}\nGenerating context in /contexts/{json_filepath}.json.
+TOP_K={int(os.getenv("TOP_K"))}
+MAX_TOKENS_TO_SAMPLE={int(os.getenv("MAX_TOKENS"))}
+CHUNK_SIZE={int(os.getenv("CHUNK_SIZE"))}
+CHUNK_OVERLAP={int(os.getenv("CHUNK_OVERLAP"))}
+CHAT_MODEL={os.getenv("CHAT_MODEL")}
+TEMPERATURE={float(os.getenv("TEMPERATURE"))}
+{'='*80}
+""")
+
+    delete_files()
+    print("DELETION STEP COMPLETED...")
 
     ingest_files()
     print("INGESTION STEP COMPLETED...")
@@ -153,7 +176,7 @@ if __name__ == "__main__":
     context_chunks: List[List[str]] = extract_context_chunks()
     print("EXTRACTION STEP COMPLETED...")
 
-    with open(f"{json_filepath}.json", "w", encoding="utf-8") as f:
+    with open(f"./contexts/{json_filepath}.json", "w", encoding="utf-8") as f:
         json.dump(
             context_chunks,
             f,

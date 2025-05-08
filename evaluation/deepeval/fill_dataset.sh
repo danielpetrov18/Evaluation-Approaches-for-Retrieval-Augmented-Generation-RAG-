@@ -26,5 +26,5 @@ fi
 echo "Environment is set and ready to be used"
 
 # Run the python script to extract and save the data
-python3 fill_dataset.py "$@" # The "$@" is used to pass the arguments to the script
+python3 fill_dataset.py "$1"
 echo "Full dataset saved..."

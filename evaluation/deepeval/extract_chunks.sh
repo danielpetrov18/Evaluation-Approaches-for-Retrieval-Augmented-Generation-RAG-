@@ -36,5 +36,5 @@ fi
 echo "Environment is set and ready to be used"
 
 # Run the python script to extract and save the data
-python3 extract_chunks.py chunks
-echo "Data extracted and saved to chunks.json"
+python3 extract_chunks.py "$1" # The "$1" is the destination filename
+echo "Data extracted and saved to /contexts/$1.json"
