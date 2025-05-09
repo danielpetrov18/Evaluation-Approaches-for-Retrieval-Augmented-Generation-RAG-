@@ -52,7 +52,7 @@ CHUNKS_WITH_EMBEDDINGS: Dict[str, Tuple[str, List[float]]] = {}
 
 def delete_files() -> None:
     """
-    Delete all files prior ingestion since we test different `chunk_size` and `overlap` values.
+    Delete all files prior to ingestion since we test different `chunk_size` and `overlap` values.
     During the ingestion phase `R2R` uses a `RecursiveCharacterTextSplitter` to chunk the documents.
     So we need to make sure that the files get re-ingested each time, we run this script.
     """
@@ -62,6 +62,15 @@ def delete_files() -> None:
         R2R_CLIENT.documents.delete(id=document_id)
 
 def ingest_files(folder_path: str = "data") -> None:
+    """
+    This will use the unstructured service behind the scenes to ingest the files.
+    The `RecursiveCharacterTextSplitter` will be used to chunk the documents.
+    For this implementation and the dataset I use I require all `md` files and exclude `README.md`.
+    NOTE: For your custom dataset you might want to change this.
+    
+    Args:
+        folder_path: Path to the folder containing the documents
+    """
     for file in os.listdir(folder_path):
         if not file.endswith(".md") or file == "README.md":
             continue
@@ -77,6 +86,15 @@ def ingest_files(folder_path: str = "data") -> None:
             print("Error when creating document:", r2re.message)
 
 def compute_embedding(text: str) -> List[float]:
+    """
+    Uses `Ollama` to convert the text to an embedding preserving the semantic meaning.
+    
+    Args:
+        text: Text to compute the embedding for
+    
+    Returns:
+        List of floats representing the vector embedding
+    """
     return OLLAMA_CLIENT.embeddings(
         model=os.getenv("EMBEDDING_MODEL"),
         prompt=text,
@@ -84,6 +102,20 @@ def compute_embedding(text: str) -> List[float]:
     )["embedding"]
 
 def compute_similarity(embedding1: List[float], embedding2: List[float]) -> float:
+    """
+    Compute the cosine similarity between two vector embeddings.
+    
+    Args:
+        embedding1: First vector embedding
+        embedding2: Second vector embedding
+    
+    Returns:
+        float: Cosine similarity score between the two embeddings. 
+        The closer to 1, the more similar the embeddings are.
+    
+    Raises:
+        ValueError: If the embeddings have different lengths
+    """
     if len(embedding1) != len(embedding2):
         raise ValueError("Embeddings must have the same length!")
 
@@ -92,6 +124,20 @@ def compute_similarity(embedding1: List[float], embedding2: List[float]) -> floa
     return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
 
 def retrieve_n_similar_chunks(current_chunk_id: str, n: int) -> List[str]:
+    """
+    It receives a `chunk_id` of the current chunk and returns the `n` most similar chunks.
+    It makes use of `compute_similarity` to compute the cosine similarity between chunks.
+    The closer to 1, the more similar the chunks are.
+    The chunks are sorted in descending order of similarity.
+    Finally, we make sure that only the `n` chunks are kept.
+    
+    Args:
+        current_chunk_id: ID of the current chunk
+        n: Number of similar chunks to retrieve
+    
+    Returns:
+        List of chunk texts
+    """
     similarities: Dict[str, float] = {}
 
     for chunk_id, (chunk_text, embedding) in CHUNKS_WITH_EMBEDDINGS.items():
@@ -114,6 +160,14 @@ def retrieve_n_similar_chunks(current_chunk_id: str, n: int) -> List[str]:
     return top_n_chunks
 
 def extract_context_chunks() -> List[List[str]]:
+    """
+    This step combines multiple others to extract the contexts.
+    Each context contains chunks, which are similar to each other.
+    The chunks in a given context might be derived from different documents.
+    
+    Returns:
+        List of contexts
+    """
     contexts: List[List[str]] = []
 
     for i, document in enumerate(R2R_CLIENT.documents.list().results):
