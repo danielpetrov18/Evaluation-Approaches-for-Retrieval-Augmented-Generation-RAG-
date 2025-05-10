@@ -96,10 +96,11 @@ If entities appear multiple times, only include them once in the results."""
 2. Consider different forms or mentions of the same entity as a single entity.
 3. The output should have a key "entities" containing a list of unique entities, where each entity is a string.
 4. Never exceed the specified maximum number of entities.
-5. DO NOT provide any further explanations or clarifications, just output the JSON.
+5. If the text contains less entities than the `max_num`, output as many entities as possible without exceeding the `max_num`.
+6. DO NOT provide any further explanations or clarifications, just output the JSON.
 **
 
-Now perform the same for the following:
+Now extract the named entities from the following text:
 
 INPUT:
 {input_obj}

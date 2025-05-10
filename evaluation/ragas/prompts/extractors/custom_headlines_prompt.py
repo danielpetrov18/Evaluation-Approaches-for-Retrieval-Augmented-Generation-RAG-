@@ -18,7 +18,7 @@ InputModel = TypeVar("InputModel", bound=BaseModel)
 
 class MyHeadlinesExtractorPrompt(PydanticPrompt[TextWithExtractionLimit, Headlines]):
     name: str = "custom_headlines_extractor_prompt"
-    instruction: str = ("""Extract the most important `max_num` headlines from the given text that can be used to split the text into independent sections.
+    instruction: str = ("""Extract the most important `max_num` headlines from the given text that can be used to split the text into independent self-contained sections.
 Focus mainly on Level 2 and Level 3 headings."""
     )
 
@@ -96,10 +96,11 @@ Final remarks and summary.
 2. Do not include any other text in the output.
 3. The output should have a key "headlines" containing a list of unique level 2 and level 3 headlines.
 4. Never exceed the specified maximum number of headlines.
-5. DO NOT provide any further explanations or clarifications, just output the JSON.
+5. If the text contains less headlines than the `max_num`, output as many headlines as possible without exceeding the `max_num`.
+6. DO NOT provide any further explanations or clarifications, just output the JSON.
 **
 
-Now perform the same for the following:
+Now extract the headlines from the following text:
 
 INPUT:
 {input_obj}

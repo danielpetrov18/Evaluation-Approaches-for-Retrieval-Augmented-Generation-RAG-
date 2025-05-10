@@ -18,6 +18,7 @@ InputModel = TypeVar("InputModel", bound=BaseModel)
 
 
 class MyKeyphrasesExtractorPrompt(PydanticPrompt[TextWithExtractionLimit, Keyphrases]):
+    name: str = "custom_keyphrases_extractor_prompt"
     instruction: str = "Extract the top `max_num` keyphrases from the provided text. All the keyphrases should be derived from the text."
     input_model: Type[TextWithExtractionLimit] = TextWithExtractionLimit
     output_model: Type[Keyphrases] = Keyphrases
@@ -80,7 +81,7 @@ class MyKeyphrasesExtractorPrompt(PydanticPrompt[TextWithExtractionLimit, Keyphr
 6. DO NOT provide any further explanations or clarifications, just output the JSON.
 **
 
-Now perform the same for the following:
+Now extract the keyphrases from the following text:
 
 INPUT:
 {input_obj}

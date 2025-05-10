@@ -23,7 +23,7 @@ class MyThemesPersonasMatchingPrompt(
     name: str = "custom_themes_personas_matching_prompt"
     instruction: str = (
         """Given a list of themes and personas with their roles, associate each persona with relevant themes based on their role description.
-Each persona should be matched with themes that align with their expertise, interests, and responsibilities."""
+Each persona should be matched with themes that align with their expertise, interests, responsibilities, requirements or needs."""
     )
 
     input_model: Type[ThemesPersonasInput] = ThemesPersonasInput
