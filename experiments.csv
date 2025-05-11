@@ -2,9 +2,9 @@ test_id,top_k,max_tokens_to_sample,chunk_size,chunk_overlap,chat_model,temperatu
 1,5,512,512,0,llama3.1:8b,0,Baseline with minimal values
 2,10,768,1024,128,llama3.1:8b,0,Maximum retrieval quality
 3,5,512,512,0,llama3.1:8b-instruct-q4_1,0,Testing instruction tuning effect on baseline
-4,5,512,512,0,deepseek-r1:7b,0,Testing alternative model on baseline
+4,5,1534,512,0,deepseek-r1:7b,0,Testing alternative model on baseline
 5,5,512,768,64,llama3.1:8b,0.5,Mid-range balanced configuration with some creativity
 6,5,512,512,0,llama3.1:8b,1,Testing high temperature creativity on baseline
 7,10,768,1024,128,llama3.1:8b-instruct-q4_1,0.5,Balanced creative instruction-tuned approach
-8,10,768,1024,128,deepseek-r1:7b,0.5,Alternative model with optimal retrieval settings
-9,10,512,768,64,deepseek-r1:7b,0,Instruction model with efficient token usage
+8,10,1534,1024,128,deepseek-r1:7b,0.5,Alternative model with optimal retrieval settings
+9,10,1024,768,64,deepseek-r1:7b,0,Instruction model with efficient token usage

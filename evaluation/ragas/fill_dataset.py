@@ -5,7 +5,6 @@ R2R will be used to generate the actual response and retrieval context.
 The generated dataset will be augmented and saved into a jsonl file.
 """
 
-import re
 import os
 import sys
 import json
@@ -144,30 +143,16 @@ def load_goldens(filepath: str) -> List[Dict]:
 
     return _goldens
 
-def _clean_answer(answer: str) -> str:
+def extract_deepseek_response(full_response):
     """
-    Removes any content enclosed in <think> tags from deepseek responses.
-    Also removes any remaining tags and trims whitespace.
+    Extract the actual response from deepseek-r1 output by ignoring the <think>...</think> section.
     """
-    # Remove everything between <think> and </think> tags (including the tags)
-    cleaned: str = re.sub(
-        pattern=r'<think>.*?</think>',
-        repl='',
-        string=answer,
-        flags=re.DOTALL # Match newlines as well
-    )
+    if "</think>" not in full_response:
+        raise ValueError("Response from deepseek-r1 is not full!")
 
-    # Remove any standalone <think> or </think> tags that might remain
-    cleaned = re.sub(
-        pattern=r'</?think>',
-        repl='',
-        string=cleaned
-    )
-
-    # Remove leading/trailing whitespace
-    cleaned = cleaned.strip()
-
-    return cleaned
+    strings: List[str] = full_response.split("</think>")
+    answer_without_section: str = strings[-1].lstrip()
+    return answer_without_section
 
 if __name__ == "__main__":
     try:
@@ -211,7 +196,7 @@ TEMPERATURE={float(os.getenv("TEMPERATURE"))}
             # If deepseek-r1 is used regardless of parameters count
             # remove the content between the <think> tags
             if "deepseek-r1" in os.getenv("CHAT_MODEL"):
-                actual_output = _clean_answer(actual_output)
+                actual_output = extract_deepseek_response(actual_output)
 
             golden["response"] = actual_output
             golden["retrieved_contexts"] = retrieved_contexts
