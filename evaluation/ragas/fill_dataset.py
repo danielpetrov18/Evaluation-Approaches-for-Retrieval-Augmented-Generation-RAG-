@@ -5,6 +5,7 @@ R2R will be used to generate the actual response and retrieval context.
 The generated dataset will be augmented and saved into a jsonl file.
 """
 
+import re
 import os
 import sys
 import json
@@ -143,6 +144,31 @@ def load_goldens(filepath: str) -> List[Dict]:
 
     return _goldens
 
+def _clean_answer(answer: str) -> str:
+    """
+    Removes any content enclosed in <think> tags from deepseek responses.
+    Also removes any remaining tags and trims whitespace.
+    """
+    # Remove everything between <think> and </think> tags (including the tags)
+    cleaned: str = re.sub(
+        pattern=r'<think>.*?</think>',
+        repl='',
+        string=answer,
+        flags=re.DOTALL # Match newlines as well
+    )
+
+    # Remove any standalone <think> or </think> tags that might remain
+    cleaned = re.sub(
+        pattern=r'</?think>',
+        repl='',
+        string=cleaned
+    )
+
+    # Remove leading/trailing whitespace
+    cleaned = cleaned.strip()
+
+    return cleaned
+
 if __name__ == "__main__":
     try:
         goldens_filepath: str = sys.argv[1]
@@ -181,6 +207,11 @@ TEMPERATURE={float(os.getenv("TEMPERATURE"))}
 
             actual_output: str = response.completion
             retrieved_contexts: List[str] = [chunk.text for chunk in response.search_results.chunk_search_results]
+
+            # If deepseek-r1 is used regardless of parameters count
+            # remove the content between the <think> tags
+            if "deepseek-r1" in os.getenv("CHAT_MODEL"):
+                actual_output = _clean_answer(actual_output)
 
             golden["response"] = actual_output
             golden["retrieved_contexts"] = retrieved_contexts
