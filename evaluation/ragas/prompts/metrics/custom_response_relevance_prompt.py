@@ -16,7 +16,15 @@ InputModel = TypeVar("InputModel", bound=BaseModel)
 class MyResponseRelevancePrompt(
     PydanticPrompt[ResponseRelevanceInput, ResponseRelevanceOutput]
 ):
-    instruction = "Generate a question for the given answer and identify if answer is noncommittal."
+    instruction = """Generate a question for the given answer and identify if the answer is noncommittal.
+A noncommittal answer is one that is evasive, vague, or ambiguous. For example, "I don't know" or "I'm not sure" are noncommittal answers.
+If the response is noncommittal, return 1; otherwise, return 0.
+Additionally, provide a hypothetical question for the response, which can be inferred from the response itself.
+The output should be a JSON object containing the following keys:
+- "question": A hypothetical question for the response.
+- "noncommittal": 1 if the response is noncommittal, and 0 otherwise.
+The output should be in JSON format.
+"""
     input_model = ResponseRelevanceInput
     output_model = ResponseRelevanceOutput
     examples = [
@@ -31,7 +39,7 @@ class MyResponseRelevancePrompt(
         ),
         (
             ResponseRelevanceInput(
-                response="""I don't know about the  groundbreaking feature of the smartphone invented in 2023 as am unaware of information beyond 2022. """,
+                response="I don't know about the groundbreaking feature of the smartphone invented in 2023 as am unaware of information beyond 2022.",
             ),
             ResponseRelevanceOutput(
                 question="What was the groundbreaking feature of the smartphone invented in 2023?",
@@ -41,36 +49,33 @@ class MyResponseRelevancePrompt(
     ]
 
     def to_string(self, data: Optional[ResponseRelevanceInput] = None) -> str:
+        examples_str: str = ""
+        for i, (ex_input, ex_output) in enumerate(self.examples, 1):
+            examples_str += f"EXAMPLE {i}:\n"
+            examples_str += f"INPUT:\n{ex_input.model_dump_json(indent=4, exclude_none=True)}\n\n"
+            examples_str += f"OUTPUT:\n{ex_output.model_dump_json(indent=4, exclude_none=True)}\n\n"
+
+        input_obj: str = (
+            data.model_dump_json(indent=4, exclude_none=True)
+            if data is not None
+            else "Input: (None)"
+        )
+
         return f"""{self.instruction}
 
-======= EXAMPLES: =======
-Answer:
-{self.examples[0][0].response}
-
-Output:
-{self.examples[0][1].model_dump_json(indent=4, exclude_none=True)}
-
-Answer:
-{self.examples[1][0].response}
-
-Output:
-{self.examples[1][1].model_dump_json(indent=4, exclude_none=True)}
+======= FEW SHOT EXAMPLES: =======
+{examples_str}
 ======= END OF EXAMPLES =======
 
 **IMPORTANT:
 1. Make sure the output is always in JSON format.
-2. Clasify each response as noncommittal or committal.
-    - A noncommittal answer is one that is evasive, vague, or ambiguous. For example, "I don't know" or "I'm not sure" are noncommittal answers.
-    - If the response is noncommittal, the value of the "noncommittal" key should be 1.
-    - If the response is committal, the value of the "noncommittal" key should be 0.
-3. Each output object should contain an additional key "question" that provides a question for the response.
-4. DO NOT provide any further explanations or clarifications, just output the JSON.
+2. DO NOT provide any further explanations or clarifications, just output the JSON.
 **
 
-Now perform the same for the following:
+Now come up with a hypothetical question for the response and classify it as noncommittal or committal.
 
-Answer:
-{data.response}
+INPUT:
+{input_obj}
 
 JSON:
 """

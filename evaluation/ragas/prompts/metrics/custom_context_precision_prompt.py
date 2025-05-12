@@ -53,7 +53,7 @@ Furthermore, a `reason` key should be provided that explains the verdict."""
         input_obj: str = (
             data.model_dump_json(indent=4, exclude_none=True)
             if data is not None
-            else "Input: (None)\n"
+            else "Input: (None)"
         )
 
         return f"""{self.instruction}

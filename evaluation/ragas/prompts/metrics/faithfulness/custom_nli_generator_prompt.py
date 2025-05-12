@@ -17,7 +17,17 @@ InputModel = TypeVar("InputModel", bound=BaseModel)
 class MyNLIStatementPrompt(
     PydanticPrompt[NLIStatementInput, NLIStatementOutput]
 ):
-    instruction = "Your task is to judge the faithfulness of a series of statements based on a given context. Verify if for each statement, whether or not it can be inferred from a context."
+    instruction = """Your task is to judge the faithfulness of a series of statements based on a given context.
+Verify for each statement, whether or not it can be inferred from a context.
+If a statement cannot be directly inferred from the context, it is considered unfaithful, and you should assign it a verdict of 0.
+If a statement can be remotely inferred from the context, it is considered faithful, and you should assign it a verdict of 1.
+Return a JSON object containing the following fields:
+- `statements`: A list of objects, each containing:
+    - `statement`: The statement being classified.
+    - `verdict`: 1 if the statement can be inferred from the context, 0 otherwise.
+    - `reason`: A reason for the verdict.
+The output should be in JSON format.
+"""
     input_model = NLIStatementInput
     output_model = NLIStatementOutput
     examples = [
@@ -53,38 +63,34 @@ class MyNLIStatementPrompt(
     ]
 
     def to_string(self, data: Optional[InputModel] = None) -> str:
+        examples_str: str = ""
+        for i, (ex_input, ex_output) in enumerate(self.examples, 1):
+            examples_str += f"EXAMPLE {i}:\n"
+            examples_str += f"INPUT:\n{ex_input.model_dump_json(indent=4, exclude_none=True)}\n\n"
+            examples_str += f"OUTPUT:\n{ex_output.model_dump_json(indent=4, exclude_none=True)}\n\n"
+
+        input_obj: str = (
+            data.model_dump_json(indent=4, exclude_none=True)
+            if data is not None
+            else "Input: (None)"
+        )
+
         return f"""{self.instruction}
 
-======= EXAMPLES: =======
-Example 1:
-Context:
-{self.examples[0][0].context}
-
-Statements:
-{self.examples[0][0].statements}
-
-Output:
-{self.examples[0][1].model_dump_json(indent=4, exclude_none=True)}
+======= FEW SHOT EXAMPLES: =======
+{examples_str}
 ======= END OF EXAMPLES =======
 
 **IMPORTANT:
 1. Make sure the output is always in JSON format.
-2. Each output object should contain a key "verdict"
-    - If the statement can be directly inferred based on the context, the value of the "verdict" key should be 1.
-    - If the statement can not be directly inferred based on the context, the value of the "verdict" key should be 0.
-3. Each output object should contain an additional key "reason" that provides a reason for the verdict.
-4. Each output object should contain a further key "statement" that provides the statement being classified.
-5. DO NOT provide any further explanations or clarifications, just output the JSON.
-6. Do not use any other knowledge you may have been trained on.
+2. DO NOT provide any further explanations or clarifications, just output the JSON.
+3. Do not use any other knowledge you may have been trained on.
 **
 
-Now perform the same for the following:
+Now judge the faithfulness of the following statements based on the context:
 
-Context:
-{data.context}
-
-Statements:
-{data.statements}
+INPUT:
+{input_obj}
 
 JSON:
 """

@@ -16,7 +16,14 @@ InputModel = TypeVar("InputModel", bound=BaseModel)
 
 class MyContextRecallPrompt(PydanticPrompt[QCA, ContextRecallClassifications]):
     name: str = "custom_context_recall_classification"
-    instruction: str = "Given a question, context, and an answer, analyze each sentence in the answer and classify each sentence as either attributed to the context or not."
+    instruction: str = """Given a question, context, and an answer, analyze each claim in the answer and classify each claim as either attributed to the context or not.
+If the claim can be attributed to the context, return 1; otherwise, return 0.
+Additionally, provide a reason for the classification and the statement being classified.
+The output should be a JSON object containing the following keys:
+- "classifications": A list of dictionaries, where each dictionary contains the following keys:
+    - "statement": The claim being classified.
+    - "reason": A reason for the classification.
+    - "attributed": 1 if the claim can be attributed to the context, and 0 otherwise."""
     input_model = QCA
     output_model = ContextRecallClassifications
     examples = [
@@ -49,43 +56,34 @@ class MyContextRecallPrompt(PydanticPrompt[QCA, ContextRecallClassifications]):
     ]
 
     def to_string(self, data: Optional[InputModel] = None) -> str:
+        examples_str: str = ""
+        for i, (ex_input, ex_output) in enumerate(self.examples, 1):
+            examples_str += f"EXAMPLE {i}:\n"
+            examples_str += f"INPUT:\n{ex_input.model_dump_json(indent=4, exclude_none=True)}\n\n"
+            examples_str += f"OUTPUT:\n{ex_output.model_dump_json(indent=4, exclude_none=True)}\n\n"
+
+        input_obj: str = (
+            data.model_dump_json(indent=4, exclude_none=True)
+            if data is not None
+            else "Input: (None)"
+        )
+
         return f"""{self.instruction}
 
-======= EXAMPLES: =======
-Question:
-{self.examples[0][0].question}
-
-Context:
-{self.examples[0][0].context}
-
-Answer:
-{self.examples[0][0].answer}
-
-Output:
-{self.examples[0][1].model_dump_json(indent=4, exclude_none=True)}
+======= FEW SHOT EXAMPLES: =======
+{examples_str}
 ======= END OF EXAMPLES =======
 
 **IMPORTANT:
 1. Make sure the output is always in JSON format.
-2. Each output object should contain a key "attributed"
-    - If the statement can be attributed to the context, the value of "attributed" should be 1.
-    - If the statement cannot be attributed to the context, the value of "attributed" should be 0.
-3. Each output object should contain an additional key "reason" that provides a reason for the classification.
-4. Each output object should contain a further key "statement" that provides the statement being classified. This should be derived from the answer.
-5. DO NOT provide any further explanations or clarifications, just output the JSON.
-6. Do not use any other knowledge you may have been trained on.
+2. DO NOT provide any further explanations or clarifications, just output the JSON.
+3. Do not use any other knowledge you may have been trained on, accept all the information from the context at face value.
 **
 
-Now perform the same for the following:
+Now classify each claim in the answer as either attributed to the context or not:
 
-Question:
-{data.question}
-
-Context:
-{data.context}
-
-Answer:
-{data.answer}
+INPUT:
+{input_obj}
 
 JSON:
 """

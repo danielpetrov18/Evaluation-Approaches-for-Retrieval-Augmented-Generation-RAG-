@@ -16,9 +16,9 @@ InputModel = TypeVar("InputModel", bound=BaseModel)
 class MyStatementGeneratorPrompt(
     PydanticPrompt[StatementGeneratorInput, StatementGeneratorOutput]
 ):
-    instruction = (
-        "Given a question and answer pair break down the answer into one or more fully understandable statements. Ensure that no pronouns are used in any statement."
-    )
+    instruction = """Given a question and answer pair break down the answer into one or more fully understandable statements.
+Each statement should be a complete, standalone claim without pronouns and factually consistent with the answer.
+The statements should be clear and concise, and they should not contain any unnecessary information."""
     input_model = StatementGeneratorInput
     output_model = StatementGeneratorOutput
     examples = [
@@ -35,21 +35,37 @@ class MyStatementGeneratorPrompt(
                     "Albert Einstein also made important contributions to the development of the theory of quantum mechanics.",
                 ]
             ),
+        ),
+        (
+            StatementGeneratorInput(
+                question="What is water?",
+                answer="Water is a transparent, tasteless, odorless liquid that is essential for all known forms of life."
+            ),
+            StatementGeneratorOutput(
+                statements=[
+                    "Water is a transparent, tasteless, odorless liquid essential for all known forms of life."
+                ]
+            )
         )
     ]
 
     def to_string(self, data: Optional[StatementGeneratorInput] = None) -> str:
+        examples_str: str = ""
+        for i, (ex_input, ex_output) in enumerate(self.examples, 1):
+            examples_str += f"EXAMPLE {i}:\n"
+            examples_str += f"INPUT:\n{ex_input.model_dump_json(indent=4, exclude_none=True)}\n\n"
+            examples_str += f"OUTPUT:\n{ex_output.model_dump_json(indent=4, exclude_none=True)}\n\n"
+
+        input_obj: str = (
+            data.model_dump_json(indent=4, exclude_none=True)
+            if data is not None
+            else "Input: (None)"
+        )
+
         return f"""{self.instruction}
-    
-======= EXAMPLES: =======
-QUESTION:
-{self.examples[0][0].question}
 
-ANSWER: 
-{self.examples[0][0].answer}
-
-OUTPUT:
-{self.examples[0][1].model_dump_json(indent=4, exclude_none=True)}
+======= FEW SHOT EXAMPLES: =======
+{examples_str}
 ======= END OF EXAMPLES =======
 
 **IMPORTANT:
@@ -59,13 +75,10 @@ OUTPUT:
 4. DO NOT provide any further explanations or clarifications, just output the JSON.
 **
 
-Now perform the same for the following:
+Now decompose the answer into one or more fully understandable statements:
 
-QUESTION:
-{data.question}
-
-ANSWER:
-{data.answer}
+INPUT:
+{input_obj}
 
 JSON:
 """
