@@ -12,7 +12,10 @@ InputModel = TypeVar("InputModel", bound=BaseModel)
 
 class MyContextPrecisionPrompt(PydanticPrompt[QAC, Verification]):
     name: str = "custom_context_precision"
-    instruction: str = 'Given question, answer and context verify if the context was useful in arriving at the given answer.'
+    instruction: str = """Given question, answer and context verify if the context was remotely useful in arriving at the given answer.
+You should return a JSON object, containing a `verdict` key and a `reason` key.
+The `verdict` key should be 1 if the context was remotely useful in arriving at the answer, and 0 if it was not useful at all.
+Furthermore, a `reason` key should be provided that explains the verdict."""
     input_model = QAC
     output_model = Verification
     examples = [
@@ -41,56 +44,34 @@ class MyContextPrecisionPrompt(PydanticPrompt[QAC, Verification]):
     ]
 
     def to_string(self, data: Optional[InputModel] = None) -> str:
+        examples_str: str = ""
+        for i, (ex_input, ex_output) in enumerate(self.examples, 1):
+            examples_str += f"EXAMPLE {i}:\n"
+            examples_str += f"INPUT:\n{ex_input.model_dump_json(indent=4, exclude_none=True)}\n\n"
+            examples_str += f"OUTPUT:\n{ex_output.model_dump_json(indent=4, exclude_none=True)}\n\n"
+
+        input_obj: str = (
+            data.model_dump_json(indent=4, exclude_none=True)
+            if data is not None
+            else "Input: (None)\n"
+        )
+
         return f"""{self.instruction}
 
-======= EXAMPLES: =======
-Example 1:
-Question:
-{self.examples[0][0].question}
-
-Context:
-{self.examples[0][0].context}
-
-Answer:
-{self.examples[0][0].answer}
-
-Output:
-{self.examples[0][1].model_dump_json(indent=4, exclude_none=True)}
-
-Example 2:
-Question:
-{self.examples[1][0].question}
-
-Context:
-{self.examples[1][0].context}
-
-Answer:
-{self.examples[1][0].answer}
-
-Output:
-{self.examples[1][1].model_dump_json(indent=4, exclude_none=True)}
+======= FEW SHOT EXAMPLES: =======
+{examples_str}
 ======= END OF EXAMPLES =======
 
 **IMPORTANT:
 1. Make sure the output is always in JSON format.
-2. Each output object should contain a key "verdict"
-    - If the context was remotely useful in arriving at the answer, the value of the "verdict" key should be 1.
-    - If the context was not useful at all in arriving at the answer, the value of the "verdict" key should be 0.
-3. Each output object should contain additional key "reason" that provides a reason for the verdict.
-4. DO NOT provide any further explanations or clarifications, just output the JSON.
-5. DO NOT use prior knowledge, accept all the information at face value.
+2. DO NOT provide any further explanations or clarifications, just output the JSON.
+3. DO NOT use any prior knowledge, accept all the information from the context at face value.
 **
 
-Now perform the same for the following:
+Now determine if the context was useful in arriving at the answer relative to the question:
 
-Question:
-{data.question}
-
-Context:
-{data.context}
-
-Answer:
-{data.answer}
+INPUT:
+{input_obj}
 
 JSON: 
 """

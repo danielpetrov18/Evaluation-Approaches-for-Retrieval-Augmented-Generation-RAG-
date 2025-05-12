@@ -73,7 +73,7 @@ Final remarks and summary.
     ]
 
     def to_string(self, data: Optional[InputModel] = None) -> str:
-        examples_str = ""
+        examples_str: str = ""
         for i, (ex_input, ex_output) in enumerate(self.examples, 1):
             examples_str += f"EXAMPLE {i}:\n"
             examples_str += f"INPUT:\n{ex_input.model_dump_json(indent=4, exclude_none=True)}\n\n"
