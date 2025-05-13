@@ -159,8 +159,8 @@ if __name__ == "__main__":
 
         # Since the config is a snapshot not an actual instance of the config
         new_ingestion_config = st.session_state['ingestion_config']
-        new_ingestion_config['chunk_size'] = st.session_state['chunk_size']
-        new_ingestion_config['chunk_overlap'] = st.session_state['chunk_overlap']
+        new_ingestion_config['new_after_n_chars'] = st.session_state['chunk_size']
+        new_ingestion_config['overlap'] = st.session_state['overlap']
 
         st.session_state['ingestion_config'] = new_ingestion_config
 
