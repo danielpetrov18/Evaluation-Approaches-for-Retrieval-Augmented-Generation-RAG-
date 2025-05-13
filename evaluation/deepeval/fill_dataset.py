@@ -8,22 +8,23 @@ The generated dataset will be augmented and saved into a json file.
 import os
 import sys
 import json
+from typing import Final, List
+
 from dotenv import load_dotenv
 from r2r import R2RClient, R2RException
 
 # pylint: disable=C0301
 
-# Additionally, you can use another prompt.
-# If the selected prompt is not available, this prompt will be used.
-TEMPLATE = """You are a helpful RAG chatbot assistant. Your task is to provide an answer given a question and context.
+# You can customize the template however you like
+TEMPLATE: Final[str] = """You are a helpful RAG chatbot assistant. Your task is to provide an answer given a question and context.
 
-**IMPORANT:
+**IMPORTANT:
 1. DO NOT USE ANY KNOWLEDGE YOU HAVE BEEN TRAINED ON.
 2. BASE YOUR ANSWER ONLY ON THE CONTEXT GIVEN.
 3. IF THE CONTEXT IS NOT ENOUGH TO ANSWER THE QUESTION, SAY THAT YOU CANNOT ANSWER BASED ON THE AVAILABLE INFORMATION.
 4. DO NOT GUESS OR SPECULATE.
 5. DO NOT INCLUDE CITATIONS OR REFERENCES TO SPECIFIC LINES OR PARTS OF THE CONTEXT.
-6. ALWAYS KEEP YOUR ANSWER RELEVANT AND FOCUSED ON THE USER'S QUESTION.
+6. ALWAYS KEEP YOUR ANSWER RELEVANT AND FOCUSED ON THE USER'S QUESTION. DO NOT PROVIDE ANY ADDITIONAL INFORMATION EXCEPT THE ANSWER.
 7. DO NOT PROVIDE ANY ADDITIONAL INFORMATION EXCEPT THE ANSWER.
 **
 
@@ -35,6 +36,17 @@ TEMPLATE = """You are a helpful RAG chatbot assistant. Your task is to provide a
 
 ### ANSWER:
 """
+
+def extract_deepseek_response(full_response):
+    """
+    Extract the actual response from deepseek-r1 output by ignoring the <think>...</think> section.
+    """
+    if "</think>" not in full_response:
+        raise ValueError("Response from deepseek-r1 is not full!")
+
+    strings: List[str] = full_response.split("</think>")
+    answer_without_section: str = strings[-1].lstrip()
+    return answer_without_section
 
 if __name__ == "__main__":
     try:
@@ -53,16 +65,6 @@ if __name__ == "__main__":
     if client.system.health().results.message.lower() != "ok":
         print("R2R server is not running or cannot be reached.")
         sys.exit(1)
-
-    if len(sys.argv) > 1:
-        prompt_name = sys.argv[1]
-        try:
-            TEMPLATE = client.prompts.retrieve(prompt_name).results.template
-            print(f"Using template: {prompt_name}")
-        except R2RException:
-            print(f"Template '{prompt_name}' doesn't exist. Using default template.")
-    else:
-        print("No template name provided. Using default template.")
 
     rag_generation_config = {
         "model": f"ollama_chat/{os.getenv("CHAT_MODEL")}",
@@ -100,6 +102,11 @@ if __name__ == "__main__":
 
             actual_output = response.completion
             retrieval_context = [chunk.text for chunk in response.search_results.chunk_search_results]
+
+            # If deepseek-r1 is used regardless of parameters count
+            # remove the content between the <think> tags
+            if "deepseek-r1" in os.getenv("CHAT_MODEL"):
+                actual_output = extract_deepseek_response(actual_output)
 
             golden["actual_output"] = actual_output
             golden["retrieval_context"] = retrieval_context
