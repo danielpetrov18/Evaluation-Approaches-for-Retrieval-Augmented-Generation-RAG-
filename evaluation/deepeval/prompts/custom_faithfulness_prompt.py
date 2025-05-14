@@ -3,59 +3,137 @@
 # pylint: disable=C0301
 # pylint: disable=W0622
 
-from typing import List, Optional
+import json
+from typing import List, Optional, Final, Tuple, Literal
+
+from pydantic import BaseModel
 from deepeval.metrics.faithfulness import FaithfulnessTemplate
+
+class Claims(BaseModel):
+    claims: List[str]
+
+FEW_SHOT_EXAMPLES_CLAIMS: Final[List[Tuple[str, Claims]]] = [
+    (
+        "The Eiffel Tower is located in Paris and was completed in 1889. It stands approximately 300 meters tall.",
+        Claims(claims=[
+            "The Eiffel Tower is located in Paris.",
+            "The Eiffel Tower was completed in 1889.",
+            "The Eiffel Tower stands approximately 300 meters tall."
+        ])
+    ),
+    (
+        "",
+        Claims(claims=[])
+    ),
+]
+
+class Truths(BaseModel):
+    truths: List[str]
+
+FEW_SHOT_EXAMPLES_TRUTHS: Final[List[Tuple[str, Truths]]] = [
+    (
+        """Apple Inc. was founded in 1976 by Steve Jobs, Steve Wozniak, and Ronald Wayne.\n
+The company's first product was the Apple I computer, which was hand-built by Wozniak.\n
+Apple went public in 1980 and has since become one of the most valuable companies in the world.""",
+        Truths(
+            truths=[
+                "Apple Inc. was founded in 1976.",
+                "Apple Inc. was founded by Steve Jobs, Steve Wozniak, and Ronald Wayne.",
+                "Apple's first product was the Apple I computer.",
+                "The Apple I computer was hand-built by Steve Wozniak.",
+                "Apple went public in 1980.",
+                "Apple is one of the most valuable companies in the world."
+            ]
+        )
+    ),
+    (
+        "",
+        Truths(
+            truths=[]
+        )
+    )
+]
+
+class Verdict(BaseModel):
+    verdict: Literal["yes", "no", "idk"]
+    reason: Optional[str] = None
+
+class Verdicts(BaseModel):
+    verdicts: List[Verdict]
+
+FEW_SHOT_EXAMPLES_VERDICTS: Final[List[Tuple[List[str], str, Verdicts]]] = [
+    (
+        # CLAIMS
+        [
+            "The Eiffel Tower is located in Berlin.",
+            "The Eiffel Tower was completed in 1889.",
+            "The Eiffel Tower may have been a gift from the United States.",
+            "The Eiffel Tower stands approximately 250 meters tall."
+        ],
+        # RETRIEVAL CONTEXT
+        "The Eiffel Tower is located in Paris and was completed in 1889.\n\nIt stands approximately 300 meters tall.",
+        # EXPECTED VERDICTS
+        Verdicts(
+            verdicts=[
+                Verdict(verdict="no", reason="The claim states the Eiffel Tower is located in Berlin, but the context states it is located in Paris."),
+                Verdict(verdict="yes"),
+                Verdict(verdict="idk"),
+                Verdict(verdict="no", reason="The claim states the Eiffel Tower is 250 meters tall, but the context states it is approximately 300 meters tall.")
+            ]
+        )
+    ),
+]
 
 class MyFaithfulnessTemplate(FaithfulnessTemplate):
 
     @staticmethod
     def generate_claims(actual_output: str) -> str:
-        return f"""Your task is to extract FACTUAL and UNDISPUTED truths from a provided text. The truths that you are to extract musn't be taken out of context.
+        examples_str: str = ""
+        for i, (example_input, example_output) in enumerate(FEW_SHOT_EXAMPLES_CLAIMS, 1):
+            examples_str += f"EXAMPLE {i}:\n"
+            examples_str += f"INPUT TEXT:\n\"{example_input}\"\n\n"
+            examples_str += f"JSON:\n{example_output.model_dump_json(indent=4)}\n\n"
 
-EXAMPLE INPUT:
-"Albert Einstein won the Nobel Prize in Physics in 1968 for his discovery of the photoelectric effect."
+        return f"""Your task is to extract FACTUAL and UNDISPUTED truths from a provided text.
+The truths that you are to extract musn't be taken out of context and should not contradict any of the data in the provided text.
+You should return a JSON object with a "claims" key containing an array of strings.
 
-EXAMPLE OUTPUT:
-{{
-    "claims": [
-        "Einstein won the Nobel Prize in Physics in 1968.",
-        "Einstein discovered the photoelectric effect."
-    ]
-}}
-===== END OF EXAMPLE ======
+====== FEW SHOT EXAMPLES ======
+
+{examples_str.strip()}
+
+====== END OF EXAMPLES ======
 
 **
 IMPORTANT:
 - Please make sure to only return in JSON format, with the "claims" key as a list of strings.
 - Accept the text at face value, DO NOT use any prior knowledge.
 - Do not provide any further explanations or clarifications.
-- Only include claims that are factual, BUT IT DOESN'T MATTER IF THEY ARE FACTUALLY CORRECT.
-- The claims you extract should include the full context it was presented in, NOT cherry picked facts.
 **
 
 INPUT TEXT:
-{actual_output}
+"{actual_output}"
 
-JSON OUTPUT:
+JSON:
 """
 
     @staticmethod
     def generate_truths(retrieval_context: str, extraction_limit: Optional[int] = None) -> str:
         limit_text = "all factual truths" if extraction_limit is None else f"the {extraction_limit} most important factual truths"
 
+        examples_str: str = ""
+        for i, (example_input, example_output) in enumerate(FEW_SHOT_EXAMPLES_TRUTHS, 1):
+            examples_str += f"EXAMPLE {i}:\n"
+            examples_str += f"INPUT TEXT:\n\"{example_input}\"\n\n"
+            examples_str += f"JSON:\n{example_output.model_dump_json(indent=4)}\n\n"
+
         return f"""Your task is to extract {limit_text} from the text. They all must be COHERENT and inferred from the provided text.
 
-EXAMPLE INPUT:
-"Company X offers a 30-day refund policy for all customers."
+====== FEW SHOT EXAMPLES ======
 
-EXAMPLE JSON:
-{{
-    "truths": [
-        "Company X has a 30-day refund policy.",
-        "The refund policy applies to all customers."
-    ]
-}}
-===== END OF EXAMPLE ======
+{examples_str.strip()}
+
+====== END OF EXAMPLES ======
 
 **
 IMPORTANT:
@@ -66,53 +144,40 @@ IMPORTANT:
 - Remember to extract {limit_text} that can inferred from the provided text.
 **
 
-TEXT:
-{retrieval_context}
+Now extract {limit_text} from the text.
 
-JSON OUTPUT:
+INPUT TEXT:
+"{retrieval_context}"
+
+JSON:
 """
 
     @staticmethod
     def generate_verdicts(claims: List[str], retrieval_context: str) -> str:
-        return f"""Your task is to determine if EACH claim contradicts a particular fact in the retrieval context.
-Claims need to be classified as either 'yes', 'no', or 'idk', depending on whether the claim contradicts any fact in the retrieval context.
+        examples_str: str = ""
+        for i, (example_claims, example_context, example_verdicts) in enumerate(FEW_SHOT_EXAMPLES_VERDICTS, 1):
+            examples_str += f"EXAMPLE {i}:\n"
+            examples_str += f"CLAIMS:\n{example_claims}\n\n"
+            examples_str += f"CONTEXT:\n\"{example_context}\"\n\n"
+            examples_str += f"JSON:\n{MyFaithfulnessTemplate._clean_verdict_json(example_verdicts)}\n\n"
+
+        return f"""Your task is to determine if EACH claim is factually consistent with the context.
+Factually consistent claims are those that do not explicitly contradict the context.
+Return a JSON object with a `verdicts` key containing an array of objects.
+Claims need to be classified as either 'yes', 'no', or 'idk', depending on whether the claim is consistent with facts from the retrieval context.
+If a claim contradicts the context, it should be classified as 'no'.
+If a claim doesn't contradict the context, it should be classified as 'yes'.
+If the claim cannot be determined, it should be classified as 'idk'.
 If the answer is no, a `reason` is to be provided, otherwise NO `reason` is to be provided.
 
-EXAMPLE:
-Example retrieval contexts: "Einstein won the Nobel Prize for his discovery of the photoelectric effect. Einstein won the Nobel Prize in 1968. Einstein is a German Scientist."
-Example claims: ["Barack Obama is a caucasian male.", "Zurich is a city in London", "Einstein won the Nobel Prize for the discovery of the photoelectric effect which may have contributed to his fame.", "Einstein won the Nobel Prize in 1969 for his discovery of the photoelectric effect.", "Einstein was a Germen chef."]
+====== FEW SHOT EXAMPLES ======
 
-Example OUTPUT:
-{{
-    "verdicts": [
-        {{
-            "verdict": "idk"
-        }},
-        {{
-            "verdict": "idk"
-        }},
-        {{
-            "verdict": "yes"
-        }},
-        {{
-            "verdict": "no",
-            "reason": "The actual output claims Einstein won the Nobel Prize in 1969, which is untrue as the retrieval context states it is 1968 instead."
-        }},
-        {{
-            "verdict": "no",
-            "reason": "The actual output claims Einstein is a Germen chef, which is not correct as the retrieval context states he was a German scientist instead."
-        }},
-    ]
-}}
-===== END OF EXAMPLE ======
+{examples_str.strip()}
+
+====== END OF EXAMPLES ======
 
 **IMPORTANT:
-- Return a JSON object with a "verdicts" key containing an array of objects
-- Each verdict must have a "verdict" field
-    - "yes" if the claim is supported by the context
-    - "no" if the claim is directly contradicted by the context (include reason)
-    - "idk" if it cannot be determined
-- If the verdict is "no", include a "reason" field
+- Return a JSON object with a `verdicts` key containing an array of objects
 - The number of verdict objects MUST EQUAL the number of claims.
 - YOU SHOULD NEVER USE YOUR PRIOR KNOWLEDGE IN YOUR JUDGEMENT.
 - Claims made using vague, suggestive, speculative language such as 'may have' does NOT count as a contradiction.
@@ -121,9 +186,24 @@ Example OUTPUT:
 
 Please classify the claims as 'yes', 'no', or 'idk':
 
-CONTEXT: {retrieval_context}
+CONTEXT:
+"{retrieval_context}"
 
-CLAIMS: {claims}
+CLAIMS:
+{claims}
 
-JSON OUTPUT:
+JSON:
 """
+
+    @staticmethod
+    def _clean_verdict_json(verdicts_model: Verdicts) -> str:
+        """Custom JSON serialization that excludes null reason fields"""
+        verdicts_dict = {"verdicts": []}
+
+        for v in verdicts_model.verdicts:
+            verdict_dict = {"verdict": v.verdict}
+            if v.reason is not None:
+                verdict_dict["reason"] = v.reason
+            verdicts_dict["verdicts"].append(verdict_dict)
+
+        return json.dumps(verdicts_dict, indent=4)
