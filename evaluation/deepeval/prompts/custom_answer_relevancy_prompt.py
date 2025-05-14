@@ -3,101 +3,158 @@
 # pylint: disable=C0301
 # pylint: disable=W0622
 
+import json
+
+from typing import List, Final, Tuple, Union, Literal
+
+from pydantic import BaseModel
 from deepeval.metrics.answer_relevancy import AnswerRelevancyTemplate
+
+class Statements(BaseModel):
+    statements: List[str]
+
+FEW_SHOT_EXAMPLES_STATEMENTS: Final[List[Tuple[str, Statements]]] = [
+    (
+        "Our laptop has a Retina display and 12-hour battery life.",
+        Statements(
+            statements=[
+                "The laptop has a Retina display.",
+                "The laptop has a 12-hour battery life."
+            ]
+        )
+    ),
+    (
+        "I've been using this blender for a month now — it crushes ice in seconds and the cleaning function is a lifesaver!",
+        Statements(
+            statements=[
+                "The blender can crush ice in seconds.",
+                "The blender has a cleaning function.",
+                "The blender has been used for a month."
+            ]
+        )
+    ),
+    (
+        "",
+        Statements(
+            statements=[]
+        )
+    )
+]
+
+class Verdict(BaseModel):
+    verdict: Literal["yes", "idk", "no"]
+    reason: Union[str, None] = None # Reason is only required if the verdict is 'no'
+
+class Verdicts(BaseModel):
+    verdicts: List[Verdict]
+
+FEW_SHOT_EXAMPLES_VERDICTS: Final[List[Tuple[str, str, Verdicts]]] = [
+    # INPUT, STATEMENTS, VERDICTS
+    (
+        "What should I consider when buying a used car?",
+        """[
+    "Check the vehicle history report for accidents or damage.",
+    "Have a mechanic inspect the car before purchasing.",
+    "Consider the car's mileage and age.",
+    "The first car was invented in 1886 by Karl Benz.",
+    "Negotiate the price based on market value and condition.",
+    "Car loans typically have interest rates between 3-10% depending on credit score."
+]""",
+        Verdicts(
+            verdicts=[
+                Verdict(verdict="yes"),
+                Verdict(verdict="yes"),
+                Verdict(verdict="yes"),
+                Verdict(verdict="no", reason="Historical information about the first car is not relevant to buying a used car today."),
+                Verdict(verdict="yes"),
+                Verdict(verdict="idk")
+            ]
+        )
+    )
+]
 
 class MyAnswerRelevancyTemplate(AnswerRelevancyTemplate):
 
     @staticmethod
     def generate_statements(actual_output: str):
-        return f"""Your task is to extract statements from a provided text.
+        examples_str: str = ""
+        for i, (example_input, example_output) in enumerate(FEW_SHOT_EXAMPLES_STATEMENTS, 1):
+            examples_str += f"EXAMPLE {i}:\n"
+            examples_str += f"TEXT:\n\"{example_input}\"\n\n"
+            examples_str += f"JSON:\n{example_output.model_dump_json(indent=4)}\n\n"
 
-Example text:
-"Our laptop has a Retina display and 12-hour battery."
+        return f"""You are a helpful assistant that extracts statements from a provided text.
+Ambiguous statements and single words can also be considered as statements.
+Try not to use pronouns in the statements, and instead use the noun or name that is being referred to.
+All statements should be inferred from the text and should be presented in a JSON format, with a key "statements" mapping to a list of strings.
 
-Example output:
-{{
-    "statements": [
-        "The laptop has a Retina display.",
-        "The laptop has a 12-hour battery."
-    ]
-}}
-===== END OF EXAMPLE ======
+====== FEW SHOT EXAMPLES ======
+
+{examples_str.strip()}
+
+====== END OF EXAMPLES ======
 
 **IMPORTANT:
-- Ambiguous statements and single words can also be considered as statements
 - Return ONLY a JSON output, with the "statements" key mapping to an array of strings
 - Do not provide any further explanations or clarifications, just the JSON output
 **
 
 Extract the statements from the following text:
-{actual_output}
+"{actual_output}"
 
-JSON output:
+JSON:
 """
 
     @staticmethod
     def generate_verdicts(input: str, statements: str) -> str:
-        return f"""Your task is to determine for each statement, whether or not it is relevant to address the input. Please generate a list of JSON with two keys: `verdict` and `reason`.
+        examples_str: str = ""
+        for i, (example_input, example_statements, example_verdicts) in enumerate(FEW_SHOT_EXAMPLES_VERDICTS, 1):
+            examples_str += f"EXAMPLE {i}:\n"
+            examples_str += f"INPUT:\n\"{example_input}\"\n\n"
+            examples_str += f"STATEMENTS:\n{example_statements}\n\n"
+            examples_str += f"JSON:\n{MyAnswerRelevancyTemplate._clean_verdict_json(example_verdicts)}\n\n"
 
-Example input: What features does the new laptop have?
+        return f"""Your task is to determine for each statement, whether or not it is relevant to address the input.
+Please generate a list of JSON with a key `verdicts` that maps to an array of verdicts.
+Each of those verdicts should have two keys: `verdict` and `reason`.
+The `verdict` key should STRICTLY be either a 'yes', 'idk' or 'no'.
+- 'yes' if the statement is relevant to addressing the original input
+- 'no' if the statement is irrelevant
+- 'idk' if it is ambiguous (eg., not directly relevant but could be used as a supporting point to address the input).
+The `reason` is the reason for the verdict and should be provided ONLY if the answer is 'no'.
 
-Example statements:
-[
-    "The new laptop model has a high-resolution Retina display.",
-    "It includes a fast-charging battery with up to 12 hours of usage.",
-    "Security features include fingerprint authentication and an encrypted SSD.",
-    "Every purchase comes with a one-year warranty.",
-    "24/7 customer support is included.",
-    "Pineapples taste great on pizza.",
-    "The laptop might be useful for professionals."
-]
+====== FEW SHOT EXAMPLES ======
 
-Correct JSON response:
-{{
-    "verdicts": [
-        {{
-            "verdict": "yes"
-        }},
-        {{
-            "verdict": "yes"
-        }},
-        {{
-            "verdict": "yes"
-        }},
-        {{
-            "verdict": "no",
-            "reason": "A one-year warranty is a purchase benefit, not a feature of the laptop itself."
-        }},
-        {{
-            "verdict": "no",
-            "reason": "Customer support is a service, not a feature of the laptop."
-        }},
-        {{
-            "verdict": "no",
-            "reason": "The statement about pineapples on pizza is completely irrelevant to the input."
-        }},
-        {{
-            "verdict": "idk"
-        }}
-    ]
-}}
-===== END OF EXAMPLE ======
+{examples_str.strip()}
+
+====== END OF EXAMPLES ======
 
 **IMPORTANT:
-* The 'verdict' key should STRICTLY be either a 'yes', 'idk' or 'no'.
-    - Answer 'yes' if the statement is relevant to addressing the original input
-    - Answer 'no' if the statement is irrelevant
-    - Answer 'idk' if it is ambiguous (eg., not directly relevant but could be used as a supporting point to address the input).
-* The 'reason' is the justification for the verdict. Provide one ONLY if the answer is 'no'.
-* The number of verdict objects MUST EQUAL the number of statements.
-* Do not provide any further explanations or clarifications, just the JSON output
+- Return ONLY a JSON output, with the "verdicts" key mapping to an array of strings
+- The number of verdict objects MUST EQUAL the number of statements.
+- Do not provide any further explanations or clarifications, just the JSON output
 **
 
-Generate verdicts for the following input and list of statements:
+Evaluate the relevancy of each statement for answering this user question:
 
-Input: {input}
+QUESTION:
+"{input}"
 
-Statements: {statements}
+STATEMENTS:
+{statements}
 
 JSON:
 """
+
+    @staticmethod
+    def _clean_verdict_json(verdicts_model: Verdicts) -> str:
+        """Custom JSON serialization that excludes null reason fields"""
+        verdicts_dict = {"verdicts": []}
+
+        for v in verdicts_model.verdicts:
+            verdict_dict = {"verdict": v.verdict}
+            if v.reason is not None:
+                verdict_dict["reason"] = v.reason
+            verdicts_dict["verdicts"].append(verdict_dict)
+
+        return json.dumps(verdicts_dict, indent=4)
