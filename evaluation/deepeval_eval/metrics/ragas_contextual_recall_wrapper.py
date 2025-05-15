@@ -22,14 +22,14 @@ from ragas.metrics._context_recall import (
     ContextRecallClassificationPrompt,
     LLMContextRecall,
 )
-from ragas.llms import LangchainLLMWrapper
+from ragas.llms import BaseRagasLLM
 from ragas.evaluation import EvaluationResult
 
 from deepeval.metrics import BaseMetric
 from deepeval.telemetry import capture_metric_type
 from deepeval.metrics.utils import check_llm_test_case_params
-from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 from deepeval.metrics.ragas import format_ragas_metric_name, import_ragas
+from deepeval.test_case import LLMTestCase, LLMTestCaseParams, ConversationalTestCase
 
 RAGAS_METRIC_NAME: Final[str] = "context_recall"
 
@@ -47,7 +47,7 @@ class CustomRAGASContextualRecallMetric(BaseMetric):
 
     def __init__(
         self,
-        ragas_llm: LangchainLLMWrapper,
+        model: BaseRagasLLM,
         run_config: Optional[RunConfig] = None,
         threshold: float = 0.3,
         context_recall_prompt: Type[
@@ -60,7 +60,7 @@ class CustomRAGASContextualRecallMetric(BaseMetric):
         # Verify if ragas is installed and is atleast version `0.2.1`
         import_ragas()
 
-        self.model = ragas_llm
+        self.model = model
         self.run_config = run_config
         self.threshold = threshold
         self.context_recall_prompt = context_recall_prompt
@@ -76,6 +76,9 @@ class CustomRAGASContextualRecallMetric(BaseMetric):
         return self.measure(test_case)
 
     def measure(self, test_case: LLMTestCase):
+        if isinstance(test_case, ConversationalTestCase):
+            test_case = test_case.turns[-1]
+
         check_llm_test_case_params(
             test_case, self._required_params, self
         )
