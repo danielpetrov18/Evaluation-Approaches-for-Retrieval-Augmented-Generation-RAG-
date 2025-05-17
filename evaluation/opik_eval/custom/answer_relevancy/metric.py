@@ -13,7 +13,7 @@ from opik.evaluation.models import base_model, models_factory
 from opik.evaluation.metrics.llm_judges.answer_relevance import parser
 from opik.evaluation.metrics.llm_judges.answer_relevance.metric import AnswerRelevanceResponseFormat
 
-from template import FewShotExampleAnswerRelevance, generate_query
+from .template import FewShotExampleAnswerRelevance, generate_query
 
 class AnswerRelevance(BaseMetric):
     """

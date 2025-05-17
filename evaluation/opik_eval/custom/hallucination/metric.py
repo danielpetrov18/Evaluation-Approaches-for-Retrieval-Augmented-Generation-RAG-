@@ -13,7 +13,7 @@ from opik.evaluation.models import base_model, models_factory
 from opik.evaluation.metrics.llm_judges.hallucination import parser
 from opik.evaluation.metrics.llm_judges.hallucination.metric import HallucinationResponseFormat
 
-from template import FewShotExampleHallucination, generate_query
+from .template import FewShotExampleHallucination, generate_query
 
 class Hallucination(BaseMetric):
     """
