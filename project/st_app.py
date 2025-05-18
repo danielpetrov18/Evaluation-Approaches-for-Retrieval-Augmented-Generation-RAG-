@@ -6,7 +6,8 @@ The caching mechanism provided by `streamlit` is being used for efficiency.
 """
 
 import os
-import typing as t
+from typing import List
+
 from r2r import R2RClient
 from ollama import Client, Options
 import streamlit as st
@@ -56,7 +57,7 @@ def ollama_options():
         format="json", # This should be json to enforce proper output if required
     )
 
-def get_pages() -> t.List[StreamlitPage]:
+def get_pages() -> List[StreamlitPage]:
     """Defines main pages of the application."""
     return [
         st.Page(
@@ -99,7 +100,7 @@ def get_pages() -> t.List[StreamlitPage]:
     ]
 
 if __name__ == "__main__":
-    pages: t.List[StreamlitPage] = get_pages()
+    pages: List[StreamlitPage] = get_pages()
 
     # Register pages. Creates the navigation menu for the application.
     # This page is an entrypoint and as such serves as a page router.
@@ -125,6 +126,12 @@ if __name__ == "__main__":
     if "chunk_overlap" not in st.session_state:
         st.session_state['chunk_overlap'] = int(os.getenv("CHUNK_OVERLAP"))
 
+    if "chat_model" not in st.session_state:
+        st.session_state["chat_model"] = os.getenv("CHAT_MODEL")
+
+    if "embedding_model" not in st.session_state:
+        st.session_state["embedding_model"] = os.getenv("EMBEDDING_MODEL")
+
     # ====== TWEAK VALUES ABOVE TO ACHIEVE BEST PERFORMANCE ======
 
     if "exports_dir" not in st.session_state:
@@ -138,12 +145,6 @@ if __name__ == "__main__":
 
     if "parent_id" not in st.session_state:
         st.session_state["parent_id"] = None
-
-    if "chat_model" not in st.session_state:
-        st.session_state["chat_model"] = os.getenv("CHAT_MODEL")
-
-    if "embedding_model" not in st.session_state:
-        st.session_state["embedding_model"] = os.getenv("EMBEDDING_MODEL")
 
     if "context_window_size" not in st.session_state:
         st.session_state["context_window_size"] = int(os.getenv("LLM_CONTEXT_WINDOW_TOKENS"))
@@ -159,8 +160,9 @@ if __name__ == "__main__":
 
         # Since the config is a snapshot not an actual instance of the config
         new_ingestion_config = st.session_state['ingestion_config']
+        # Look at: /core/providers/ingestion/unstructured (assuming you have "r2r[core]==3.5.11" installed)
         new_ingestion_config['new_after_n_chars'] = st.session_state['chunk_size']
-        new_ingestion_config['overlap'] = st.session_state['overlap']
+        new_ingestion_config['overlap'] = st.session_state['chunk_overlap']
 
         st.session_state['ingestion_config'] = new_ingestion_config
 

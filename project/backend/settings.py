@@ -2,14 +2,18 @@
 # pylint: disable=W0718 -> disable too-broad of an exception
 
 import datetime
+from typing import Dict, Any
+
 import streamlit as st
 from streamlit.errors import Error
 from r2r import R2RException, R2RClient
 
+from shared.api.models.management.responses import ServerStats
+
 def check_health(client: R2RClient):
     """Check health. Should return OK."""
     try:
-        message = client.system.health().results.message
+        message: str = client.system.health().results.message
         st.success(f"Service status: {message}")
     except R2RException as r2re:
         st.error(f"Error checking health: {r2re.message}")
@@ -22,7 +26,7 @@ def check_status(client: R2RClient):
     """Check status. Gives information like uptime and memory usage."""
     try:
         with st.spinner(text="Fetching system status...", show_time=True):
-            status = client.system.status().results
+            status: ServerStats = client.system.status().results
 
             # Calculate deltas to represent changes
             if 'previous_cpu_usage' not in st.session_state:
@@ -74,7 +78,7 @@ def check_settings(client: R2RClient):
     If not specified, default values are used implicitly by R2R.
     """
     try:
-        settings = client.system.settings().results.config
+        settings: Dict[str, Any] = client.system.settings().results.config
         if settings:
             st.write("**R2R Backend Settings:**")
 

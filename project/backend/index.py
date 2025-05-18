@@ -5,7 +5,7 @@
 import tempfile
 import dataclasses
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, Union, List, Any
 
 import yaml
 from r2r import R2RException, R2RClient
@@ -13,6 +13,8 @@ from r2r import R2RException, R2RClient
 import streamlit as st
 from streamlit.errors import Error
 from streamlit.runtime.uploaded_file_manager import UploadedFile
+
+from shared.api.models.ingestion.responses import VectorIndexResponse
 
 @dataclasses.dataclass
 class Index:
@@ -25,7 +27,7 @@ class Index:
 def list_indices(client: R2RClient):
     """Fetch all available indices"""
     try:
-        indices = client.indices.list().results.indices
+        indices: List[VectorIndexResponse] = client.indices.list().results.indices
         if indices:
             for obj in indices:
                 with st.expander(
@@ -52,16 +54,16 @@ def create_idx(client: R2RClient, file: UploadedFile):
     temp_file.flush()
 
     try:
-        index = _load_index_config_from_yaml(temp_file.name)
+        index: Index = _load_index_config_from_yaml(temp_file.name)
 
-        idx_config = _construct_index_config(
+        idx_config: Dict[str, Union[str, bool]] = _construct_index_config(
             index_method=index.method,
             index_name=index.name,
             index_measure=index.measure,
             index_arguments=index.arguments
         )
 
-        idx_creation_resp = client.indices.create(
+        idx_creation_resp: str = client.indices.create(
             config=idx_config,
             run_with_orchestration=True
         ).results.message
@@ -80,7 +82,7 @@ def create_idx(client: R2RClient, file: UploadedFile):
 def delete_idx(client: R2RClient, name: str):
     """Delete index if available."""
     try:
-        result = client.indices.delete(
+        result: str = client.indices.delete(
             index_name=name,
             table_name="chunks"
         ).results.message
@@ -107,24 +109,24 @@ def _load_index_config_from_yaml(filepath: Union[str,Path]) -> Index:
         Index object
     """
     with open(file=filepath, mode='r', encoding='utf-8') as f:
-        data = yaml.safe_load(f)
+        data: Any = yaml.safe_load(f)
 
     if not isinstance(data, Dict) or len(data.keys()) != 1:
         raise ValueError(
             "YAML file must contain exactly one top-level key representing the index name!"
         )
 
-    idx_name = list(data.keys())[0]
-    config_data = data[idx_name]
+    idx_name: str = list(data.keys())[0]
+    config_data: Any = data[idx_name]
 
     if 'index_method' not in config_data or 'index_measure' not in config_data:
         raise ValueError(
             "The top-level key must contain 'index_method' and 'index_measure' fields."
         )
 
-    idx_method = config_data['index_method']
-    idx_measure = config_data['index_measure']
-    idx_args = config_data.get('index_arguments', {})
+    idx_method: str = config_data['index_method']
+    idx_measure: str = config_data['index_measure']
+    idx_args: Dict = config_data.get('index_arguments', {})
 
     if not idx_name or not idx_method or not idx_measure:
         raise ValueError("YAML file must contain index_name, index_method, and index_measure.")
@@ -147,7 +149,7 @@ def _construct_index_config(
     if index_measure not in ('ip_distance', 'l2_distance', 'cosine_distance'):
         raise ValueError('Only ip_distance, l2_distance and cosine_distance are supported!')
 
-    config = {
+    config: Dict[str, Union[str, bool]] = {
         # According to the documentation it should be vectors. However, it doesn't work.
         'table_name': 'chunks',
         'index_method': index_method,
@@ -159,4 +161,5 @@ def _construct_index_config(
         'index_column': 'vec', 
         'concurrently': True
     }
+
     return config

@@ -1,9 +1,3 @@
-[agent]
-tools = ["local_search"]
-
-  [agent.generation_config]
-  model = "ollama/llama3.1"
-
 [logging]
 level="DEBUG"
 
@@ -13,22 +7,19 @@ default_max_documents_per_user = 1_000
 default_max_chunks_per_user = 100_000
 default_max_upload_size = 10_000_000 # 10 MB
 
-fast_llm = "ollama_chat/llama3.1"    # LLM used for internal operations, like deriving conversation names
-quality_llm = "ollama_chat/llama3.1" # LLM used for user-facing output, like RAG replies
-
-# Reasoning model, used for `research` agent
-reasoning_llm = "ollama_chat/llama3.1"
-# Planning model, used for `research` agent
-planning_llm = "ollama_chat/llama3.1"
+fast_llm = "ollama_chat/llama3.1:8b"    # LLM used for internal operations, like deriving conversation names
+quality_llm = "ollama_chat/llama3.1:8b" # LLM used for user-facing output, like RAG replies
 
 [completion]
 provider = "litellm"
-concurrent_request_limit = 1
+# Make sure you check out your providers concurrency limits
+# I believe that this value and the `OLLAMA_NUM_PARALLEL` must be the same
+concurrent_request_limit = 4
 
   [completion.generation_config]
   # https://docs.litellm.ai/docs/providers/ollama#using-ollama-apichat
-  model = "ollama_chat/llama3.1"
-  temperature = 0.1
+  model = "ollama_chat/llama3.1:8b"
+  temperature = 0.0
   top_p = 1
   max_tokens_to_sample = 512
   stream = false
@@ -65,7 +56,7 @@ chunking_strategy = "by_title"
 new_after_n_chars = 512 # chunk size
 max_characters = 1_024
 combine_under_n_chars = 128
-overlap = 0
+overlap = 0 # chunk overlap
 chunks_for_document_summary = 16
-document_summary_model = "ollama_chat/llama3.1"
+document_summary_model = "ollama_chat/llama3.1:8b"
 automatic_extraction = false

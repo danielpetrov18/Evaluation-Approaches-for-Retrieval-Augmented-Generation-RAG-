@@ -1,4 +1,5 @@
 # pylint: disable=C0114
+# pylint: disable=C0301
 # pylint: disable=E0601
 # pylint: disable=R0914
 # pylint: disable=W0612
@@ -9,12 +10,15 @@ import os
 import json
 import datetime
 from pathlib import Path
-from typing import List
+from typing import List, Dict, Any
+
 import requests
 import pandas as pd
 import streamlit as st
 from streamlit.errors import Error
 from r2r import R2RClient, R2RException
+
+from shared.api.models.management.responses import ConversationResponse, MessageResponse
 
 def list_conversations(
     client: R2RClient,
@@ -24,7 +28,7 @@ def list_conversations(
 ):
     """List conversations."""
     try:
-        conversations = client.conversations.list(ids, offset, limit).results
+        conversations: List[ConversationResponse] = client.conversations.list(ids, offset, limit).results
 
         if conversations:
             st.write(f"Showing conversations {offset+1} to {offset+len(conversations)}")
@@ -74,7 +78,7 @@ def delete_conversation(client: R2RClient, conversation_id: str):
 def fetch_messages(client: R2RClient, conversation_id: str, display_metadata: bool):
     """Fetch all messages related to a particular conversation."""
     try:
-        messages = client.conversations.retrieve(conversation_id).results
+        messages: List[MessageResponse] = client.conversations.retrieve(conversation_id).results
 
         if not messages:
             st.warning(f"No messages found for conversation: {conversation_id}")
@@ -116,13 +120,13 @@ def export_conversations(conversations_ids: str, out: str):
         #     include_header = True
         # )
 
-        headers = {
+        headers: Dict[str, str] = {
             'Authorization': f'Bearer {st.session_state['bearer_token']}',
             'Content-Type': 'application/json',
             'Accept': 'text/csv'
         }
 
-        payload = {
+        payload: Dict[str, Any] = {
             'include_header': 'true',
             'columns': [
                 'id',
@@ -131,7 +135,7 @@ def export_conversations(conversations_ids: str, out: str):
             ]
         }
 
-        response = requests.post(
+        response: requests.Response = requests.post(
             url='http://r2r:7272/v3/conversations/export',
             headers=headers,
             json=payload,
@@ -145,7 +149,7 @@ def export_conversations(conversations_ids: str, out: str):
         if df.shape[0] == 0: # If the dataframe is empty (no rows)
             raise R2RException('No conversations found', 404)
 
-        filters = {}
+        filters: Dict[str, Any] = {}
         if conversations_ids:
             filters['id'] = [filter_id.strip() for filter_id in conversations_ids.split('\n')]
 
@@ -153,9 +157,9 @@ def export_conversations(conversations_ids: str, out: str):
         if filters:
             _filter_df(df, filters)
 
-        curr_path = os.getcwd()
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        out = Path(curr_path) / st.session_state['exports_dir'] / f'{out}_{timestamp}.csv'
+        curr_path: str = os.getcwd()
+        timestamp: str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        out: str = Path(curr_path) / st.session_state['exports_dir'] / f'{out}_{timestamp}.csv'
 
         df.to_csv(out, index=False)
 
@@ -170,11 +174,11 @@ def export_conversations(conversations_ids: str, out: str):
 def export_messages(out: str, filters: dict = None):
     """Export messages to a CSV file."""
     try:
-        payload = {
+        payload: Dict[str, str] = {
             "include_header": "true"
         }
 
-        response = requests.post(
+        response: requests.Response = requests.post(
             url='http://r2r:7272/v3/conversations/export_messages',
             headers={
                 'Authorization': f'Bearer {st.session_state['bearer_token']}',
@@ -218,9 +222,9 @@ def export_messages(out: str, filters: dict = None):
             if filters.get("conversation_id"):
                 df = df.loc[df['conversation_id'].isin(filters["conversation_id"])]
 
-        curr_path = os.getcwd()
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        out = Path(curr_path) / st.session_state['exports_dir'] / f'{out}_{timestamp}.csv'
+        curr_path: str = os.getcwd()
+        timestamp: str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        out: str = Path(curr_path) / st.session_state['exports_dir'] / f'{out}_{timestamp}.csv'
 
         df.to_csv(out, index=False)
 

@@ -12,7 +12,7 @@ import time
 import asyncio
 import tempfile
 from pathlib import Path
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Any
 
 import json
 import requests
@@ -23,6 +23,10 @@ from r2r import R2RException, R2RClient
 import streamlit as st
 from streamlit.errors import Error
 from streamlit.runtime.uploaded_file_manager import UploadedFile
+
+from shared.abstractions.document import UUID, DocumentResponse
+from shared.api.models.management.responses import ChunkResponse
+from shared.api.models.ingestion.responses import IngestionResponse
 
 from langchain.docstore.document import Document
 from langchain_community.document_loaders import AsyncHtmlLoader
@@ -72,7 +76,7 @@ def ollama_tools() -> List[Dict[str, Union[str, Dict]]]:
 def delete_all_documents(client: R2RClient):
     """Delete all present documents"""
     try:
-        doc_ids = [doc.id for doc in client.documents.list().results]
+        doc_ids: List[UUID] = [doc.id for doc in client.documents.list().results]
         for doc_id in doc_ids:
             client.documents.delete(doc_id)
         st.success("Successfully deleted all documents")
@@ -91,7 +95,7 @@ def fetch_documents(
 ):
     """Retrieve documents. For each document there's a delete button."""
     try:
-        selected_files = client.documents.list(ids, offset, limit).results
+        selected_files: List[DocumentResponse] = client.documents.list(ids, offset, limit).results
         if selected_files:
             for i, doc in enumerate(selected_files):
                 with st.expander(label=f"{i + 1}: {doc.title}", expanded=False):
@@ -131,7 +135,7 @@ def delete_document(client: R2RClient, document_id: str):
 def fetch_document_chunks(client: R2RClient, document_id: str, offset: int, limit: int):
     """Fetches all chunks related to a document"""
     try:
-        chunks = client.documents.list_chunks(
+        chunks: List[ChunkResponse] = client.documents.list_chunks(
             id=document_id,
             include_vectors=False,
             offset=offset,
@@ -163,7 +167,7 @@ def ingest_file(client: R2RClient, file: UploadedFile, metadata: dict):
     Finally, embeddings are generated and stored in the database with additional metadata.
     """
 
-    temp_filepath = os.path.join(tempfile.gettempdir(), file.name) # Do it outside because of the finally clause
+    temp_filepath: str = os.path.join(tempfile.gettempdir(), file.name) # Do it outside because of the finally clause
     try:
         # Make sure file doesn't already exist.
         for doc in client.documents.list().results:
@@ -182,9 +186,9 @@ def ingest_file(client: R2RClient, file: UploadedFile, metadata: dict):
 
         with st.spinner(text="Ingesting document...", show_time=True):
             if isinstance(metadata, str):
-                metadata = json.loads(metadata)
+                metadata: Any = json.loads(metadata)
 
-            ingest_resp = client.documents.create(
+            ingest_resp: IngestionResponse = client.documents.create(
                 file_path=temp_filepath,
                 metadata=metadata,
                 ingestion_config=st.session_state['ingestion_config'],
@@ -213,18 +217,18 @@ def perform_webscrape(client: R2RClient, file: UploadedFile):
         state="running"
     ):
         try:
-            urls = _extract_urls(file)
+            urls: List[str] = _extract_urls(file)
             if len(urls) == 0:
                 st.error("No valid URLs found in file")
                 return
 
             st.write('Extracted URLs...')
 
-            documents = _fetch_data_from_urls(urls)
+            documents: List[Document] = _fetch_data_from_urls(urls)
             st.write('Fetched data...')
 
             # Make sure there's no document with that specific source
-            sources = [
+            sources: List[DocumentResponse] = [
                 doc.metadata.get('source', 'unknown')
                 for doc in client.documents.list().results
             ]
@@ -245,7 +249,7 @@ def perform_webscrape(client: R2RClient, file: UploadedFile):
 
                         # No summary will be generated
                         # If you want a summary switch to custom mode
-                        chunks_ing_resp = client.documents.create(
+                        chunks_ing_resp: IngestionResponse = client.documents.create(
                             file_path=temp_file.name,
                             ingestion_mode='fast',
                             metadata=document.metadata,
@@ -269,12 +273,12 @@ def perform_webscrape(client: R2RClient, file: UploadedFile):
 def export_docs_to_csv(client: R2RClient, filename: str, ingestion_status: str):
     """Exports all available documents to a csv file."""
     try:
-        filters = {}
+        filters: Dict = {}
 
         if ingestion_status != "all":
             filters["ingestion_status"] = ingestion_status
 
-        columns = [
+        columns: List[str] = [
             "id",
             "type",
             "title",
@@ -311,7 +315,7 @@ def perform_websearch(
     """
     try:
         # Call the model with the properly formatted tools
-        response = ollama_client.chat(
+        response: Dict[str, Any] = ollama_client.chat(
             model=st.session_state['chat_model'],
             options=options,
             messages=[
@@ -331,7 +335,7 @@ def perform_websearch(
                     )
 
                     # Continue the conversation with the tool results
-                    final_response = ollama_client.chat(
+                    final_response: Dict[str, Any] = ollama_client.chat(
                         model=st.session_state['chat_model'],
                         options=options,
                         messages=[
@@ -364,19 +368,19 @@ def perform_websearch(
 def _langsearch_websearch_tool(query: str, count: int) -> tuple[str, List[str]]:
     """Performs a web search and returns the data in a formated way."""
 
-    url = "https://api.langsearch.com/v1/web-search"
-    headers = {
+    url: str = "https://api.langsearch.com/v1/web-search"
+    headers: Dict[str, str] = {
         "Authorization": f"Bearer {st.session_state['websearch_api_key']}",
         "Content-Type": "application/json"
     }
-    data = {
+    data: Dict[str, Any] = {
         "query": query,
         "freshness": "noLimit",
         "summary": True,
         "count": count
     }
 
-    response = requests.post(
+    response: requests.Response = requests.post(
         url,
         headers=headers,
         json=data,
@@ -390,11 +394,11 @@ def _langsearch_websearch_tool(query: str, count: int) -> tuple[str, List[str]]:
             if json_response["code"] != 200 or not json_response["data"]:
                 return f"Search API request failed, reason: {response.msg or 'Unknown error'}", []
 
-            webpages = json_response["data"]["webPages"]["value"]
+            webpages: Any = json_response["data"]["webPages"]["value"]
             if not webpages:
                 return "No relevant results found.", []
 
-            formatted_results = ""
+            formatted_results: str = ""
             urls = []
             for idx, page in enumerate(webpages, start=1):
                 if len(page['summary']) > 1000:  # Limit content length
@@ -422,8 +426,8 @@ def _extract_urls(file: UploadedFile) -> List[str]:
     if file is None:
         raise FileNotFoundError("File not found")
 
-    filename = str(file.name)
-    file_extension = Path(filename).suffix.lower()
+    filename: str = str(file.name)
+    file_extension: str = Path(filename).suffix.lower()
 
     if file_extension != ".csv":
         raise ValueError(f"Unsupported file type: {file_extension}")
@@ -437,8 +441,8 @@ def _extract_urls(file: UploadedFile) -> List[str]:
     if dataframe.empty:
         raise ValueError("CSV file is empty")
 
-    extracted_urls = dataframe.iloc[1:, 0].dropna().astype(str).str.strip().tolist()
-    extracted_urls = _remove_duplicate_urls(extracted_urls)
+    extracted_urls: List[str] = dataframe.iloc[1:, 0].dropna().astype(str).str.strip().tolist()
+    extracted_urls: List[str] = _remove_duplicate_urls(extracted_urls)
     return extracted_urls
 
 def _run_async_function(coroutine):

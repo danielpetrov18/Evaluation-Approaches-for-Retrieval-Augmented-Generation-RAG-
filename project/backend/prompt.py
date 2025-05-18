@@ -4,7 +4,7 @@
 
 import tempfile
 import dataclasses
-from typing import Union, Dict
+from typing import Union, Dict, List, Any
 
 import yaml
 from r2r import R2RException, R2RClient
@@ -12,6 +12,9 @@ from r2r import R2RException, R2RClient
 import streamlit as st
 from streamlit.errors import Error
 from streamlit.runtime.uploaded_file_manager import UploadedFile
+
+from shared.api.models.base import GenericBooleanResponse
+from shared.api.models.management.responses import PromptResponse
 
 @dataclasses.dataclass
 class MyPrompt:
@@ -23,7 +26,7 @@ class MyPrompt:
 def list_prompts(client: R2RClient):
     """List all available prompts"""
     try:
-        prompts = client.prompts.list().results
+        prompts: List[PromptResponse] = client.prompts.list().results
         if prompts:
             st.write(f"Found {len(prompts)} prompts:")
             for prompt in prompts:
@@ -55,7 +58,7 @@ def create_prompt(client: R2RClient, file: UploadedFile):
             if _check_prompt_exists(client, prompt_obj.name):
                 st.error(f"Prompt with name {prompt_obj.name} already exists.")
             else:
-                result = client.prompts.create(
+                result: str = client.prompts.create(
                     name = prompt_obj.name,
                     template = prompt_obj.template,
                     input_types = prompt_obj.input_types
@@ -75,7 +78,7 @@ def create_prompt(client: R2RClient, file: UploadedFile):
 def delete_prompt(client:R2RClient, name: str):
     """Delete specific prompt by name"""
     try:
-        result = client.prompts.delete(name)
+        result: GenericBooleanResponse = client.prompts.delete(name).results
         st.success(f"Prompt deletion result: {result.results}")
     except R2RException as r2re:
         st.error(f"Error deleting prompt: {r2re.message}")
@@ -104,7 +107,7 @@ def _load_prompt_from_yaml(filepath: str) -> Union[MyPrompt,None]:
     """
     try:
         with open(file=filepath, mode='r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
+            data: Any = yaml.safe_load(f)
 
         # There should be exactly one top-level key that represents the prompt name.
         if not isinstance(data, Dict) or len(data.keys()) != 1:
@@ -112,14 +115,14 @@ def _load_prompt_from_yaml(filepath: str) -> Union[MyPrompt,None]:
                 "YAML file must contain exactly one top-level key representing the prompt name!"
             )
 
-        name = list(data.keys())[0]
-        prompt_data = data[name] # Template and input types
+        name: str = list(data.keys())[0]
+        prompt_data: Any = data[name] # Template and input types
 
         if 'template' not in prompt_data or 'input_types' not in prompt_data:
             raise ValueError("The top-level key must contain 'template' and 'input_types'!")
 
-        template = prompt_data['template']
-        input_types = prompt_data['input_types']
+        template: str = prompt_data['template']
+        input_types: str = prompt_data['input_types']
 
         if not name or not template or not input_types:
             raise ValueError("YAML file must contain 'name', 'template', and 'input_types'.")
@@ -134,7 +137,7 @@ def _load_prompt_from_yaml(filepath: str) -> Union[MyPrompt,None]:
 
 def _check_prompt_exists(client: R2RClient, name: str) -> bool:
     try:
-        prompt = client.prompts.retrieve(name).results
+        prompt: PromptResponse = client.prompts.retrieve(name).results
         return prompt is not None
     except R2RException:
         return False
