@@ -1,7 +1,7 @@
 """
 This script will be used after synthetic test data has been created using RAGAs.
-    (input, reference, reference_context)
-R2R will be used to generate the actual response and retrieval context.
+    (input, reference, reference_contexts)
+R2R will be used to generate the actual response and retrieval contexts.
 The generated dataset will be augmented and saved into a jsonl file.
 """
 
@@ -43,7 +43,9 @@ SEARCH_SETTINGS: Final[Dict[str, Union[bool, int, str]]] = {
 }
 
 # You can modify this template as needed
-TEMPLATE: Final[str] = """You are a helpful RAG chatbot assistant. Your task is to provide an answer given a question and context.
+TEMPLATE: Final[str] = """You are a helpful RAG assistant. Your task is to provide an answer given a question and context.
+Please make sure the answer is complete and relevant to the question. Do not guess or speculate. 
+Do not provide any information in the answer outside the context.
 
 **IMPORTANT:
 1. DO NOT USE ANY KNOWLEDGE YOU HAVE BEEN TRAINED ON.
@@ -129,13 +131,13 @@ def load_goldens(filepath: str) -> List[Dict]:
     """Loads the synthetically generated goldens from a JSONL file."""
     _goldens: List[Dict] = []
     try:
-        with open(file=f"./{filepath}.jsonl", mode="r", encoding="utf-8") as file:
+        with open(file=f"./goldens/{filepath}.jsonl", mode="r", encoding="utf-8") as file:
             # Read the file line by line and parse each line as JSON
             for line in file:
                 if line.strip():  # Skip empty lines
                     _goldens.append(json.loads(line))
     except FileNotFoundError:
-        print(f"File `./{filepath}.jsonl` containing goldens not found.")
+        print(f"File `./goldens/{filepath}.jsonl` containing goldens not found.")
         sys.exit(1)
     except json.JSONDecodeError as e:
         print(f"Error parsing JSONL file: {e}")
@@ -162,7 +164,7 @@ if __name__ == "__main__":
         print("USAGE: python fill_dataset.py <goldens-filename> <test-id> (without extension)")
         sys.exit(1)
 
-    print(f"""{'='*80}\nGenerating dataset in /datasets/{test_id}-dataset.jsonl
+    print(f"""{'='*80}\nGenerating dataset in ./datasets/{test_id}_dataset.jsonl
 TOP_K={int(os.getenv("TOP_K"))}
 MAX_TOKENS_TO_SAMPLE={int(os.getenv("MAX_TOKENS"))}
 CHUNK_SIZE={int(os.getenv("CHUNK_SIZE"))}
@@ -191,7 +193,10 @@ TEMPERATURE={float(os.getenv("TEMPERATURE"))}
             ).results
 
             actual_output: str = response.completion
-            retrieved_contexts: List[str] = [chunk.text for chunk in response.search_results.chunk_search_results]
+            retrieved_contexts: List[str] = [
+                chunk.text
+                for chunk in response.search_results.chunk_search_results
+            ]
 
             # If deepseek-r1 is used regardless of parameters count
             # remove the content between the <think> tags
@@ -209,6 +214,6 @@ TEMPERATURE={float(os.getenv("TEMPERATURE"))}
 
     # Persist the complete dataset
     os.makedirs("./datasets", exist_ok=True)  # Create the directory if it doesn't exist
-    with open(file=f"./datasets/{test_id}-dataset.jsonl", mode="w", encoding="utf-8") as f:
+    with open(file=f"./datasets/{test_id}_dataset.jsonl", mode="w", encoding="utf-8") as f:
         for golden in goldens:
             f.write(json.dumps(golden, ensure_ascii=False) + "\n")

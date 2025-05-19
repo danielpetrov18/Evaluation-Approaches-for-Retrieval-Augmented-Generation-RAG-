@@ -5,14 +5,18 @@
 - [About The Project](#about-the-project)
 - [Built With](#built-with)
 - [Prerequisites](#prerequisites)
+- [Docker services](#docker-services)
+- [Project structure](#project-structure)
 - [Usage](#usage)
 - [Contact](#contact)
 
 ### About The Project
 
-This is my Bachelor's thesis project at the University of Vienna, where I explore different **frameworks for evaluating a Retrieval-Augmented Generation (RAG) system**. The project leverages **Ollama** for running large language models locally, **R2R** for abstracting RAG workflows, and **Streamlit** for an interactive UI. Additionally, **3 different frameworks for evaluation** are used.
+This is my Bachelor's thesis project at the University of Vienna, where I explore different **frameworks for evaluating a Retrieval-Augmented Generation (RAG) system**. The project leverages **Ollama** for running large language models locally, **R2R** for building a RAG pipeline, and **Streamlit** for an interactive UI. Additionally, **3 different frameworks for evaluation** are used.
 
 The primary goal is to assess different evaluation frameworks, including **RAGAs**, to analyze how efficient a RAG application is. A variety of **evaluation metrics** are to be used to achieve that.
+
+The application is a **vanilla RAG** - no Knowledge Graphs, no hybrid search, no AI-agents or tools, just submitting a query, retrieving context, augmenting a prompt and submitting it to get the response from the LLM.
 
 ### Built With
 
@@ -38,6 +42,8 @@ The primary goal is to assess different evaluation frameworks, including **RAGAs
 
 ### Prerequisites
 
+- **NOTE**: I expect you to run this project on a **UNIX-based OS**. For Windows you will need to use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
+
 - Check if `python` is **installed** on your system. Make sure it is at least `3.12`.
 
 ```sh
@@ -50,6 +56,12 @@ python3 --version
 pip3 --version
 ```
 
+- Check if `git` is locally available.
+
+```bash
+git version
+```
+
 - Ollama also needs to be locally available. If not run:
 
 ```sh
@@ -58,33 +70,37 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 - Finally, you will need to have docker. If not go to [Docker](https://www.docker.com/) and install the version appropriate for your OS.
 
-### Usage
+### Docker services
 
-- Make sure that `ufw - uncomplicated firewall` is turned off, if available on the system.
+1. `pgvector` - an extension for `postgresql` allowing the storage of vector embeddings and performing **semantic similarity search**
 
-- Also make sure **Ollama** is available under `0.0.0.0`, otherwise even with `host.docker.internal` one cannot reach it from inside any of the containers. To modify it: `sudo nano /etc/systemd/system/ollama.service.`. Once modified use: `sudo systemctl reload ollama`. If that doesn't work try: `sudo systemctl reload-daemon`.
+2. `reranker` - a **re-ranking model** used after context retrieval for additional re-ordering of documents based on **relevance**
 
-Example:
+3. `unstructured` - a service used for enhanced **data ingestion**. It supports various file types like `pdf`, `md` and so on.
+
+4. `r2r` - the **RAG** frameworks server. It provides a `python` SDK and a `RESTful API`. It supports file ingestion, index creation, using more advanced versions of RAG like **HyDE** or **RAG-fusion** and so on.
+
+5. `frontend` - the UI of the application, which provides a GUI in the browser at `localhost:8501`, where a user can interact with the chatbot and ingest data.
+
+### Project structure
 
 ```bash
-[Unit]
-Description=Ollama Service
-After=network-online.target
-
-[Service]
-ExecStart=/usr/local/bin/ollama serve
-User=ollama
-Group=ollama
-Restart=always
-RestartSec=3
-Environment="PATH=<path>
-Environment="OLLAMA_DEBUG=1" # Optional
-# Make sure it's available not only on localhost, otherwise R2R in container cannot reach it
-Environment="OLLAMA_HOST=0.0.0.0"
-
-[Install]
-WantedBy=default.target
+├── docker-compose.yaml   # All docker services
+├── env                   # Environment variables
+├── evaluation            # All 3 evaluation frameworks
+│   ├── deepeval_eval     
+│   ├── opik_eval
+│   ├── ragas_eval
+├── experiments.csv       # Experiments ran during evaluation
+├── img                   # Images used in my notebooks
+├── project               # The RAG pipeline + GUI
+├── Readme.md             # Useful information regarding the project
+└── run.sh                # This script initializes the project
 ```
+
+### Usage
+
+0. Make sure that `ufw - uncomplicated firewall` is turned off, if available on the system. You can run `sudo systemctl status ufw` to check its status. Otherwise there might be some connectivity issues between the docker containers and `Ollama`.
 
 1. Clone the repo
 
@@ -105,8 +121,8 @@ WantedBy=default.target
    # This will make sure that:
    #  1. All environment variables are exported.
    #  2. Ollama is running and has the proper models installed.
-   #  3. Docker is running and start all containers.
-   #  4. Nvidia container toolkit is available, if not download it
+   #  3. Nvidia container toolkit is available, if not download it
+   #  4. Docker is running and start all containers.
    ./run.sh   
    ```
 
@@ -115,12 +131,10 @@ WantedBy=default.target
    ```sh
    # From root of project
    cd evaluation/ragas
-   # To generate a synthetic dataset:
-   #  -> Either use RAGAs
-   #  -> or what I do is generate it using DeepEval
    # Make sure to run the `setup.sh` script to install all dependencies
    # Select `eval` as your kernel in the notebook
-   # thereafter select metrics https://docs.ragas.io/en/latest/concepts/metrics/available_metrics/ or use all the metrics I've used
+   # To generate a synthetic dataset use the `generate` notebook
+   # Thereafter select metrics https://docs.ragas.io/en/latest/concepts/metrics/available_metrics/ or use all the metrics I've used
    # The evaluation for the other frameworks is very similar (using a notebook with code + explanation)
    ```
 

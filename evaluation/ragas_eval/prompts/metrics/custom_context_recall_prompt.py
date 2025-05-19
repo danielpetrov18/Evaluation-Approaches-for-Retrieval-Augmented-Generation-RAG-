@@ -29,30 +29,30 @@ The output should be a JSON object containing the following keys:
     examples = [
         (
             QCA(
-                question="What are some achievements of Albert Einstein?",
-                context="Albert Einstein was a renowned physicist who developed the theory of relativity. His mass-energy equivalence formula, E = mc^2, became one of the most famous equations in physics. In 1921, he won the Nobel Prize in Physics for his work on the photoelectric effect, a key contribution to quantum theory.",
-                answer="Albert Einstein developed the theory of relativity and won the Nobel Prize in 1921 for his work on the photoelectric effect. He also invented the first electric motor.",
+                question="Tell me about Marie Curie's scientific contributions.",
+                context="Marie Curie was a pioneer in the field of radioactivity. She discovered two new elements: polonium and radium. Marie Curie was awarded the Nobel Prize in Physics in 1903. In 1911, she won a second Nobel Prize, this time in Chemistry.",
+                answer="Marie Curie discovered polonium and radium. She won two Nobel Prizes. Marie Curie developed the theory of relativity.",
             ),
             ContextRecallClassifications(
                 classifications=[
                     ContextRecallClassification(
-                        statement="Albert Einstein developed the theory of relativity.",
-                        reason="The context clearly mentions Einstein's work on the theory of relativity.",
+                        statement="Marie Curie discovered polonium and radium.",
+                        reason="The context explicitly states that she discovered polonium and radium.",
                         attributed=1
                     ),
                     ContextRecallClassification(
-                        statement="He won the Nobel Prize in 1921 for his work on the photoelectric effect.",
-                        reason="The context explicitly states that he won the Nobel Prize for the photoelectric effect.",
+                        statement="She won two Nobel Prizes.",
+                        reason="The context mentions she won Nobel Prizes in 1903 and 1911, which supports this statement.",
                         attributed=1
                     ),
                     ContextRecallClassification(
-                        statement="He also invented the first electric motor.",
-                        reason="The context does not mention anything about Einstein inventing an electric motor.",
+                        statement="Marie Curie developed the theory of relativity.",
+                        reason="The context does not mention anything about the theory of relativity.",
                         attributed=0
                     ),
                 ]
             )
-        ),
+        )
     ]
 
     def to_string(self, data: Optional[InputModel] = None) -> str:
@@ -71,7 +71,9 @@ The output should be a JSON object containing the following keys:
         return f"""{self.instruction}
 
 ======= FEW SHOT EXAMPLES: =======
-{examples_str}
+
+{examples_str.strip()
+}
 ======= END OF EXAMPLES =======
 
 **IMPORTANT:

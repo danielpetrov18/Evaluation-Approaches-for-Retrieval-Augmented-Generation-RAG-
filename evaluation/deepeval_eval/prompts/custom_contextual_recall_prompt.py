@@ -17,16 +17,18 @@ class Verdicts(BaseModel):
 
 FEW_SHOT_EXAMPLES: Final[List[Tuple[str, List[str], Verdicts]]] = [
     (
-        "The device operates for up to 8 hours on battery. It supports wireless charging. The screen is 5.5 inches wide.",
+        "Marie Curie discovered polonium and radium. She won two Nobel Prizes. Marie Curie developed the theory of relativity.",
         [
-            "Battery life extends to 8 hours with moderate usage.",
-            "The screen measures 5.5 inches diagonally."
+            "Marie Curie was a pioneer in the field of radioactivity.",
+            "She discovered two new elements: polonium and radium.",
+            "Marie Curie was awarded the Nobel Prize in Physics in 1903.",
+            "In 1911, she won a second Nobel Prize, this time in Chemistry."
         ],
         Verdicts(
             verdicts=[
-                Verdict(verdict="yes", reason="Battery life of 8 hours is mentioned in the first context."),
-                Verdict(verdict="no", reason="There's no mention of wireless charging in the contexts."),
-                Verdict(verdict="yes", reason="The third context supports the statement about the 5.5 inch screen.")
+                Verdict(verdict="yes", reason="The second context explicitly states she discovered polonium and radium."),
+                Verdict(verdict="yes", reason="The third and fourth contexts together support that she won two Nobel Prizes."),
+                Verdict(verdict="no", reason="None of the contexts mention Marie Curie developing the theory of relativity.")
             ]
         )
     )

@@ -115,6 +115,7 @@ JSON:
             examples_str += f"JSON:\n{MyAnswerRelevancyTemplate._clean_verdict_json(example_verdicts)}\n\n"
 
         return f"""Your task is to determine for each statement, whether or not it is relevant to address the input.
+A relevant statement should be a direct response to the input, should stay on-topic and should fully answer the input question.
 Please generate a list of JSON with a key `verdicts` that maps to an array of verdicts.
 Each of those verdicts should have two keys: `verdict` and `reason`.
 The `verdict` key should STRICTLY be either a 'yes', 'idk' or 'no'.

@@ -143,7 +143,9 @@ Guidelines:
         return f"""{self.instruction}
 
 ======= FEW SHOT EXAMPLES: =======
-{examples_str}
+
+{examples_str.strip()}
+
 ======= END OF EXAMPLES =======
 
 **IMPORTANT:
@@ -157,7 +159,7 @@ Guidelines:
 7. DO NOT provide any explanations outside the JSON structure
 **
 
-Now generate for the following input:
+Now generate a query-answer pair based on the specified conditions (persona, themes, query style, length) and the provided context.
 
 INPUT:
 {input_obj}

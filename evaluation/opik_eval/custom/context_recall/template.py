@@ -144,16 +144,16 @@ FEW_SHOT_EXAMPLE_CONTEXT_RECALL: Final[List[FewShotExampleContextRecall]] = [
     )
 ]
 
-CONTEXT_RECALL_TEMPLATE: Final[str] = """You are an expert judge with EXTREMELY STRICT criteria for evaluating whether each statement derived from an expected output can be attributed to atleast one of the CONTEXTS.
+CONTEXT_RECALL_TEMPLATE: Final[str] = """You are an expert judge evaluating whether each statement derived from an expected output can be attributed to at least one of the CONTEXTS.
 
-EXTREMELY STRICT EVALUATION CRITERIA:
-1. A statement is deemed attributed if it can be directly supported by one of the CONTEXTS and no inference is required.
-2. A statement is deemed unattributed otherwise.
+EVALUATION CRITERIA:
+1. A statement is deemed attributed if it can be reasonably supported by one of the CONTEXTS.
+2. A statement is deemed unattributed if no context contains information to support it.
 3. Do not use any prior knowledge and accept the information from the CONTEXTS at face value.
 4. Read the CONTEXTS and STATEMENTS carefully.
 5. THE NUMBER OF VERDICTS MUST BE THE SAME AS THE NUMBER OF STATEMENTS.
 
-Your task is to independently evaluate each statement in relation to the list of CONTEXTS, and decide if any of the contexts ALONE contain the exact information needed to support that statement.
+Your task is to evaluate each statement in relation to the list of CONTEXTS, and decide if any of the contexts contain the information needed to support that statement.
 
 Respond in the following JSON format:
 {{

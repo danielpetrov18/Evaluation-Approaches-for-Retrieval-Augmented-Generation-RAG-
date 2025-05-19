@@ -88,7 +88,9 @@ If entities appear multiple times, only include them once in the results."""
         return f"""{self.instruction}
 
 ======= FEW SHOT EXAMPLES: =======
-{examples_str}
+
+{examples_str.strip()}
+
 ======= END OF EXAMPLES =======
 
 **IMPORTANT:

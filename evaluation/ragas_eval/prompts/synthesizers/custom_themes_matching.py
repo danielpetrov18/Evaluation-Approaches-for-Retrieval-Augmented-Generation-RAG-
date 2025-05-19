@@ -89,7 +89,9 @@ Each persona should be matched with themes that align with their expertise, inte
         return f"""{self.instruction}
 
 ======= FEW SHOT EXAMPLES: =======
-{examples_str}
+
+{examples_str.strip()}
+
 ======= END OF EXAMPLES =======
 
 **IMPORTANT:
@@ -100,7 +102,7 @@ Each persona should be matched with themes that align with their expertise, inte
 5. DO NOT provide any further explanations or clarifications, just output the JSON.
 **
 
-Now perform the same for the following:
+Now match each persona with relevant themes based on their role description:
 
 INPUT:
 {input_obj}

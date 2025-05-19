@@ -17,54 +17,48 @@ class FewShotExampleContextPrecision(BaseModel):
 
 FEW_SHOT_EXAMPLES: Final[List[Type[FewShotExampleContextPrecision]]] = [
     FewShotExampleContextPrecision(
-        input="What is the capital of France?",
+        input="Who developed the theory of evolution?",
         contexts=[
-            "Paris is the capital of France and has been since 1792.",
-            "France is located in Western Europe and has a population of about 67 million people.",
-            "The Eiffel Tower is located in Paris and was completed in 1889."
+            "Charles Darwin was an English naturalist and biologist known for his theory of evolution by natural selection. He published 'On the Origin of Species' in 1859.",
+            "The process of evolution involves changes in the heritable characteristics of biological populations over successive generations.",
+            "Alfred Russel Wallace was a British naturalist who independently conceived the theory of evolution through natural selection."
         ],
-        expected_output="The capital of France is Paris.",
+        expected_output="Charles Darwin developed the theory of evolution.",
         verdicts=["yes", "no", "no"],
         reasons=[
-            "This context explicitly states that Paris is the capital of France, which directly answers the question.",
-            "This context provides information about France but does not mention its capital, so it cannot be used to answer the question.",
-            "While this context mentions Paris, it does not state that Paris is the capital of France, so it cannot be used to directly answer the question."
+            "This context explicitly states that Charles Darwin is known for his theory of evolution, which directly supports the expected output.",
+            "This context describes what evolution is but doesn't mention who developed the theory, so it's not useful for arriving at the expected output.",
+            "While this context mentions another scientist related to evolution theory, it doesn't support the specific expected output about Charles Darwin."
         ]
     ),
     FewShotExampleContextPrecision(
-        input="What is the boiling point of water?",
+        input="What is the tallest mountain in the world?",
         contexts=[
-            "Water boils at 100 degrees Celsius at standard pressure.",
-            "H2O is the chemical formula for water, which is essential for life on Earth.",
-            "The freezing point of water is 0 degrees Celsius, while its boiling point is 100 degrees Celsius."
+            "Mount Everest, located in the Mahalangur Himal sub-range of the Himalayas, is Earth's highest mountain above sea level at 8,848.86 meters.",
+            "The Andes is the longest continental mountain range in the world, located in South America.",
+            "K2 is the second-highest mountain on Earth, after Mount Everest, at 8,611 meters above sea level."
         ],
-        expected_output="The boiling point of water is 100 degrees Celsius at standard pressure.",
+        expected_output="Mount Everest is the tallest mountain in the world.",
         verdicts=["yes", "no", "yes"],
         reasons=[
-            "This context explicitly states the boiling point of water at standard pressure, directly answering the question.",
-            "While this context provides information about water and is factually accurate, it does not mention its boiling point, so it cannot be used to answer the question.",
-            "This context explicitly mentions that the boiling point of water is 100 degrees Celsius, directly answering the question."
+            "This context directly states that Mount Everest is Earth's highest mountain, which supports the expected output.",
+            "This context discusses the Andes mountain range but doesn't provide information about the world's tallest mountain, so it's not useful for the expected output.",
+            "This context mentions that K2 is the second-highest mountain after Mount Everest, which indirectly confirms that Everest is the tallest mountain in the world."
         ]
     ),
 ]
 
-CONTEXT_PRECISION_TEMPLATE: Final[Type[str]] = """You are an expert judge with EXTREMELY STRICT criteria for evaluating whether each context node is directly useful for arriving at the expected output.
+CONTEXT_PRECISION_TEMPLATE: Final[Type[str]] = """You are an expert judge evaluating whether each context node was remotely useful for arriving at the expected output based on the input question.
 
-EXTREMELY STRICT EVALUATION CRITERIA:
-1. A context node is ONLY relevant (verdict: "yes") if it EXPLICITLY and LITERALLY contains the specific information needed to directly answer the input question.
+EVALUATION CRITERIA:
+1. A context node is relevant (verdict: "yes") if it contains information that helps arrive at the expected output, even if only partially or indirectly.
 2. A context node is NOT relevant (verdict: "no") if:
-   - It contains related information but doesn't explicitly answer the question
-   - It mentions entities from the answer but doesn't state the relationship requested in the question
-   - It requires ANY inference or knowledge to reach the expected output
-   - It contains only partial information that alone cannot produce the expected output
-   - It does not LITERALLY contain the answer in the exact form required
-3. Being "about" the same topic is NEVER sufficient for relevance
-4. Indirect support or related facts are NEVER sufficient for relevance
-5. The information must be EXPLICITLY and LITERALLY stated in that exact context to be considered relevant
-6. DO NOT hallucinate or infer information not literally present in the context
-7. READ EACH CONTEXT WORD FOR WORD and verify that it contains the specific answer
+   - It contains completely unrelated information
+   - It contradicts the expected output
+   - It provides no value in answering the question
+3. Do not provide any further explanations or clarifications.
 
-Your task is to evaluate each context node INDEPENDENTLY and determine if it ALONE contains the EXPLICIT and LITERAL information needed to answer the question. DO NOT combine information from different contexts.
+Your task is to evaluate each context node and determine if it was even remotely useful in arriving at the expected output with respect to the input.
 
 Provide your answer in the following JSON format:
 {{

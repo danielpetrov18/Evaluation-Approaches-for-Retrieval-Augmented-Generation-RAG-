@@ -59,7 +59,9 @@ Furthermore, a `reason` key should be provided that explains the verdict."""
         return f"""{self.instruction}
 
 ======= FEW SHOT EXAMPLES: =======
-{examples_str}
+
+{examples_str.strip()}
+
 ======= END OF EXAMPLES =======
 
 **IMPORTANT:

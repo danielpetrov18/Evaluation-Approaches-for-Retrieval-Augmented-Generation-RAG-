@@ -19,7 +19,11 @@ do
 done
 
 # You can modify this on your device as needed
-OLLAMA_MODELS="${HOME}/.ollama/models" OLLAMA_HOST="0.0.0.0:11434" OLLAMA_KEEP_ALIVE="1h" OLLAMA_NUM_PARALLEL=4 ollama serve &
+OLLAMA_MODELS="${HOME}/.ollama/models" \
+OLLAMA_HOST="0.0.0.0:11434" \
+OLLAMA_KEEP_ALIVE="1h" \
+OLLAMA_CONTEXT_LENGTH="${LLM_CONTEXT_WINDOW_TOKENS:-16000}" \
+ollama serve &
 echo "[+] OLLAMA SERVER STARTED AT $OLLAMA_HOST. [+]"
 
 # Check if chat model is available
@@ -35,12 +39,6 @@ then
     echo "    [+] DOWNLOADING EMBEDDING MODEL \"$EMBEDDING_MODEL\" [+]"
     ollama pull "$EMBEDDING_MODEL"
 fi
-
-# https://r2r-docs.sciphi.ai/self-hosting/local-rag
-echo "Creating Modelfile with context window \"$LLM_CONTEXT_WINDOW_TOKENS\" tokens..."
-echo -e "FROM $CHAT_MODEL\nPARAMETER num_ctx $LLM_CONTEXT_WINDOW_TOKENS" > Modelfile
-ollama create "$CHAT_MODEL" -f Modelfile
-echo "    [+] CHAT MODEL \"$CHAT_MODEL\" CREATED WITH CONTEXT WINDOW \"$LLM_CONTEXT_WINDOW_TOKENS\" TOKENS. [+]"
 
 # Add NVIDIA container toolkit only if not already installed
 # https://huggingface.co/docs/text-embeddings-inference/quick_tour

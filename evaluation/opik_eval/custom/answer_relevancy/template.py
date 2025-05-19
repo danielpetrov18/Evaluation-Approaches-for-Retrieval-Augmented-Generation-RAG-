@@ -43,7 +43,7 @@ Your task is to analyze the given answer and to determine if it's relevant to th
 Guidelines:
 
 1. Answer relevance is defined the following way:
-    - There should be no information in the answer that is not relevant to the input (on-topic).
+    - There should be only information in the answer that is relevant to the input (on-topic).
     - The answer should be a direct response to the input (concise).
     - The answer should fully address the input (complete).
 

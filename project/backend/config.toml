@@ -14,7 +14,7 @@ quality_llm = "ollama_chat/llama3.1:8b" # LLM used for user-facing output, like 
 provider = "litellm"
 # Make sure you check out your providers concurrency limits
 # I believe that this value and the `OLLAMA_NUM_PARALLEL` must be the same
-concurrent_request_limit = 4
+concurrent_request_limit = 1
 
   [completion.generation_config]
   # https://docs.litellm.ai/docs/providers/ollama#using-ollama-apichat

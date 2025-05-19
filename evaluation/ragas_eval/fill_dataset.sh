@@ -2,32 +2,24 @@
 
 # Check if the virtual environment already exists
 if [ ! -d "r2r_venv" ]; then
-    echo "Creating virtual environment..."
+    echo "[+] CREATING VIRTUAL ENVIRONMENT... [+]"
     python3 -m venv r2r_venv
-    echo "Virtual environment created."
+    echo "[+] VIRTUAL ENVIRONMENT CREATED. [+]"
 else
-    echo "Virtual environment already exists. Skipping creation."
+    echo "[+] VIRTUAL ENVIRONMENT ALREADY EXISTS. SKIPPING CREATION. [+]"
 fi
 
 # Activate
 source r2r_venv/bin/activate
 
-# Check if dependencies need to be installed
-if [ ! -f "r2r_venv/.dependencies_installed" ]; then
-    echo "Installing dependencies..."
-    pip3 install "r2r[core]==3.5.11" langchain==0.3.25 langchain-community==0.3.23 "unstructured[md]"==0.17.2
-    # Create a marker file to indicate dependencies are installed
-    touch r2r_venv/.dependencies_installed
-    echo "Dependencies installed."
-else
-    echo "Dependencies already installed. Skipping installation."
-fi
+echo "[+] INSTALLING DEPENDENCIES... [+]"
+pip3 install "r2r[core]==3.5.11" langchain==0.3.25 langchain-community==0.3.23 "unstructured[md]"==0.17.2
 
-echo "Environment is set and ready to be used"
+echo "[+] ENVIRONMENT IS SET AND READY TO BE USED. [+]"
 
 # Check if arguments are provided
 if [ $# -lt 2 ]; then
-    echo "Usage: $0 <goldens-filename> <test-id>"
+    echo "[-] USAGE: $0 <goldens-filename> <test-id> [-]"
     exit 1
 fi
 
@@ -35,4 +27,4 @@ fi
 # First argument is where the goldens are
 # Second argument represents the test-id configuration
 python3 fill_dataset.py "$1" "$2"
-echo "Full dataset saved..."
+echo "[+] FULL DATASET SAVED... [+]"

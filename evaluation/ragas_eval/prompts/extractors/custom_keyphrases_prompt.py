@@ -16,7 +16,6 @@ from ragas.testset.transforms.extractors.llm_based import Keyphrases, TextWithEx
 
 InputModel = TypeVar("InputModel", bound=BaseModel)
 
-
 class MyKeyphrasesExtractorPrompt(PydanticPrompt[TextWithExtractionLimit, Keyphrases]):
     name: str = "custom_keyphrases_extractor_prompt"
     instruction: str = "Extract the top `max_num` keyphrases from the provided text. All the keyphrases should be derived from the text."
@@ -69,7 +68,9 @@ class MyKeyphrasesExtractorPrompt(PydanticPrompt[TextWithExtractionLimit, Keyphr
         return f"""{self.instruction}
 
 ======= FEW SHOT EXAMPLES: =======
-{examples_str}
+
+{examples_str.strip()}
+
 ======= END OF EXAMPLES =======
 
 **IMPORTANT:
