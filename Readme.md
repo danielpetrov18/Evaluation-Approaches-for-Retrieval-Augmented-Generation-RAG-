@@ -205,16 +205,16 @@ To play around with different values one could modify the environment variables 
 
 | Test ID | Top-K | Max Tokens | Chunk Size | Chunk Overlap | Chat Model                 | Temp. | Description                                                    |
 | ------- | ----- | ---------- | ---------- | ------------- | -------------------------- | ----- | -------------------------------------------------------------- |
-| 1 | 3 | 512 | 512 | 0 | llama3.1:8b | 0 | Baseline with minimal values |
-| 2       | 3     | 512        | 512        | 0             | llama3.1:8b                | 0     | Baseline with minimal values (HyDE)                    |
-| 3       | 5     | 768        | 1024       | 128           | llama3.1:8b                | 0     | Max retrieval quality, ideal retriever settings                |
-| 4       | 3     | 512        | 512        | 0             | llama3.1:8b-instruct-q4\_1 | 0     | Impact of instruction tuning on baseline                       |
-| 5       | 3     | 1536       | 512        | 0             | deepseek-r1:7b             | 0     | Alternative model performance with basic retriever             |
-| 6       | 3     | 512        | 768        | 64            | llama3.1:8b                | 0.5   | Mid-balanced retriever/generator with some creativity          |
-| 7       | 3     | 512        | 512        | 0             | llama3.1:8b                | 1     | High temperature, tests creative but less deterministic output |
-| 8       | 5     | 768        | 1024       | 128           | llama3.1:8b-instruct-q4\_1 | 0.5   | Instruction-tuned, optimal retriever, moderate creativity      |
-| 9       | 5     | 1536       | 1024       | 128           | deepseek-r1:7b             | 0.5   | Alt. model with strong retriever, moderate creativity          |
-| 10      | 5     | 1024       | 768        | 64            | deepseek-r1:7b             | 0     | Efficient token usage on alt model with re-ranking             |
+| 1       | 3     | 512        | 512        | 0             | llama3.1:8b                | 0     | Baseline with minimal values                                   |
+| 2       | 3     | 512        | 512        | 0             | llama3.1:8b-instruct-q4_1  | 0     | Testing instruction tuning effect on baseline                  |
+| 3       | 3     | 1536       | 512        | 0             | deepseek-r1:7b             | 0     | Testing alternative model (reasoning) on baseline              |
+| 4       | 5     | 512        | 768        | 64            | llama3.1:8b                | 0.5   | Mid-range balanced configuration with some creativity          |
+| 5       | 5     | 512        | 768        | 64            | llama3.1:8b-instruct-q4_1  | 0.5   | Mid-range balanced creative instruction-tuned approach         |
+| 6       | 5     | 512        | 1024       | 128           | llama3.1:8b                | 0     | Maximum retrieval quality                                      |
+| 7       | 5     | 512        | 1024       | 128           | llama3.1:8b                | 0     | Maximum retrieval quality advanced-RAG (HyDE)                  |
+| 8       | 5     | 512        | 1024       | 128           | llama3.1:8b                | 1     | Testing high temperature creativity on max retrieval quality   |
+| 9       | 5     | 512        | 1024       | 128           | llama3.1:8b-instruct-q4_1  | 0     | Alternative model with high retrieval settings                 |
+| 10      | 5     | 1536       | 1024       | 128           | deepseek-r1:7b             | 0     | Reasoning model with high retrieval settings                   |
 
 ---
 
@@ -223,15 +223,15 @@ To play around with different values one could modify the environment variables 
 **NOTE**: all experiments, with exception of the second use a **vanilla RAG approach**. The second experiment tests if the usage of a more advanced approach like **Hypothetical Document Embeddings** could yield significantly better results.
 
 - **Experiment 1**: Baseline
-- **Experiment 2**: Verify if **HyDE** would significantly improve responses
-- **Experiment 3**: Maximize retrieval quality - bigger chunks, more overlap to ensure no loss of context and retrieval of more nodes.
-- **Experiment 4**: Compare basic vs instruction-tuned LLM - will a fine-tuned model be able to follow instructions and reason better
-- **Experiment 5**: Swap in a different model (DeepSeek) - how does a **reasoning model** compare to a **fine-tuned** one
-- **Experiment 6**: Balanced setup with moderate creativity - slightly higher chunk size and chunk overlap to maximize retrieval and testing **higher** temperature for creativity
-- **Experiment 7**: Baseline configuration - verify how a **very high** creativity level affects the **faithfulness** of responses
-- **Experiment 8**: Best of both worlds: quality retrieval + tuned LLM + creativity.
-- **Experiment 9**: Peak performance for DeepSeek setup, with mid-range creativity - will that affect its reasoning capabilities
-- **Experiment 10**: Cost-efficient DeepSeek config with shorter context
+- **Experiment 2**: Seeing how a `fine-tuned` model performs on baseline
+- **Experiment 3**: Seein how a `reasoning` model performs on baseline
+- **Experiment 4**: Increasing the nodes retrieved, chunk size and overlap to see how that affects **faithfulness**, **recall**, **precision**, etc. Also using a higher temperature.
+- **Experiment 5**: Same as experiment 4, but with `fine-tuned` model.
+- **Experiment 6**: Maximum retrieval with higher chunk sizes and overlap
+- **Experiment 7**: Maximum retrieval with the same model, but using an advanced approach - **Hypothetical Document Embeddings**
+- **Experiment 8**: High retrieval with very high creativity
+- **Experiment 9**: `Fine-tuned` model on max retrieval quality
+- **Experiment 10**: `Reasoning` model on max retrieval quality
 
 #### How to
 
