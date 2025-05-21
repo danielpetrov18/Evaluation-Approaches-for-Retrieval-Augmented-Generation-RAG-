@@ -20,7 +20,7 @@ The primary goal is to assess different evaluation frameworks, including **RAGAs
 
 The application is a **vanilla RAG** - no Knowledge Graphs, no hybrid search, no AI-agents or tools, just submitting a query, retrieving context, augmenting a prompt and submitting it to get the response from the LLM. During context retrieval **cosine distance** is used as measure.
 
-![RAG application structure](img/app/RAG-app.png "RAG application")
+![RAG application structure](img/app/rag-app.png "RAG application")
 
 ### Built With
 
