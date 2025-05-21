@@ -2,6 +2,7 @@
 # pylint: disable=E0401 -> disable relative import error
 
 import streamlit as st
+
 from st_app import r2r_client
 from backend.settings import (
     check_health,

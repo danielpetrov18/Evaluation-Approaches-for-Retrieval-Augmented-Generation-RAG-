@@ -8,15 +8,19 @@
 - [Docker services](#docker-services)
 - [Project structure](#project-structure)
 - [Usage](#usage)
+- [Data generation](#data-generation)
+- [Evaluation](#evaluation)
 - [Contact](#contact)
 
 ### About The Project
 
-This is my Bachelor's thesis project at the University of Vienna, where I explore different **frameworks for evaluating a Retrieval-Augmented Generation (RAG) system**. The project leverages **Ollama** for running large language models locally, **R2R** for building a RAG pipeline, and **Streamlit** for an interactive UI. Additionally, **3 different frameworks for evaluation** are used.
+This is my bachelor’s thesis project at the University of Vienna, where I explore different **frameworks for evaluating a Retrieval-Augmented Generation (RAG) system**. The project leverages **Ollama** for running large language models locally, **R2R** for building a basic RAG pipeline, and **Streamlit** for an interactive UI. Additionally, **3 different frameworks for evaluation** are used.
 
 The primary goal is to assess different evaluation frameworks, including **RAGAs**, to analyze how efficient a RAG application is. A variety of **evaluation metrics** are to be used to achieve that.
 
-The application is a **vanilla RAG** - no Knowledge Graphs, no hybrid search, no AI-agents or tools, just submitting a query, retrieving context, augmenting a prompt and submitting it to get the response from the LLM.
+The application is a **vanilla RAG** - no Knowledge Graphs, no hybrid search, no AI-agents or tools, just submitting a query, retrieving context, augmenting a prompt and submitting it to get the response from the LLM. During context retrieval **cosine distance** is used as measure.
+
+![RAG application structure](img/app/RAG-app.png "RAG application")
 
 ### Built With
 
@@ -39,6 +43,15 @@ The application is a **vanilla RAG** - no Knowledge Graphs, no hybrid search, no
 #### Evaluation Frameworks
 
 [![RAGAs][RAGAs-img]][RAGAs-url] [![DeepEval][DeepEval-img]][DeepEval-url] [![Opik][Opik-img]][Opik-url]
+
+### System
+
+This project was developed and tested on the following system:
+
+- **OS**: Pop!_OS 22.04 LTS x86_64
+- **CPU**: 11th Gen Intel i7-11370H (8) @ 3.300GHz
+- **RAM**: 16GB DDR4
+- **GPU**: NVIDIA GeForce RTX 3060 with 8GB VRAM
 
 ### Prerequisites
 
@@ -72,7 +85,13 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 ### Docker services
 
-1. `pgvector` - an extension for `postgresql` allowing the storage of vector embeddings and performing **semantic similarity search**
+**NOTE**:
+
+- The `reranker` service is **optional**. A **RAG** application can function without it, however the results might not always be optimal. The model is used in the **late phase of retrieval**, to **re-order the context based on relevance** relative to the **user query**.
+
+- The `frontend` service is also **optional**, one could run: `streamlit run st_app.py` on `localhost`.
+
+1. `pgvector` - an extension for `postgresql` enabling the storage of vector embeddings and performing **semantic similarity search**
 
 2. `reranker` - a **re-ranking model** used after context retrieval for additional re-ordering of documents based on **relevance**
 
@@ -93,7 +112,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 │   ├── ragas_eval
 ├── experiments.csv       # Experiments ran during evaluation
 ├── img                   # Images used in my notebooks
-├── project               # The RAG pipeline + GUI
+├── project               # The RAG project + GUI
 ├── Readme.md             # Useful information regarding the project
 └── run.sh                # This script initializes the project
 ```
@@ -126,19 +145,105 @@ curl -fsSL https://ollama.com/install.sh | sh
    ./run.sh   
    ```
 
-4. For performing an evaluation. Example with **RAGAs**
+### Data Generation
 
-   ```sh
-   # From root of project
-   cd evaluation/ragas
-   # Make sure to run the `setup.sh` script to install all dependencies
-   # Select `eval` as your kernel in the notebook
-   # To generate a synthetic dataset use the `generate` notebook
-   # Thereafter select metrics https://docs.ragas.io/en/latest/concepts/metrics/available_metrics/ or use all the metrics I've used
-   # The evaluation for the other frameworks is very similar (using a notebook with code + explanation)
+- Evaluating a **RAG** application requires a collection of data that is:
+
+   1. **diverse** enough to resemble real-world user interactions
+
+   2. **include edge-cases** like short or long queries, the use of improper grammar or more scientific lingo
+
+   3. contain **enough samples** to draw statistically significant conclusions
+
+- **RAGAs** provides a solution that covers all the aformentioned criteria of a **well-defined** dataset.
+
+- It's based on the concept of **knowledge graph** that consists of **node**s holding some kind of information and metadata.
+
+- One can apply various pre-defined or custom transformations to **enrich** the **knowledge graph**.
+
+- Finally, using the **enriched graph** one can generate **samples**.
+
+- To make use of this:
+
+   ```bash
+   cd evaluation
+   
+   chmod u+x setup.sh
+   
+   ./setup.sh #<= will create a virtual environment (eval) 
+   
+   cd ragas-eval
+
+   # Open the `generate` notebook
+   # Select the kernel (eval)
+   # Follow along the instructions, documentation and code
    ```
 
-## Contact
+- Do have in mind that this notebook **DOESN'T** generate the **full** dataset. It will generate **goldens** - entries consisting of `user_input`, `reference` (expected output) and `reference_contexts`. For all experiments I've used the same `model` and `temperature` values: **llama3.1:8b-instruct-q4_1** and **0.0** respectively. The reason is to try to create synthetic datasets that are as uniform as possible and try to avoid noise.
+
+- For completing the synthetic dataset, i.e. adding the `response` (LLM response) and `retrieved_contexts` the `model` and `temperature` will depend on the corresponding experiment.
+
+- With all of that in mind, one could generate various of datasets and test various configurations. Each dataset will be saved locally under `evaluation/ragas_eval/datasets`.
+
+- Alternatively, one could make use of the `generate` notebook under `evaluation/deepeval-eval`, however I suggest the **RAGAs** approach since it's more customizable.
+
+### Evaluation
+
+A vanilla **RAG** application consists of 2 major components:
+
+- `Retriever` - an abstraction, that fetches **relevant context** out of a **vector store** using an `embedding model`, performing `semantic search` or optionally, one could use `hybrid search` by adding a `knowledge graph`, etc and finally, **re-ranking of the context by relevance** (optional).
+
+- `Generator` - the underlying **LLM** that would accept an **augmented prompt**, containing the user query and retrieved context and generate a response.
+
+One can influence the behaviour of both of the components by tweaking various `hyperparameters`.
+
+For example different values for the `chunk size`, `chunk overlap` and `top-K` could drastically improve or worsen the efficiency of the **retriever**. This of course could either lead to a much better or worse response.
+
+To play around with different values one could modify the environment variables under `env/rag.env`.
+
+#### Experiments
+
+| Test ID | Top-K | Max Tokens | Chunk Size | Chunk Overlap | Chat Model                 | Temp. | Description                                                    |
+| ------- | ----- | ---------- | ---------- | ------------- | -------------------------- | ----- | -------------------------------------------------------------- |
+| 1 | 3 | 512 | 512 | 0 | llama3.1:8b | 0 | Baseline with minimal values |
+| 2       | 3     | 512        | 512        | 0             | llama3.1:8b                | 0     | Baseline with minimal values (HyDE)                    |
+| 3       | 5     | 768        | 1024       | 128           | llama3.1:8b                | 0     | Max retrieval quality, ideal retriever settings                |
+| 4       | 3     | 512        | 512        | 0             | llama3.1:8b-instruct-q4\_1 | 0     | Impact of instruction tuning on baseline                       |
+| 5       | 3     | 1536       | 512        | 0             | deepseek-r1:7b             | 0     | Alternative model performance with basic retriever             |
+| 6       | 3     | 512        | 768        | 64            | llama3.1:8b                | 0.5   | Mid-balanced retriever/generator with some creativity          |
+| 7       | 3     | 512        | 512        | 0             | llama3.1:8b                | 1     | High temperature, tests creative but less deterministic output |
+| 8       | 5     | 768        | 1024       | 128           | llama3.1:8b-instruct-q4\_1 | 0.5   | Instruction-tuned, optimal retriever, moderate creativity      |
+| 9       | 5     | 1536       | 1024       | 128           | deepseek-r1:7b             | 0.5   | Alt. model with strong retriever, moderate creativity          |
+| 10      | 5     | 1024       | 768        | 64            | deepseek-r1:7b             | 0     | Efficient token usage on alt model with re-ranking             |
+
+---
+
+##### Description
+
+**NOTE**: all experiments, with exception of the second use a **vanilla RAG approach**. The second experiment tests if the usage of a more advanced approach like **Hypothetical Document Embeddings** could yield significantly better results.
+
+- **Experiment 1**: Baseline
+- **Experiment 2**: Verify if **HyDE** would significantly improve responses
+- **Experiment 3**: Maximize retrieval quality - bigger chunks, more overlap to ensure no loss of context and retrieval of more nodes.
+- **Experiment 4**: Compare basic vs instruction-tuned LLM - will a fine-tuned model be able to follow instructions and reason better
+- **Experiment 5**: Swap in a different model (DeepSeek) - how does a **reasoning model** compare to a **fine-tuned** one
+- **Experiment 6**: Balanced setup with moderate creativity - slightly higher chunk size and chunk overlap to maximize retrieval and testing **higher** temperature for creativity
+- **Experiment 7**: Baseline configuration - verify how a **very high** creativity level affects the **faithfulness** of responses
+- **Experiment 8**: Best of both worlds: quality retrieval + tuned LLM + creativity.
+- **Experiment 9**: Peak performance for DeepSeek setup, with mid-range creativity - will that affect its reasoning capabilities
+- **Experiment 10**: Cost-efficient DeepSeek config with shorter context
+
+#### How to
+
+The `evaluation` folder contains 3 sub-directories. Depending on the framework one might want to try out, one could switch into the respective folder and use the `evaluate` notebook. The notebooks contains both code and explanation in markdown to simplify the process as much as possible. In each notebook I have a short description of each metric I've used and the corresponding code required for evaluation.
+
+Do note that for evaluation with different metrics, different parameters might be required. Some metrics rely only on `user_input` and `response`, others might require other ones. So if you are using a custom dataset, some metrics might not work, due to missing parameters.
+
+Do also note that different frameworks use varying names for describing parameters. For example **RAGAs** uses `response` and **DeepEval** - `actual_output`.
+
+For all three frameworks one could overwrite the default `prompts` that are used during evaluation to try to achieve consistent evaluation and or to customize the evaluation as required relative to a specific domain.
+
+### Contact
 
 Daniel Petrov - <daniel.petrov18@protonmail.com>
 

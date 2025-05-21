@@ -11,6 +11,7 @@ import streamlit as st
 from streamlit.errors import Error
 from r2r import R2RClient, R2RException
 from shared.api.models.retrieval.responses import SSEEventBase, MessageEvent
+from shared.api.models.management.responses import MessageResponse, PromptResponse
 
 from .message import Message
 from .helper import (
@@ -21,9 +22,6 @@ from .helper import (
 @st.cache_data(ttl=60)  # Cache for 60 seconds
 def retrieve_messages(_client: R2RClient, conversation_id: str) -> Union[List[Message],None]:
     """
-                          ^
-                          |
-                          |
     When using an underscore the client won't be part of the arguments passed to the function
     which are of importance for the caching behaviour. Since client cannot be pickled/serialized.
     https://docs.streamlit.io/develop/api-reference/caching-and-state/st.cache_data
@@ -32,16 +30,16 @@ def retrieve_messages(_client: R2RClient, conversation_id: str) -> Union[List[Me
     This method also makes sure that R2R messages are converted into my own Message class.
     """
     try:
-        conversation = _client.conversations.retrieve(conversation_id).results
-        msgs = [
+        conversation: List[MessageResponse] = _client.conversations.retrieve(conversation_id).results
+        msgs: List[Message] = [
             Message(
-                id = str(obj.id),
-                role = obj.message.role,
-                content = obj.message.content,
+                id = str(msg.id),
+                role = msg.message.role,
+                content = msg.message.content,
                 # Make sure you convert it back to an embedding -> check add_message()
-                embedding = json.loads(obj.metadata['embedding']),
+                embedding = json.loads(msg.metadata['embedding']),
             )
-            for obj in conversation
+            for msg in conversation
         ]
         return msgs
     except R2RException as r2re:
@@ -58,8 +56,8 @@ def check_conversation_exists(client: R2RClient):
     """
     Making sure that a conversation exists. If not we create one.
     
-    If the id is empty -> create a new one and use it
-        This is the case when the user starts a new conversation
+    If the id is empty -> create a new one and use it.
+    This is the case when the user starts a new conversation.
     """
     try:
         if not st.session_state['conversation_id']:
@@ -83,7 +81,7 @@ def check_conversation_exists(client: R2RClient):
 def set_new_prompt(client: R2RClient, prompt_name: str) -> bool:
     """After making sure the prompt exists we select it for future RAG completions"""
     try:
-        prompt_obj = client.prompts.retrieve(prompt_name).results
+        prompt_obj: PromptResponse = client.prompts.retrieve(prompt_name).results
         st.session_state['selected_prompt'] = prompt_name
         st.session_state['prompt_template'] = prompt_obj.template
         return True
@@ -102,9 +100,9 @@ def add_message(client: R2RClient, msg: Dict[str, str]):
     It is then used when quering for relevant messages from previous interactions.
     """
     try:
-        embedding = compute_embedding(msg['content'])
+        embedding: List[float] = compute_embedding(msg['content'])
 
-        msg_response = client.conversations.add_message(
+        msg_response: MessageResponse = client.conversations.add_message(
             id = st.session_state['conversation_id'],
             content = msg['content'],
             role = msg['role'],
@@ -114,10 +112,10 @@ def add_message(client: R2RClient, msg: Dict[str, str]):
             },
             # If this is the first message in the conversation => None/Null
             parent_id = st.session_state['parent_id']
-        )
+        ).results
 
         # Set the parent id for next message to equal the id of the newly added one
-        st.session_state['parent_id'] = str(msg_response.results.id)
+        st.session_state['parent_id'] = str(msg_response.id)
 
         new_msg = Message(
             id = st.session_state['parent_id'],
@@ -159,13 +157,19 @@ def submit_query(client: R2RClient) -> Generator[SSEEventBase, None, None]:
         Exception: For any other unexpected errors.
     """
     try:
-        search_settings: dict = {
+        # https://r2r-docs.sciphi.ai/api-and-sdks/retrieval/search-app
+        search_settings: Dict[str, Union[bool, int, str]] = {
             "use_semantic_search": True,
             "limit": st.session_state['top_k'],
             "offset": 0,
             "include_metadatas": False,
             "include_scores": True,
             "search_strategy": "vanilla",
+            "chunk_settings": {
+                "index_measure": "cosine_distance",
+                "enabled": True,
+                "ef_search": 80
+            }
         }
 
         # Augmented query which should include additional data if any is found

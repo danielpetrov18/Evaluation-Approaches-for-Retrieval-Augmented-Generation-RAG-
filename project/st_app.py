@@ -1,5 +1,5 @@
 """
-This module holds all the available pages of the application.
+This module holds all the available pages of the RAG application.
 Every resource defined in the main page can be accessed by all other pages.
 
 The caching mechanism provided by `streamlit` is being used for efficiency.
@@ -25,9 +25,9 @@ def r2r_client():
     Since the `R2R` service is going to run in a docker container, one can specify
     the name of the container as a hostname.
     """
-
+    port: int = int(os.getenv('R2R_PORT'))
     return R2RClient(
-        base_url='http://r2r:7272',
+        base_url=f'http://r2r:{port}',
         timeout=1800 # 30 minutes
     )
 
@@ -120,11 +120,11 @@ if __name__ == "__main__":
     if "chunk_size" not in st.session_state:
         st.session_state['chunk_size'] = int(os.getenv("CHUNK_SIZE"))
 
-    if "temperature" not in st.session_state:
-        st.session_state['temperature'] = float(os.getenv("TEMPERATURE"))
-
     if "chunk_overlap" not in st.session_state:
         st.session_state['chunk_overlap'] = int(os.getenv("CHUNK_OVERLAP"))
+
+    if "temperature" not in st.session_state:
+        st.session_state['temperature'] = float(os.getenv("TEMPERATURE"))
 
     if "chat_model" not in st.session_state:
         st.session_state["chat_model"] = os.getenv("CHAT_MODEL")
@@ -143,17 +143,18 @@ if __name__ == "__main__":
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+    # The id of the last message in a given conversation
     if "parent_id" not in st.session_state:
         st.session_state["parent_id"] = None
 
     if "context_window_size" not in st.session_state:
         st.session_state["context_window_size"] = int(os.getenv("LLM_CONTEXT_WINDOW_TOKENS"))
 
-    if "similarity_threshold" not in st.session_state:
-        st.session_state["similarity_threshold"] = float(os.getenv("SIMILARITY_THRESHOLD"))
-
     if "max_relevant_messages" not in st.session_state:
         st.session_state["max_relevant_messages"] = int(os.getenv("MAX_RELEVANT_MESSAGES"))
+
+    if "similarity_threshold" not in st.session_state:
+        st.session_state["similarity_threshold"] = float(os.getenv("SIMILARITY_THRESHOLD"))
 
     if 'ingestion_config' not in st.session_state:
         st.session_state['ingestion_config'] = r2r_client().system.settings().results.config['ingestion']
@@ -167,17 +168,23 @@ if __name__ == "__main__":
         st.session_state['ingestion_config'] = new_ingestion_config
 
     # Default prompt name that is used by R2R when interacting with /rag endpoint
+    # You can specify a custom name in the application itself
     if 'selected_prompt' not in st.session_state:
         st.session_state['selected_prompt'] = "rag"
 
+    # The actual template of the prompt
     if 'prompt_template' not in st.session_state:
         st.session_state['prompt_template'] = r2r_client().prompts.retrieve(
             st.session_state['selected_prompt']
         ).results.template
 
+    # This is not required. It parts of a small function in the storage module
+    # It's part of a tool call, that can fetch data from the internet.
     if 'websearch_api_key' not in st.session_state:
         st.session_state['websearch_api_key'] = None
 
+    # Some RESTful API endpoints require authentication and the `r2r` SDK doesn't work.
+    # Login values are default ones. Can be modified in the config file.
     if "bearer_token" not in st.session_state:
         st.session_state['bearer_token'] = r2r_client().users.login(
             email = "admin@example.com",

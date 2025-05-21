@@ -97,8 +97,8 @@ def fetch_documents(
     try:
         selected_files: List[DocumentResponse] = client.documents.list(ids, offset, limit).results
         if selected_files:
-            for i, doc in enumerate(selected_files):
-                with st.expander(label=f"{i + 1}: {doc.title}", expanded=False):
+            for i, doc in enumerate(selected_files, 1):
+                with st.expander(label=f"{i}: {doc.title}", expanded=False):
                     st.json(doc)
 
                     with st.popover(label="Delete document", icon="🗑️"):
@@ -120,7 +120,7 @@ def fetch_documents(
     except Exception as exc:
         st.error(f"Unexpected error: {str(exc)}")
 
-def delete_document(client: R2RClient, document_id: str):
+def delete_document(client: R2RClient, document_id: Union[str, UUID]):
     """Delete any document by id"""
     try:
         client.documents.delete(document_id)
@@ -160,16 +160,18 @@ def fetch_document_chunks(client: R2RClient, document_id: str, offset: int, limi
     except Exception as exc:
         st.error(f"Unexpected error: {str(exc)}")
 
-def ingest_file(client: R2RClient, file: UploadedFile, metadata: dict):
+def ingest_file(client: R2RClient, file: UploadedFile, metadata: Dict):
     """
     This method takes a file in binary format and saves it in the tmp folder.
     Thereafter, the text is extracted and split.
     Finally, embeddings are generated and stored in the database with additional metadata.
+    The temporary file is then deleted.
     """
 
-    temp_filepath: str = os.path.join(tempfile.gettempdir(), file.name) # Do it outside because of the finally clause
+    # Do it outside because of the finally clause
+    temp_filepath: str = os.path.join(tempfile.gettempdir(), file.name)
     try:
-        # Make sure file doesn't already exist.
+        # Make sure the file doesn't already exist.
         for doc in client.documents.list().results:
             if doc.title == file.name:
                 st.error("File already exists!")
@@ -181,7 +183,7 @@ def ingest_file(client: R2RClient, file: UploadedFile, metadata: dict):
             temp_file.flush()
 
         if not os.path.exists(temp_filepath) or os.path.getsize(temp_filepath) == 0:
-            st.error("Failed to save file or file is empty.")
+            st.error("Failed to save file or file is empty!")
             return
 
         with st.spinner(text="Ingesting document...", show_time=True):
@@ -243,7 +245,7 @@ def perform_webscrape(client: R2RClient, file: UploadedFile):
                         # Make sure there's no document with that specific source
                         if document.metadata['source'] in sources:
                             st.error(
-                                f"Document {document.metadata['source']} already exists"
+                                f"Document {document.metadata['source']} already exists! Skipping!"
                             )
                             continue
 
@@ -328,7 +330,7 @@ def perform_websearch(
         )
 
         if "message" in response and "tool_calls" in response["message"]:
-            for tool_call in response["message"]["tool_calls"]:
+            for tool_call in response["message"]["tool_calls"]: # Go over the tool calls
                 if tool_call["function"]["name"] == "langsearch_websearch_tool":
                     search_results, urls = _langsearch_websearch_tool(
                         query=query, count=results_to_return

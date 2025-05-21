@@ -1,4 +1,5 @@
 # pylint: disable=C0114
+# pylint: disable=C0115
 # pylint: disable=R1732
 # pylint: disable=W0718
 
@@ -18,7 +19,6 @@ from shared.api.models.management.responses import PromptResponse
 
 @dataclasses.dataclass
 class MyPrompt:
-    """Custom class to group prompt information."""
     name: str
     template: str
     input_types: Dict[str, Union[str, Dict]]
@@ -79,7 +79,7 @@ def delete_prompt(client:R2RClient, name: str):
     """Delete specific prompt by name"""
     try:
         result: GenericBooleanResponse = client.prompts.delete(name).results
-        st.success(f"Prompt deletion result: {result.results}")
+        st.success(f"Prompt deletion result: {result}")
     except R2RException as r2re:
         st.error(f"Error deleting prompt: {r2re.message}")
     except Error as e:

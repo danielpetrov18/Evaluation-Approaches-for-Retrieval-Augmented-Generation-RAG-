@@ -18,13 +18,14 @@ do
     fi
 done
 
-# You can modify this on your device as needed
+# You can modify the environment variables on your device as needed.
+# For example if you have a powerful GPU you can use `OLLAMA_NUM_PARALLEL` to increase parallelism.
 OLLAMA_MODELS="${HOME}/.ollama/models" \
 OLLAMA_HOST="0.0.0.0:11434" \
 OLLAMA_KEEP_ALIVE="1h" \
 OLLAMA_CONTEXT_LENGTH="${LLM_CONTEXT_WINDOW_TOKENS:-16000}" \
 ollama serve &
-echo "[+] OLLAMA SERVER STARTED AT $OLLAMA_HOST. [+]"
+echo "[+] OLLAMA SERVER STARTED. [+]"
 
 # Check if chat model is available
 if ! ollama list | grep -q "$CHAT_MODEL"
@@ -67,7 +68,7 @@ then
     exit 1
 else
     echo "[+] DOCKER IS RUNNING. STARTING DOCKER COMPOSE... [+]"
-    docker compose up --build --detach
+    docker compose up --detach
 fi
 
 echo "[+] INITIALIZATION SCRIPT COMPLETED. [+]"

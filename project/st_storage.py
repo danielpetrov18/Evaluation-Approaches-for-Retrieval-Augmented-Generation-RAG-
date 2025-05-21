@@ -3,7 +3,11 @@
 # pylint: disable=C0301
 # pylint: disable=E0401
 
+from typing import List, Union
+
 import streamlit as st
+from streamlit.runtime.uploaded_file_manager import UploadedFile
+
 from st_app import (
     r2r_client,
     ollama_client,
@@ -53,7 +57,7 @@ if __name__ == "__page__":
         with col2:
             limit = st.number_input("Limit", min_value=1, max_value=1000, value=10, step=10)
 
-        doc_ids = st.text_area(
+        doc_ids: str = st.text_area(
             label="Document IDs",
             placeholder="document_id1\ndocument_id2\n...",
             height=100,
@@ -61,7 +65,7 @@ if __name__ == "__page__":
         )
 
         if doc_ids:
-            doc_ids: list[str] = [doc.strip() for doc in doc_ids.split("\n")]
+            doc_ids: List[str] = [doc.strip() for doc in doc_ids.strip().split("\n")]
 
         if st.button("Fetch Documents", type="primary", key="fetch_docs_btn"):
             fetch_documents(r2r_client(), doc_ids, offset, limit)
@@ -71,7 +75,7 @@ if __name__ == "__page__":
 
         col1, col2 = st.columns([1, 2])
         with col1:
-            offset = st.number_input(
+            offset: int = st.number_input(
                 "Offset", 
                 min_value=0,
                 value=0,
@@ -79,7 +83,7 @@ if __name__ == "__page__":
                 key="Chunks offset"
             )
         with col2:
-            limit = st.number_input(
+            limit: int = st.number_input(
                 "Limit",
                 min_value=1,
                 max_value=1000,
@@ -88,13 +92,14 @@ if __name__ == "__page__":
                 key="Chunks limit"
             )
 
-        document_id_chunks = st.text_input(
+        document_id_chunks: str = st.text_input(
             label="Document id",
             placeholder="Ex. document_id",
             value=None
         )
 
         if st.button("Fetch Chunks", type="primary", key="fetch_chunks_btn"):
+            document_id_chunks: str = document_id_chunks.strip()
             if not document_id_chunks:
                 st.error("Please provide a document id.")
             else:
@@ -103,12 +108,12 @@ if __name__ == "__page__":
     with t_file_ingest:
         st.markdown("**Ingest Document**")
 
-        uploaded_file = st.file_uploader(
+        uploaded_file: Union[UploadedFile, None] = st.file_uploader(
             label="Choose a file to upload",
             type=["txt", "pdf", "docx", "csv", "md", "html", "json"]
         )
 
-        metadata = st.text_area(
+        metadata: str = st.text_area(
             label="Metadata (JSON format)",
             value="{}",
             help="Optional metadata in JSON format"
@@ -118,12 +123,12 @@ if __name__ == "__page__":
             if not uploaded_file:
                 st.error("Please upload a file.")
             else:
-                ingest_file(r2r_client(), uploaded_file, metadata)
+                ingest_file(r2r_client(), uploaded_file, metadata.strip())
 
     with t_webscrape:
         st.markdown("**Perform Web Scrape**")
 
-        uploaded_url_file = st.file_uploader(
+        uploaded_url_file: Union[UploadedFile, None] = st.file_uploader(
             label="Choose file containing URLs",
             type="csv",
             help="Supported formats: CSV"
@@ -138,7 +143,7 @@ if __name__ == "__page__":
     with t_export_docs:
         st.markdown("**Export Documents**")
 
-        files_csv_out = st.text_input(
+        files_csv_out: str = st.text_input(
             label='Name of output file (without extension)',
             placeholder="Ex. exported_docs"
         )
@@ -163,7 +168,7 @@ if __name__ == "__page__":
         st.markdown("**Web Search**")
 
         with st.sidebar:
-            new_api_key = st.text_input(
+            new_api_key: str = st.text_input(
                 label="API key",
                 value=st.session_state['websearch_api_key'],
                 type="password"
@@ -174,10 +179,10 @@ if __name__ == "__page__":
                     st.error("Please enter an API key.")
                 elif 'sk-' not in new_api_key:
                     st.error("Please enter a valid API key.")
-                elif st.session_state['websearch_api_key'] == new_api_key:
+                elif new_api_key == st.session_state['websearch_api_key']:
                     st.error("Please enter a new API key.")
                 else:
-                    st.session_state['websearch_api_key'] = new_api_key
+                    st.session_state['websearch_api_key'] = new_api_key.strip()
                     st.success("API key saved.")
 
         with st.expander("Instructions on how to use it", expanded=True, icon="📖"):
@@ -194,7 +199,7 @@ if __name__ == "__page__":
             * You can use the links to create a csv file to then ingest     
             """)
 
-        query = st.text_input(
+        query: str = st.text_input(
             label="Enter query",
             key="query_input",
             placeholder="What is the capital of France?"
@@ -210,7 +215,7 @@ if __name__ == "__page__":
         )
 
         if st.button("Search", type="primary", key="websearch_btn"):
-            if not query:
+            if not query.strip():
                 st.error("Please enter a query.")
             elif st.session_state['websearch_api_key'] is None:
                 st.error("Please enter an API key.")
@@ -223,7 +228,7 @@ if __name__ == "__page__":
                         results_to_return
                     )
 
-                formatted_urls = ""
+                formatted_urls: str = ""
                 for i, url in enumerate(urls, 0):
                     formatted_urls += f"{i}. [{url}]({url})\n"
 

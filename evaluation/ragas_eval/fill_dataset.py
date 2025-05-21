@@ -40,6 +40,11 @@ SEARCH_SETTINGS: Final[Dict[str, Union[bool, int, str]]] = {
     "include_metadatas": False,
     "include_scores": True,
     "search_strategy": "vanilla",
+    "chunk_settings": {
+        "index_measure": "cosine_distance",
+        "enabled": True,
+        "ef_search": 80
+    }
 }
 
 # You can modify this template as needed
@@ -53,7 +58,7 @@ Do not provide any information in the answer outside the context.
 3. IF THE CONTEXT IS NOT ENOUGH TO ANSWER THE QUESTION, SAY THAT YOU CANNOT ANSWER BASED ON THE AVAILABLE INFORMATION.
 4. DO NOT GUESS OR SPECULATE.
 5. DO NOT INCLUDE CITATIONS OR REFERENCES TO SPECIFIC LINES OR PARTS OF THE CONTEXT.
-6. ALWAYS KEEP YOUR ANSWER RELEVANT AND FOCUSED ON THE USER'S QUESTION. DO NOT PROVIDE ANY ADDITIONAL INFORMATION EXCEPT THE ANSWER.
+6. ALWAYS KEEP YOUR ANSWER RELEVANT AND FOCUSED ON THE USER'S QUESTION.
 7. DO NOT PROVIDE ANY ADDITIONAL INFORMATION EXCEPT THE ANSWER.
 **
 

@@ -1,19 +1,23 @@
 """
 Prompt templating can significantly improve the quality of responses.
 It's worth trying out different prompts for RAG to see which one works best.
-Prompts can be defined in YAML format. Check out the prompts page in the frontend.
+Prompts can be defined in YAML format. Check out the prompts page in the browser.
 """
 
 # pylint: disable=E0401
 # pylint: disable=C0301
 
+from typing import Union
+
 import streamlit as st
-from st_app import r2r_client
+from streamlit.runtime.uploaded_file_manager import UploadedFile
+
 from backend.prompt import (
     list_prompts,
     create_prompt,
     delete_prompt
 )
+from st_app import r2r_client
 
 if __name__ == "__page__":
     st.title("📝 Prompt Management")
@@ -67,7 +71,7 @@ if __name__ == "__page__":
                         context: str
             """, language="yaml", line_numbers=True, wrap_lines=True)
 
-        uploaded_file = st.file_uploader(
+        uploaded_file: Union[UploadedFile, None] = st.file_uploader(
             label="Upload YAML Prompt File",
             type=["yaml", "yml"]
         )
@@ -80,13 +84,14 @@ if __name__ == "__page__":
     with tab_delete:
         st.markdown("**Delete Prompt by Name**")
 
-        del_prompt_name = st.text_input(
+        del_prompt_name: str = st.text_input(
             label="Prompt Name to Delete",
             placeholder="Ex. prompt_name",
             value=""
         )
         if st.button("Delete Prompt", key="delete_prompt_btn"):
-            if not del_prompt_name.strip():
+            del_prompt_name: str = del_prompt_name.strip()
+            if not del_prompt_name:
                 st.error("Please enter a prompt name.")
             else:
-                delete_prompt(r2r_client(), del_prompt_name.strip())
+                delete_prompt(r2r_client(), del_prompt_name)

@@ -34,12 +34,16 @@ def ollama_options():
         top_p=st.session_state['top_p'],
         top_k=st.session_state['top_k'],
         num_ctx=st.session_state["context_window_size"],
-        format="json", # This should be json to enforce proper output
+        format="json", # This should be json to enforce proper output if required
     )
 
 def get_enhanced_query(query: str) -> str:
     """
-    Enhance the query with relevant historical context.
+    Enhance the query with relevant historical context:
+        1. Find messages in the history that are relevant to the given query
+        2. Construct prompt for summarizing relevant history
+        3. Get summary of relevant context
+        4. Enhance query with context
     
     Args:
         query: Original user query
@@ -55,19 +59,21 @@ def get_enhanced_query(query: str) -> str:
     if not relevant_messages:
         return query
 
-    # Construct prompt for summarizing relevant history
-    history_summary_prompt: str = construct_history_summary_prompt(query, relevant_messages)
+    history_summary_prompt: str = construct_history_summary_prompt(
+        query,
+        relevant_messages
+    )
 
-    # Get summary of relevant context
     context_summary: str = summarize_context(history_summary_prompt)
 
-    # Enhance query with context
     return enhance_user_query(query, context_summary)
 
 @st.cache_data(ttl=None)
 def compute_embedding(text: str) -> List[float]:
     """
     Compute the vector embedding of a given text using the selected Ollama model.
+    By default this project uses `mxbai-embed-large`, however one can change that from
+    the environment variables file under `env/rag.env`.
     
     Args:
         text: Text to compute the embedding for the text input
@@ -120,7 +126,7 @@ def get_relevant_messages(query_embedding: List[float], history: List[Message]) 
     For each message, it computes the cosine similarity between the query embedding.
     If the given message has a similarity exceeding the threshold, it is considered relevant.
     The `relevant` messages are then sorted in descending order, based on their similarity scores.
-    Finally, we make sure that only the `TOP_K` messages are kept.
+    Finally, we make sure that only the `top-k` messages are kept.
     
     Args:
         query_embedding: Embedding of the current users query
@@ -168,32 +174,29 @@ def construct_history_summary_prompt(query: str, relevant_history: List[Dict]) -
     """
     prompt_parts: List[str] = []
     if relevant_history:
-        prompt_parts.append("# Context Summarization Task")
         prompt_parts.append("You are helping to summarize relevant parts of a conversation history that relate to the current question.")
         prompt_parts.append("\n## Relevant conversation history:")
 
-        for i, item in enumerate(relevant_history):
-            content = item['message'].content
-            role = item['message'].role
-            similarity = item['similarity']
+        for i, item in enumerate(relevant_history, 1):
+            content: str = item['message'].content
+            role: str = item['message'].role
             prompt_parts.append(
-                f"{i+1}. [{role.upper()} (relevance: {similarity:.2f})]:\n{content}\n{'_' * 40}"
+                f"{i}. [{role.upper()}]:\n{content}\n\n"
             )
 
         prompt_parts.append(
-            "\n## Instructions:\n" +
-            "1. Extract key information from the conversation history above\n" +
-            "2. Only include details relevant to answering the current question\n" +
-            "3. Preserve specific facts, data points, and context\n" +
-            "4. Keep your summary concise (3-5 sentences maximum)\n" +
-            "5. Format in clear, simple language\n"
-            "6. DO NOT add any further explanations or clarifications\n"
+            """## Instructions:
+1. Extract key information from the conversation history above.
+2. Only include details relevant to answering the current question.
+3. Keep your summary concise (3-5 sentences maximum).
+4. DO NOT add any further explanations or clarifications, just the summary.
+"""
         )
 
-    prompt_parts.append(f"\n## Current question:\n{query}")
+    prompt_parts.append(f"## Current question:\n{query}\n")
 
     if relevant_history:
-        prompt_parts.append("\n## Your summary of relevant context (be concise):")
+        prompt_parts.append("## Your summary of the relevant context (be concise):")
 
     result: str = "\n".join(prompt_parts)
     return result

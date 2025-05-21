@@ -1,9 +1,12 @@
 services:
+  # The vector store, where vector embeddings will be stored.
+  # It has support for semantic search.
   pgvector:
     image: 'pgvector/pgvector:pg16'
     container_name: pgvector-db
     env_file:
       - ./env/pgvector-db.env
+      - ./env/r2r.env
     pull_policy: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -14,13 +17,16 @@ services:
     restart: on-failure
     command: >
       postgres
-      -c max_connections=1024
+      -c max_connections=${R2R_POSTGRES_MAX_CONNECTIONS}
     volumes:
       - 'postgres_data:/var/lib/postgresql/data'
     networks:
       - r2r_network
 
   # https://github.com/huggingface/text-embeddings-inference
+  # This container will hold a Sequence Classification cross-encoders model.
+  # After context retrieval the re-ranker will re-order the nodes position based
+  # on their relevance relative to the user input.
   reranker:
     image: 'ghcr.io/huggingface/text-embeddings-inference:1.7'
     container_name: hf-reranker
@@ -42,6 +48,8 @@ services:
     networks:
       - r2r_network
 
+  # `R2R` will use this service to ingest documents into the vector store.
+  # The service will receive requests containing the document to be ingested.
   unstructured:
     image: ragtoriches/unst-prod:latest
     container_name: unstructured
@@ -55,8 +63,11 @@ services:
     restart: on-failure
     networks:
       - r2r_network
-    
+  
+  # The `RAG` application server.
   r2r:
+    # Make sure the tag of the image matches the version of `r2r` specified in the `requirements.txt`.
+    # Otherwise, there might be unexpected errors, due to changes in the code.
     image: sciphiai/r2r:3.5.11
     container_name: r2r
     pull_policy: always
@@ -75,9 +86,10 @@ services:
     networks:
       - r2r_network
     volumes:
-      # Custom configuration file. To make sure it's available inside the container.
+      # Custom configuration file will be mapped inside the container.
       - ./project/backend/config.toml:/app/custom_config_ollama.toml
     extra_hosts:
+      # This makes sure the container can communicate with `ollama` running on localhost
       - host.docker.internal:host-gateway
     depends_on:
       pgvector:
@@ -95,6 +107,7 @@ services:
     container_name: frontend
     env_file:
       - ./env/rag.env
+      - ./env/r2r.env
     ports:
       - "127.0.0.1:8501:8501"
     restart: on-failure

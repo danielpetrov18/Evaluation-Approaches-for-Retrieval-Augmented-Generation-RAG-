@@ -80,6 +80,11 @@ if __name__ == "__main__":
         "include_metadatas": False,
         "include_scores": True,
         "search_strategy": "vanilla",
+        "chunk_settings": {
+            "index_measure": "cosine_distance",
+            "enabled": True,
+            "ef_search": 80
+        }
     }
 
     goldens: list[dict] = []

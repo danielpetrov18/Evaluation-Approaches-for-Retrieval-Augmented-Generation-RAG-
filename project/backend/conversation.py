@@ -33,9 +33,9 @@ def list_conversations(
         if conversations:
             st.write(f"Showing conversations {offset+1} to {offset+len(conversations)}")
 
-            for i, conversation in enumerate(conversations):
+            for i, conversation in enumerate(conversations, 1):
                 with st.expander(
-                    label=f"Conversation {i + 1}: {conversation.id}",
+                    label=f"Conversation {i}: {conversation.id}",
                     expanded=False
                 ):
                     st.json(conversation)

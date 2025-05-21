@@ -7,7 +7,11 @@ https://r2r-docs.sciphi.ai/api-and-sdks/indices/indices
 
 # pylint: disable=E0401
 
+from typing import Union
+
 import streamlit as st
+from streamlit.runtime.uploaded_file_manager import UploadedFile
+
 from backend.index import (
     list_indices,
     create_idx,
@@ -54,7 +58,7 @@ if __name__ == "__page__":
                         ef: 40 
             """, language="yaml", line_numbers=True)
 
-        uploaded_file = st.file_uploader(
+        uploaded_file: Union[UploadedFile, None] = st.file_uploader(
             label="Upload YAML Index File",
             type=["yaml", "yml"]
         )
@@ -68,13 +72,14 @@ if __name__ == "__page__":
     with tab_delete:
         st.markdown("**Delete Index by Name**")
 
-        del_index_name = st.text_input(
+        del_index_name: str = st.text_input(
             label="Index Name to Delete",
             placeholder="Ex index_name",
             value=""
         )
         if st.button(label="Delete Index", key="delete_index_btn"):
-            if not del_index_name.strip():
+            del_index_name: str = del_index_name.strip()
+            if not del_index_name:
                 st.error("Please provide an index name to delete.")
             else:
-                delete_idx(r2r_client(), del_index_name.strip())
+                delete_idx(r2r_client(), del_index_name)

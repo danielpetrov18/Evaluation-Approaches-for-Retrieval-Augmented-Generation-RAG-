@@ -7,10 +7,10 @@ from pydantic import BaseModel, Field
 
 class Message(BaseModel):
     """
-    Represents a chat message with embedding information.
-    This class is relevant for my custom implementation of the history.
-    It holds embedding information. When searching for relevant messages from previous
-    interactions we will perform semantic similarity search on those embeddings.
+    Represents a chat message with embeddings information.
+    This class is relevant for my custom implementation of the (chat)history.
+    When searching for relevant messages from previous
+    interactions we will perform semantic similarity search using the embeddings.
     
     Attributes:
         id: Unique identifier for the message

@@ -3,7 +3,10 @@
 # pylint: disable=E0401
 
 import re
+from typing import List, Dict
+
 import streamlit as st
+
 from st_app import r2r_client
 from backend.conversation import (
     list_conversations,
@@ -33,7 +36,7 @@ if __name__ == "__page__":
     with t_list:
         st.markdown("**List Conversations**")
 
-        filter_ids = st.text_area(
+        filter_ids: str = st.text_area(
             label="Filter by Conversation IDs",
             placeholder="id1\nid2\n... (optional)",
             value="",
@@ -68,11 +71,11 @@ if __name__ == "__page__":
                 st.session_state["page_number"] += 1
                 st.rerun()
 
-        offset = st.session_state["page_number"] * st.session_state["items_per_page"]
-        limit = st.session_state["items_per_page"]
+        offset: int = st.session_state["page_number"] * st.session_state["items_per_page"]
+        limit: int = st.session_state["items_per_page"]
 
-        if filter_ids:
-            filter_ids = [id.strip() for id in filter_ids.split('\n')]
+        if filter_ids.strip():
+            filter_ids: List[str] = [id.strip() for id in filter_ids.split('\n')]
 
         if conversations_btn:
             list_conversations(r2r_client(), filter_ids, offset, limit)
@@ -80,13 +83,13 @@ if __name__ == "__page__":
     with t_conv_msgs:
         st.markdown("**Conversation messages**")
 
-        conversation_id = st.text_input(
+        conversation_id: str = st.text_input(
             label = "Conversation ID",
             placeholder = "Ex. conversation_id",
             value=""
         )
 
-        include_metadata = st.checkbox(
+        include_metadata: bool = st.checkbox(
             label="Include metadata",
             value=False
         )
@@ -100,29 +103,29 @@ if __name__ == "__page__":
     with t_exp_conversations:
         st.markdown("**Export Conversations Metadata to CSV**")
 
-        filename = st.text_input(
+        filename: str = st.text_input(
             label = "export filename",
             placeholder = "Ex. conversations",
             max_chars = 20,
             help = "Name of the exported file without extension"
         )
 
-        filter_ids = st.text_area(
+        filter_ids: str = st.text_area(
             label = "conversation ids",
             placeholder = "conversation_id1\nconversation_id2\n... (optional)",
             help = "Conversation ids on each line"
         )
 
         if st.button("Export conversations", key="export_conv_btn"):
-            if not filename:
+            if not filename.strip():
                 st.warning("Please enter a filename")
             else:
-                export_conversations(filter_ids, filename)
+                export_conversations(filter_ids.strip(), filename.strip())
 
     with t_exp_msgs:
         st.markdown("**Export Conversation Messages to CSV**")
 
-        filename = st.text_input(
+        filename: str = st.text_input(
             label = "export filename",
             placeholder = "Ex. messages",
             max_chars = 20,
@@ -159,7 +162,7 @@ if __name__ == "__page__":
             if not filename:
                 st.warning("Please enter a filename")
             else:
-                filters = {}
+                filters: Dict[str, str|int] = {}
 
                 if role_filter != "all":
                     filters['role'] = role_filter

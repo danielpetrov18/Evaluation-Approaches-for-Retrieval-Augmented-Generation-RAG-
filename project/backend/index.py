@@ -1,4 +1,5 @@
 # pylint: disable=C0114
+# pylint: disable=C0115
 # pylint: disable=W0718
 # pylint: disable=R1732
 
@@ -18,7 +19,6 @@ from shared.api.models.ingestion.responses import VectorIndexResponse
 
 @dataclasses.dataclass
 class Index:
-    """Following a more object oriented approach by grouping data together."""
     name: str
     method: str
     measure: str
@@ -87,7 +87,7 @@ def delete_idx(client: R2RClient, name: str):
             table_name="chunks"
         ).results.message
 
-        st.success(body=result)
+        st.success(result)
     except R2RException as r2re:
         st.error(f"Error deleting index: {r2re.message}")
     except Error as e:

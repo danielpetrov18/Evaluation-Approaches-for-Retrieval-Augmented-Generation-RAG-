@@ -1,5 +1,6 @@
 # pylint: disable=C0114
-# pylint: disable=W0718 -> disable too-broad of an exception
+# pylint: disable=C0301
+# pylint: disable=W0718
 
 import datetime
 from typing import Dict, Any
@@ -7,7 +8,6 @@ from typing import Dict, Any
 import streamlit as st
 from streamlit.errors import Error
 from r2r import R2RException, R2RClient
-
 from shared.api.models.management.responses import ServerStats
 
 def check_health(client: R2RClient):
@@ -37,8 +37,8 @@ def check_status(client: R2RClient):
                 memory_delta = None
             else:
                 # Calculate delta from previous values
-                cpu_delta = status.cpu_usage - st.session_state['previous_cpu_usage']
-                memory_delta = status.memory_usage - st.session_state['previous_memory_usage']
+                cpu_delta: float = status.cpu_usage - st.session_state['previous_cpu_usage']
+                memory_delta: float = status.memory_usage - st.session_state['previous_memory_usage']
                 st.session_state['previous_cpu_usage'] = status.cpu_usage
                 st.session_state['previous_memory_usage'] = status.memory_usage
 
@@ -74,7 +74,7 @@ def check_status(client: R2RClient):
 def check_settings(client: R2RClient):
     """
     Check settings.
-    All of the settings can be configured under `/project/backend/config.toml`.
+    All of the settings can be configured under `project/backend/config.toml`.
     If not specified, default values are used implicitly by R2R.
     """
     try:
