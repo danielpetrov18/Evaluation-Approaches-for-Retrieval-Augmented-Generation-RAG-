@@ -72,8 +72,8 @@ The output should be a JSON object containing the following keys:
 
 ======= FEW SHOT EXAMPLES: =======
 
-{examples_str.strip()
-}
+{examples_str.strip()}
+
 ======= END OF EXAMPLES =======
 
 **IMPORTANT:

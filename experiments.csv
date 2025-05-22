@@ -5,7 +5,7 @@ test_id,top_k,max_tokens_to_sample,chunk_size,chunk_overlap,chat_model,temperatu
 4,5,512,768,64,llama3.1:8b,0.5,Mid-range balanced configuration with some creativity
 5,5,512,768,64,llama3.1:8b-instruct-q4_1,0.5,Mid-range balanced creative instruction-tuned approach
 6,5,512,1024,128,llama3.1:8b,0,Maximum retrieval quality
-7,5,512,1024,128,llama3.1:8b,0,Maximum retrieval quality advanced-RAG (HyDE)
+7,5,512,1024,128,llama3.1:8b,0,Maximum retrieval quality advanced-RAG (RAG-Fusion)
 8,5,512,1024,128,llama3.1:8b,1,Testing high temperature creativity on max retrieval quality
 9,5,512,1024,128,llama3.1:8b-instruct-q4_1,0,Alternative model with high retrieval settings
 10,5,1536,1024,128,deepseek-r1:7b,0,Reasoning model with high retrieval settings

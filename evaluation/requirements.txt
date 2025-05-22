@@ -5,4 +5,3 @@ rapidfuzz==3.13.0 # Used by some RAGAs metrics (non-LLM based ones)
 unstructured[md]==0.17.2
 langchain-ollama==0.3.2
 ipykernel
-ipywidgets

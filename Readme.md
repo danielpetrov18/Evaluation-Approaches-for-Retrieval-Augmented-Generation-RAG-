@@ -12,6 +12,8 @@
 - [Evaluation](#evaluation)
 - [Contact](#contact)
 
+---
+
 ### About The Project
 
 This is my bachelor’s thesis project at the University of Vienna, where I explore different **frameworks for evaluating a Retrieval-Augmented Generation (RAG) system**. The project leverages **Ollama** for running large language models locally, **R2R** for building a basic RAG pipeline, and **Streamlit** for an interactive UI. Additionally, **3 different frameworks for evaluation** are used.
@@ -19,6 +21,20 @@ This is my bachelor’s thesis project at the University of Vienna, where I expl
 The primary goal is to assess different evaluation frameworks, including **RAGAs**, to analyze how efficient a RAG application is. A variety of **evaluation metrics** are to be used to achieve that.
 
 The application is a **vanilla RAG** - no Knowledge Graphs, no hybrid search, no AI-agents or tools, just submitting a query, retrieving context, augmenting a prompt and submitting it to get the response from the LLM. During context retrieval **cosine distance** is used as measure.
+
+#### Introduction to Simple RAG
+
+[Reference](https://github.com/FareedKhan-dev/all-rag-techniques/blob/main/1_simple_rag.ipynb)
+
+Retrieval-Augmented Generation (RAG) is a hybrid approach that combines information retrieval with generative models. It enhances the performance of language models by incorporating external knowledge, which improves accuracy and factual correctness.
+
+In a Simple RAG setup, we follow these steps:
+
+1. **Data Ingestion**: Load and preprocess the text data.
+2. **Chunking**: Break the data into smaller chunks to improve retrieval performance.
+3. **Embedding Creation**: Convert the text chunks into numerical representations using an embedding model.
+4. **Semantic Search**: Retrieve relevant chunks based on a user query.
+5. **Response Generation**: Use a language model to generate a response based on retrieved text.
 
 ![RAG application structure](img/app/rag-app.png "RAG application")
 
@@ -104,17 +120,17 @@ curl -fsSL https://ollama.com/install.sh | sh
 ### Project structure
 
 ```bash
-├── docker-compose.yaml   # All docker services
-├── env                   # Environment variables
-├── evaluation            # All 3 evaluation frameworks
+├── docker-compose.yaml   
+├── env                   
+├── evaluation            
 │   ├── deepeval_eval     
 │   ├── opik_eval
 │   ├── ragas_eval
-├── experiments.csv       # Experiments ran during evaluation
-├── img                   # Images used in my notebooks
-├── project               # The RAG project + GUI
-├── Readme.md             # Useful information regarding the project
-└── run.sh                # This script initializes the project
+├── experiments.csv       
+├── img                   
+├── project               
+├── Readme.md   # <- You are here!
+└── run.sh                
 ```
 
 ### Usage
@@ -144,6 +160,7 @@ curl -fsSL https://ollama.com/install.sh | sh
    #  4. Docker is running and start all containers.
    ./run.sh   
    ```
+4. You can then open a browser and enter `http://localhost:8501` in the search bar. That will enable you to interact with the RAG service using a GUI. There's a **python SDK** and a **RESTful API** as well. For that you can use `http://localhost:7272`. For further details refer to [R2R](https://r2r-docs.sciphi.ai/api-and-sdks/introduction).
 
 ### Data Generation
 
@@ -151,7 +168,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 
    1. **diverse** enough to resemble real-world user interactions
 
-   2. **include edge-cases** like short or long queries, the use of improper grammar or more scientific lingo
+   2. **include edge-cases** like short or long queries, the use of improper grammar or more scientific lingo, etc
 
    3. contain **enough samples** to draw statistically significant conclusions
 
@@ -159,7 +176,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 - It's based on the concept of **knowledge graph** that consists of **node**s holding some kind of information and metadata.
 
-- One can apply various pre-defined or custom transformations to **enrich** the **knowledge graph**.
+- One can apply various pre-defined or custom transformations to **enrich** the **knowledge graph** and establish **relationship**s between **node**s.
 
 - Finally, using the **enriched graph** one can generate **samples**.
 
@@ -172,20 +189,24 @@ curl -fsSL https://ollama.com/install.sh | sh
    
    ./setup.sh #<= will create a virtual environment (eval) 
    
-   cd ragas-eval
+   cd ragas_eval
 
    # Open the `generate` notebook
    # Select the kernel (eval)
    # Follow along the instructions, documentation and code
    ```
 
-- Do have in mind that this notebook **DOESN'T** generate the **full** dataset. It will generate **goldens** - entries consisting of `user_input`, `reference` (expected output) and `reference_contexts`. For all experiments I've used the same `model` and `temperature` values: **llama3.1:8b-instruct-q4_1** and **0.0** respectively. The reason is to try to create synthetic datasets that are as uniform as possible and try to avoid noise.
+- Do have in mind that **RAGAs DOESN'T** generate the **full** dataset. It will generate **goldens** - entries consisting of `user_input`, `reference` (expected output) and `reference_contexts`. The rest needs to be filled out by you, either using [R2R](https://r2r-docs.sciphi.ai/introduction) or your own **RAG** pipeline with any framework you like.
+
+- For the generation of goldens for all experiments I've used the same `model` and `temperature` values: **llama3.1:8b-instruct-q4_1** and **0.0** respectively. The reason is to try to create synthetic datasets that are as uniform as possible and try to avoid noise.
 
 - For completing the synthetic dataset, i.e. adding the `response` (LLM response) and `retrieved_contexts` the `model` and `temperature` will depend on the corresponding experiment.
 
-- With all of that in mind, one could generate various of datasets and test various configurations. Each dataset will be saved locally under `evaluation/ragas_eval/datasets`.
+- With all of that in mind, one could generate various of datasets and test various configurations. Each dataset will be saved locally under `evaluation/ragas_eval/datasets` by default.
 
-- Alternatively, one could make use of the `generate` notebook under `evaluation/deepeval-eval`, however I suggest the **RAGAs** approach since it's more customizable.
+- If you already have a dataset of your own, ensure that you properly match fields to the ones expected by **RAGAs** metrics or the other frameworks during evaluation.
+
+- Alternatively, one could make use of the `generate` notebook under `evaluation/deepeval_eval`, however I suggest the **RAGAs** approach since it's more customizable.
 
 ### Evaluation
 
@@ -201,6 +222,8 @@ For example different values for the `chunk size`, `chunk overlap` and `top-K` c
 
 To play around with different values one could modify the environment variables under `env/rag.env`.
 
+Do have in mind that the `chunk size` and `chunk overlap` values are **NOT** in **tokens**, but in **characters**, since [R2R](https://r2r-docs.sciphi.ai/introduction) makes use of `unstructured` and `RecursiveCharacterTextSplitter` for data ingestion.
+
 #### Experiments
 
 | Test ID | Top-K | Max Tokens | Chunk Size | Chunk Overlap | Chat Model                 | Temp. | Description                                                    |
@@ -211,7 +234,7 @@ To play around with different values one could modify the environment variables 
 | 4       | 5     | 512        | 768        | 64            | llama3.1:8b                | 0.5   | Mid-range balanced configuration with some creativity          |
 | 5       | 5     | 512        | 768        | 64            | llama3.1:8b-instruct-q4_1  | 0.5   | Mid-range balanced creative instruction-tuned approach         |
 | 6       | 5     | 512        | 1024       | 128           | llama3.1:8b                | 0     | Maximum retrieval quality                                      |
-| 7       | 5     | 512        | 1024       | 128           | llama3.1:8b                | 0     | Maximum retrieval quality advanced-RAG (HyDE)                  |
+| 7       | 5     | 512        | 1024       | 128           | llama3.1:8b                | 0     | Maximum retrieval quality advanced-RAG (RAG-Fusion)                  |
 | 8       | 5     | 512        | 1024       | 128           | llama3.1:8b                | 1     | Testing high temperature creativity on max retrieval quality   |
 | 9       | 5     | 512        | 1024       | 128           | llama3.1:8b-instruct-q4_1  | 0     | Alternative model with high retrieval settings                 |
 | 10      | 5     | 1536       | 1024       | 128           | deepseek-r1:7b             | 0     | Reasoning model with high retrieval settings                   |
@@ -220,7 +243,7 @@ To play around with different values one could modify the environment variables 
 
 ##### Description
 
-**NOTE**: all experiments, with exception of the second use a **vanilla RAG approach**. The second experiment tests if the usage of a more advanced approach like **Hypothetical Document Embeddings** could yield significantly better results.
+**NOTE**: all experiments, with exception of the 7th use a **vanilla RAG approach**. The 7th experiment tests if the usage of a more advanced approach like [RAG-Fusion](https://r2r-docs.sciphi.ai/documentation/advanced-rag#rag-fusion) could yield significantly better results. The idea of `RAG-Fusion` is to generate `N` hypothetical questions based on the original one, as to capture a broader perspective and to fetch more relevant context. It uses `RRF` or Reciprocal Rank Fusion to fuse all the documents for the individual queries.
 
 - **Experiment 1**: Baseline
 - **Experiment 2**: Seeing how a `fine-tuned` model performs on baseline
@@ -228,7 +251,7 @@ To play around with different values one could modify the environment variables 
 - **Experiment 4**: Increasing the nodes retrieved, chunk size and overlap to see how that affects **faithfulness**, **recall**, **precision**, etc. Also using a higher temperature.
 - **Experiment 5**: Same as experiment 4, but with `fine-tuned` model.
 - **Experiment 6**: Maximum retrieval with higher chunk sizes and overlap
-- **Experiment 7**: Maximum retrieval with the same model, but using an advanced approach - **Hypothetical Document Embeddings**
+- **Experiment 7**: Maximum retrieval with the same model, but using an advanced approach - **RAG-Fusion**
 - **Experiment 8**: High retrieval with very high creativity
 - **Experiment 9**: `Fine-tuned` model on max retrieval quality
 - **Experiment 10**: `Reasoning` model on max retrieval quality
@@ -237,11 +260,13 @@ To play around with different values one could modify the environment variables 
 
 The `evaluation` folder contains 3 sub-directories. Depending on the framework one might want to try out, one could switch into the respective folder and use the `evaluate` notebook. The notebooks contains both code and explanation in markdown to simplify the process as much as possible. In each notebook I have a short description of each metric I've used and the corresponding code required for evaluation.
 
-Do note that for evaluation with different metrics, different parameters might be required. Some metrics rely only on `user_input` and `response`, others might require other ones. So if you are using a custom dataset, some metrics might not work, due to missing parameters.
+Do note that for evaluation with different metrics, different parameters might be required. Some metrics rely only on `user_input` and `response`, others might require other ones. So if you are using a custom dataset, some metrics might not work, due to missing parameters or invalid names. Make sure you map out the parameters as needed.
 
 Do also note that different frameworks use varying names for describing parameters. For example **RAGAs** uses `response` and **DeepEval** - `actual_output`.
 
-For all three frameworks one could overwrite the default `prompts` that are used during evaluation to try to achieve consistent evaluation and or to customize the evaluation as required relative to a specific domain.
+For all three frameworks one could overwrite the default `prompts` of metrics that are used during evaluation to try to achieve consistent evaluation and or to customize the evaluation as required relative to a specific domain.
+
+For the evaluation of all experiments across the different frameworks I use the same `model` and `temperature` - `llama3.1:8b-instruct-q4_1` and `0.0` respectively.
 
 ### Contact
 
