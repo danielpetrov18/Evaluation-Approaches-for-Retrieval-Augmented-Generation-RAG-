@@ -38,7 +38,8 @@ FEW_SHOT_EXAMPLES_STATEMENTS: Final[List[FewShotExampleStatements]] = [
     )
 ]
 
-TEXT_DECOMPOSITION_TEMPLATE: Final[str] = """You are a helpful assistant that specializes in breaking down complex or multi-part texts into individual, complete, and standalone claims. You DO NOT need to over-split into fine details; aim for meaningful, medium-grained statements.
+TEXT_DECOMPOSITION_TEMPLATE: Final[str] = """You are a helpful assistant that specializes in breaking down complex or multi-part texts into individual, complete, and standalone claims.
+You DO NOT need to over-split into fine details; aim for meaningful, medium-grained statements.
 
 RULES:
 1. Decompose each sentence into standalone, atomic statements.
@@ -148,7 +149,7 @@ CONTEXT_RECALL_TEMPLATE: Final[str] = """You are an expert judge evaluating whet
 
 EVALUATION CRITERIA:
 1. A statement is deemed attributed if it can be reasonably supported by one of the CONTEXTS.
-2. A statement is deemed unattributed if no context contains information to support it.
+2. A statement is deemed unattributed if no context contains any information to support it.
 3. Do not use any prior knowledge and accept the information from the CONTEXTS at face value.
 4. Read the CONTEXTS and STATEMENTS carefully.
 5. THE NUMBER OF VERDICTS MUST BE THE SAME AS THE NUMBER OF STATEMENTS.
@@ -173,7 +174,7 @@ Respond in the following JSON format:
 
 === END OF EXAMPLES ===
 
-Now evaluate:
+Now classify the following statements in relation to the CONTEXTS:
 
 INPUT:
 {input}
@@ -232,8 +233,8 @@ VERDICTS:
     )
 
     # Format input `context` and `statements` the same way
-    formatted_contexts = "[\n    " + ",\n    ".join(f'"{c}"' for c in context) + "\n]"
-    formatted_statements = "[\n    " + ",\n    ".join(f'{{"text": "{s.text}"}}' for s in statements) + "\n]"
+    formatted_contexts: str = "[\n    " + ",\n    ".join(f'"{c}"' for c in context) + "\n]"
+    formatted_statements: str = "[\n    " + ",\n    ".join(f'{{"text": "{s.text}"}}' for s in statements) + "\n]"
 
     return CONTEXT_RECALL_TEMPLATE.format(
         examples_str=examples_str.strip(),

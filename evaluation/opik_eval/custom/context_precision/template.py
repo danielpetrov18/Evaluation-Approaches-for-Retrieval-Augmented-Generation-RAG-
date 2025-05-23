@@ -4,7 +4,7 @@
 # pylint: disable=C0301
 # pylint: disable=W0622
 
-from typing import List, Final, Type, Optional, Literal
+from typing import List, Final, Optional, Literal
 
 from pydantic import BaseModel
 
@@ -15,7 +15,7 @@ class FewShotExampleContextPrecision(BaseModel):
     verdicts: List[Literal["yes", "no"]]
     reasons: List[str]
 
-FEW_SHOT_EXAMPLES: Final[List[Type[FewShotExampleContextPrecision]]] = [
+FEW_SHOT_EXAMPLES: Final[List[FewShotExampleContextPrecision]] = [
     FewShotExampleContextPrecision(
         input="Who developed the theory of evolution?",
         contexts=[
@@ -48,7 +48,7 @@ FEW_SHOT_EXAMPLES: Final[List[Type[FewShotExampleContextPrecision]]] = [
     ),
 ]
 
-CONTEXT_PRECISION_TEMPLATE: Final[Type[str]] = """You are an expert judge evaluating whether each context node was remotely useful for arriving at the expected output based on the input question.
+CONTEXT_PRECISION_TEMPLATE: Final[str] = """You are an expert judge evaluating whether each context node was remotely useful for arriving at the expected output based on the input question.
 
 EVALUATION CRITERIA:
 1. A context node is relevant (verdict: "yes") if it contains information that helps arrive at the expected output, even if only partially or indirectly.
@@ -92,15 +92,19 @@ VERDICT:
 """
 
 def generate_query(
-    input: Type[str],
-    expected_output: Type[str],
-    context: List[Type[str]],
-    few_shot_examples: Optional[List[Type[FewShotExampleContextPrecision]]] = None,
+    input: str,
+    expected_output: str,
+    context: List[str],
+    few_shot_examples: Optional[
+        List[FewShotExampleContextPrecision]
+    ] = None,
 ) -> str:
     # If the user doesn't provide examples of his own, use the default ones
-    examples: List[Type[FewShotExampleContextPrecision]] = FEW_SHOT_EXAMPLES if few_shot_examples is None else few_shot_examples
+    examples: List[FewShotExampleContextPrecision] = (
+        FEW_SHOT_EXAMPLES if few_shot_examples is None else few_shot_examples
+    )
 
-    examples_str: Type[str] = "\n\n".join(
+    examples_str: str = "\n\n".join(
         [
             f"""EXAMPLE {i}:
     
@@ -110,7 +114,7 @@ INPUT:
 CONTEXT:
 {example.contexts}
 
-OUTPUT:
+EXPECTED OUTPUT:
 {example.expected_output}
 
 VERDICT:

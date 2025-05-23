@@ -13,7 +13,7 @@ import numpy as np
 from opik.evaluation.metrics.base_metric import BaseMetric
 from opik.evaluation.metrics.score_result import ScoreResult
 
-def compute_similarity(embedding1: List[float], embedding2: List[float]) -> float:
+def compute_similarity(embedding1: np.ndarray, embedding2: np.ndarray) -> float:
     """
     Compute the cosine similarity between two vector embeddings.
     
@@ -28,13 +28,10 @@ def compute_similarity(embedding1: List[float], embedding2: List[float]) -> floa
     Raises:
         ValueError: If the embeddings have different dimensions.
     """
-    if len(embedding1) != len(embedding2):
+    if embedding1.size != embedding2.size:
         raise ValueError("Embeddings must have the same length!")
 
-    vec1 = np.array(embedding1)
-    vec2 = np.array(embedding2)
-
-    return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+    return np.dot(embedding1, embedding2) / (np.linalg.norm(embedding1) * np.linalg.norm(embedding2))
 
 
 class ReciprocalRank(BaseMetric):
@@ -80,6 +77,10 @@ class ReciprocalRank(BaseMetric):
         self.similarity_threshold = similarity_threshold
 
     def _get_embeddings(self, texts: List[str]) -> np.ndarray:
+        """
+        Using Ollama we compute the vector embeddings of the given texts.
+        Alternatively, you can use `openai`, `litellm`, etc.
+        """
         response: ollama.EmbedResponse = ollama.embed(
             model=self.embedding_model,
             input=texts,
@@ -91,6 +92,7 @@ class ReciprocalRank(BaseMetric):
         expected_output: str,
         contexts: List[str]
     ) -> Dict[str, Any]:
+        # We can't compute it if no relevant contexts were found
         if not contexts:
             return {
                 "score": 0.0,
@@ -101,16 +103,16 @@ class ReciprocalRank(BaseMetric):
         all_texts: List[str] = [expected_output] + contexts
         all_embeddings: np.ndarray = self._get_embeddings(all_texts)
 
-        expected_embedding: np.ndarray = all_embeddings[0]
-        context_embeddings: np.ndarray = all_embeddings[1:] # List of lists
+        expected_embedding: np.ndarray = all_embeddings[0]  # Expected output embedding
+        context_embeddings: np.ndarray = all_embeddings[1:] # Contexts embeddings
 
         # Calculate similarity scores
         similarities: List[float] = []
         for context_embedding in context_embeddings:
             # Pairwise similarity computation
             similarity: float = compute_similarity(
-                expected_embedding.tolist(),
-                context_embedding.tolist()
+                expected_embedding,
+                context_embedding
             )
             similarities.append(similarity)
 
@@ -133,15 +135,16 @@ class ReciprocalRank(BaseMetric):
                           f"Similarity scores:\n" + "\n".join(similarity_details)
             }
 
-        # Find first relevant context position (1-indexed)
-        first_relevant_position: int = relevant_indices[0] + 1
+        # Find the first relevant context
+        first_relevant_index: int = np.min(relevant_indices)  # 0-indexed
+        first_relevant_position: int = first_relevant_index + 1  # Convert to 1-indexed
 
         # Calculate RR score
         rr_score = 1.0 / first_relevant_position
 
         return {
             "score": rr_score,
-            "reason": f"First relevant context found at position {first_relevant_position} (similarity: {similarities[relevant_indices[0]]:.4f}).\n"
+            "reason": f"First relevant context found at position {first_relevant_position} (similarity: {similarities[first_relevant_index]:.4f}).\n"
                       f"Reciprocal Rank score: 1/{first_relevant_position} = {rr_score:.4f}\n"
                       f"Similarity scores:\n" + "\n".join(similarity_details),
             "context_similarities": similarities.tolist(),

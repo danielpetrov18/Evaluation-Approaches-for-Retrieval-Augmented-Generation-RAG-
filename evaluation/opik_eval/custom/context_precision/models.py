@@ -1,7 +1,7 @@
 # pylint: disable=C0114
 # pylint: disable=C0115
 
-from typing import (List, Literal)
+from typing import List, Literal
 
 from pydantic import BaseModel
 

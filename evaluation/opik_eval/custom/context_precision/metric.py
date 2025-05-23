@@ -19,7 +19,7 @@ from .template import generate_query, FewShotExampleContextPrecision
 
 class ContextPrecision(BaseMetric):
     """
-    A metric that evaluates the context precision of an input-output pair with context using a LLM.
+    A metric that evaluates the context precision of an input-output pair relative to the context using a LLM.
     Is the context fetched relevant and is it ranked high enough?
 
     This metric uses a language model to assess how well the given output aligns with
@@ -46,12 +46,7 @@ class ContextPrecision(BaseMetric):
         track: bool = True,
         project_name: Optional[str] = None,
     ):
-        super().__init__(
-            name=name,
-            track=track,
-            project_name=project_name,
-        )
-
+        super().__init__(name=name, track=track, project_name=project_name)
         self._init_model(model)
         self.few_shot_examples = few_shot_examples
 
@@ -83,14 +78,14 @@ class ContextPrecision(BaseMetric):
             ScoreResult: A ScoreResult object containing the context precision score
             (between 0.0 and 1.0) and a reason for the score.
         """
-        llm_query = generate_query(
+        llm_query: str = generate_query(
             input=input,
             expected_output=expected_output,
             context=context,
             few_shot_examples=self.few_shot_examples,
         )
 
-        model_output = self._model.generate_string(
+        model_output: str = self._model.generate_string(
             input=llm_query, response_format=ContextPrecisionVerdicts
         )
 
@@ -106,9 +101,6 @@ class ContextPrecision(BaseMetric):
         """
         Asynchronously calculate the context precision score for the given input-output pair.
 
-        This method is the asynchronous version of :meth:`score`. For detailed documentation,
-        please refer to the :meth:`score` method.
-
         Args:
             input: The input text to be evaluated.
             expected_output: The expected output for the given input.
@@ -118,14 +110,14 @@ class ContextPrecision(BaseMetric):
         Returns:
             ScoreResult: A ScoreResult object with the context precision score and reason.
         """
-        llm_query = generate_query(
+        llm_query: str = generate_query(
             input=input,
             expected_output=expected_output,
             context=context,
             few_shot_examples=self.few_shot_examples,
         )
 
-        model_output = await self._model.agenerate_string(
+        model_output: str = await self._model.agenerate_string(
             input=llm_query, response_format=ContextPrecisionVerdicts
         )
 

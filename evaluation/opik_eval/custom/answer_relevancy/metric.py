@@ -28,11 +28,7 @@ class AnswerRelevance(BaseMetric):
         model: The language model to use for evaluation. Can be a string (model name) or an `opik.evaluation.models.OpikBaseModel` subclass instance.
             `opik.evaluation.models.LiteLLMChatModel` is used by default.
         name: The name of the metric. Defaults to "AnswerRelevanceMetric".
-        few_shot_examples: A list of dict to include as examples to the prompt query. Context key is required.
-            If not provided, Opik's generic examples will be used.
-        few_shot_examples_no_context: A list of dict to include as examples to the prompt query in no-context mode (so, 'context' key is not needed).
-            If not provided, Opik's generic examples will be used.
-        require_context: if set to False, execution in no-context mode is allowed. Default is True.
+        few_shot_examples: A list of examples to include in the prompt query.
         track: Whether to track the metric. Defaults to True.
         project_name: Optional project name to track the metric in for the cases when there are no parent span/trace to inherit project name from.
     """
@@ -47,11 +43,7 @@ class AnswerRelevance(BaseMetric):
         track: bool = True,
         project_name: Optional[str] = None,
     ):
-        super().__init__(
-            name=name,
-            track=track,
-            project_name=project_name,
-        )
+        super().__init__(name=name, track=track, project_name=project_name)
         self._init_model(model)
         self.few_shot_examples = few_shot_examples
 
@@ -78,16 +70,16 @@ class AnswerRelevance(BaseMetric):
             **ignored_kwargs: Additional keyword arguments that are ignored.
 
         Returns:
-            score_result.ScoreResult: A ScoreResult object containing the answer relevance score
+            ScoreResult: A ScoreResult object containing the answer relevance score
             (between 0.0 and 1.0) and a reason for the score.
         """
-        llm_query = generate_query(
+        llm_query: str = generate_query(
             input=input,
             output=output,
             few_shot_examples=self.few_shot_examples
         )
 
-        model_output = self._model.generate_string(
+        model_output: str = self._model.generate_string(
             input=llm_query, response_format=AnswerRelevanceResponseFormat
         )
         return parser.parse_model_output(content=model_output, name=self.name)
@@ -101,9 +93,6 @@ class AnswerRelevance(BaseMetric):
         """
         Asynchronously calculate the answer relevance score for the given input-output pair.
 
-        This method is the asynchronous version of :meth:`score`. For detailed documentation,
-        please refer to the :meth:`score` method.
-
         Args:
             input: The input text (question) to be evaluated.
             output: The output text (answer) to be evaluated.
@@ -112,12 +101,12 @@ class AnswerRelevance(BaseMetric):
         Returns:
             ScoreResult: A ScoreResult object with the answer relevance score and reason.
         """
-        llm_query = generate_query(
+        llm_query: str = generate_query(
             input=input,
             output=output,
             few_shot_examples=self.few_shot_examples
         )
-        model_output = await self._model.agenerate_string(
+        model_output: str = await self._model.agenerate_string(
             input=llm_query, response_format=AnswerRelevanceResponseFormat
         )
 

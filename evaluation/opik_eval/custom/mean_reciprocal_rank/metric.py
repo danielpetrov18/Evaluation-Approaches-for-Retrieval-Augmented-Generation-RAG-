@@ -30,7 +30,7 @@ def mean_aggregator(score_results: List[ScoreResult]) -> ScoreResult:
 
     # Extract values from all score results
     values: List[float] = [result.value for result in score_results]
-    mean_value: float = float(np.mean(values))
+    mean_value: float = float(np.mean(values)) # Take the average to compute MRR
 
     return ScoreResult(
         name="mean_reciprocal_rank",

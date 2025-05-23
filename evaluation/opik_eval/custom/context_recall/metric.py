@@ -24,7 +24,7 @@ from .parser import parse_statements, parse_classified_statements
 
 class ContextRecall(BaseMetric):
     """
-    A metric that evaluates the context recall of an input-output pair using an LLM.
+    A metric that evaluates the context recall of an input-output pair relative to the context using an LLM.
 
     We first decompose the `expected output` into separate statements.
     Then we use the LLM to determine if each of those statements can be attributed to a node from the `retrieved context`.
@@ -55,12 +55,7 @@ class ContextRecall(BaseMetric):
         track: bool = True,
         project_name: Optional[str] = None,
     ):
-        super().__init__(
-            name=name,
-            track=track,
-            project_name=project_name,
-        )
-
+        super().__init__(name=name, track=track, project_name=project_name)
         self._init_model(model)
         self.few_shot_examples_statements = few_shot_examples_statements
         self.few_shot_examples_context_recall = few_shot_examples_context_recall
@@ -90,7 +85,7 @@ class ContextRecall(BaseMetric):
             **ignored_kwargs: Additional keyword arguments that are ignored.
 
         Returns:
-            score_result.ScoreResult: A ScoreResult object containing the context recall score
+            ScoreResult: A ScoreResult object containing the context recall score
             (between 0.0 and 1.0).
         """
         # Create the decomposition query
@@ -99,7 +94,7 @@ class ContextRecall(BaseMetric):
             few_shot_examples=self.few_shot_examples_statements,
         )
 
-        # Retrive the LLM response 
+        # Retrive the LLM response
         statements_output: str = self._model.generate_string(
             input=llm_statement_decomposition_query, response_format=Statements
         )
@@ -114,7 +109,7 @@ class ContextRecall(BaseMetric):
             Statement(**statement) for statement in statements
         ]
 
-        # Generate context recall prompt 
+        # Generate context recall prompt
         llm_context_recall_query: str = generate_query(
             input=input,
             statements=statements,
@@ -149,9 +144,6 @@ class ContextRecall(BaseMetric):
         """
         Asynchronously calculate the context recall score for the given input-output pair.
 
-        This method is the asynchronous version of :meth:`score`. For detailed documentation,
-        please refer to the :meth:`score` method.
-
         Args:
             input: The input text to be evaluated.
             expected_output: The expected output for the given input.
@@ -159,7 +151,7 @@ class ContextRecall(BaseMetric):
             **ignored_kwargs: Additional keyword arguments that are ignored.
 
         Returns:
-            score_result.ScoreResult: A ScoreResult object with the context recall score.
+            ScoreResult: A ScoreResult object with the context recall score.
         """
         llm_statement_decomposition_query: str = generate_decomposition_query(
             expected_output=expected_output,
