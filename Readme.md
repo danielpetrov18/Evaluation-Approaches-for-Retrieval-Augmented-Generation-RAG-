@@ -24,7 +24,8 @@ The application is a **vanilla RAG** - no Knowledge Graphs, no hybrid search, no
 
 #### Introduction to Simple RAG
 
-[Reference](https://github.com/FareedKhan-dev/all-rag-techniques/blob/main/1_simple_rag.ipynb)
+[Paper](https://arxiv.org/abs/2005.11401)
+[Example](https://github.com/FareedKhan-dev/all-rag-techniques/blob/main/1_simple_rag.ipynb)
 
 Retrieval-Augmented Generation (RAG) is a hybrid approach that combines information retrieval with generative models. It enhances the performance of language models by incorporating external knowledge, which improves accuracy and factual correctness.
 
@@ -37,6 +38,8 @@ In a Simple RAG setup, we follow these steps:
 5. **Response Generation**: Use a language model to generate a response based on retrieved text.
 
 ![RAG application structure](img/app/rag-app.png "RAG application")
+
+---
 
 ### Built With
 
@@ -60,6 +63,8 @@ In a Simple RAG setup, we follow these steps:
 
 [![RAGAs][RAGAs-img]][RAGAs-url] [![DeepEval][DeepEval-img]][DeepEval-url] [![Opik][Opik-img]][Opik-url]
 
+---
+
 ### System
 
 This project was developed and tested on the following system:
@@ -68,6 +73,8 @@ This project was developed and tested on the following system:
 - **CPU**: 11th Gen Intel i7-11370H (8) @ 3.300GHz
 - **RAM**: 16GB DDR4
 - **GPU**: NVIDIA GeForce RTX 3060 with 8GB VRAM
+
+---
 
 ### Prerequisites
 
@@ -99,6 +106,8 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 - Finally, you will need to have docker. If not go to [Docker](https://www.docker.com/) and install the version appropriate for your OS.
 
+---
+
 ### Docker services
 
 **NOTE**:
@@ -117,6 +126,8 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 5. `frontend` - the UI of the application, which provides a GUI in the browser at `localhost:8501`, where a user can interact with the chatbot and ingest data.
 
+---
+
 ### Project structure
 
 ```bash
@@ -132,6 +143,8 @@ curl -fsSL https://ollama.com/install.sh | sh
 ├── Readme.md   # <- You are here!
 └── run.sh                
 ```
+
+---
 
 ### Usage
 
@@ -160,7 +173,10 @@ curl -fsSL https://ollama.com/install.sh | sh
    #  4. Docker is running and start all containers.
    ./run.sh   
    ```
+
 4. You can then open a browser and enter `http://localhost:8501` in the search bar. That will enable you to interact with the RAG service using a GUI. There's a **python SDK** and a **RESTful API** as well. For that you can use `http://localhost:7272`. For further details refer to [R2R](https://r2r-docs.sciphi.ai/api-and-sdks/introduction).
+
+---
 
 ### Data Generation
 
@@ -207,6 +223,8 @@ curl -fsSL https://ollama.com/install.sh | sh
 - If you already have a dataset of your own, ensure that you properly match fields to the ones expected by **RAGAs** metrics or the other frameworks during evaluation.
 
 - Alternatively, one could make use of the `generate` notebook under `evaluation/deepeval_eval`, however I suggest the **RAGAs** approach since it's more customizable.
+
+---
 
 ### Evaluation
 
@@ -258,7 +276,7 @@ Do have in mind that the `chunk size` and `chunk overlap` values are **NOT** in 
 
 #### How to
 
-The `evaluation` folder contains 3 sub-directories. Depending on the framework one might want to try out, one could switch into the respective folder and use the `evaluate` notebook. The notebooks contains both code and explanation in markdown to simplify the process as much as possible. In each notebook I have a short description of each metric I've used and the corresponding code required for evaluation.
+The `evaluation` folder contains 3 sub-directories. Depending on the framework one might want to try out, one could switch into the respective folder and use the `evaluate` notebook. The notebooks contain both code and explanation in markdown to simplify the process as much as possible. In each notebook I have a short description of each metric I've used and the corresponding code required for evaluation.
 
 Do note that for evaluation with different metrics, different parameters might be required. Some metrics rely only on `user_input` and `response`, others might require other ones. So if you are using a custom dataset, some metrics might not work, due to missing parameters or invalid names. Make sure you map out the parameters as needed.
 
@@ -267,6 +285,8 @@ Do also note that different frameworks use varying names for describing paramete
 For all three frameworks one could overwrite the default `prompts` of metrics that are used during evaluation to try to achieve consistent evaluation and or to customize the evaluation as required relative to a specific domain.
 
 For the evaluation of all experiments across the different frameworks I use the same `model` and `temperature` - `llama3.1:8b-instruct-q4_1` and `0.0` respectively.
+
+---
 
 ### Contact
 
