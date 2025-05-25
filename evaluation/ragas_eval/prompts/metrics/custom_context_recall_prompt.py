@@ -19,11 +19,23 @@ class MyContextRecallPrompt(PydanticPrompt[QCA, ContextRecallClassifications]):
     instruction: str = """Given a question, context, and an answer, analyze each claim in the answer and classify each claim as either attributed to the context or not.
 If the claim can be attributed to the context, return 1; otherwise, return 0.
 Additionally, provide a reason for the classification and the statement being classified.
-The output should be a JSON object containing the following keys:
-- "classifications": A list of dictionaries, where each dictionary contains the following keys:
-    - "statement": The claim being classified.
-    - "reason": A reason for the classification.
-    - "attributed": 1 if the claim can be attributed to the context, and 0 otherwise."""
+
+Please provide the classifications in the following JSON format:
+{
+    "classifications": [
+        {
+            "statement": "<statement>",
+            "reason": "<reason>",
+            "attributed": <1 or 0>
+        },
+        {
+            "statement": "<statement>",
+            "reason": "<reason>",
+            "attributed": <1 or 0>
+        },
+        // More classifications...
+    ]
+}"""
     input_model = QCA
     output_model = ContextRecallClassifications
     examples = [

@@ -56,8 +56,8 @@ class CustomRAGASAnswerRelevancyMetric(BaseMetric):
         embeddings: BaseRagasEmbeddings,
         run_config: Optional[RunConfig] = None,
         threshold: float = 0.3,
-        evaluation_template: Type[
-            PydanticPrompt[ResponseRelevanceInput, ResponseRelevanceOutput]
+        evaluation_template: PydanticPrompt[
+            ResponseRelevanceInput, ResponseRelevanceOutput
         ] = ResponseRelevancePrompt(),
         strictness: float = 3, # Number of hypothetical questions to generate
         experiment_name: Optional[str] = None,
@@ -84,7 +84,7 @@ class CustomRAGASAnswerRelevancyMetric(BaseMetric):
 
     def measure(self, test_case: LLMTestCase) -> float:
         if isinstance(test_case, ConversationalTestCase):
-            test_case = test_case.turns[-1]
+            raise ValueError("ConversationalTestCase is not supported!")
 
         check_llm_test_case_params(
             test_case, self._required_params, self

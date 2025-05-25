@@ -43,13 +43,30 @@ class MyContextualRelevancyTemplate(ContextualRelevancyTemplate):
             examples_str += f"Context:\n\"{c}\"\n"
             examples_str += f"JSON:\n{MyContextualRelevancyTemplate._clean_verdict_json(v)}\n\n"
 
-        return f"""Your task is to determine for each statement in the context, whether or not it was remotely useful in arriving at the input.
+        return f"""Your task is to determine for each statement in the context, whether or not it would be useful for answering the input.
 Relevant statement would be something that is useful in answering the input, while irrelevant statement would be something that is not useful in answering the input.
 Please generate a JSON object to indicate for each statement found in the context whether it is relevant to the provided input.
 The JSON will be a list of 'verdicts', with 2 mandatory fields: 'verdict' and 'statement', and 1 optional field: 'reason'.
 A reason should only be provided if the verdict is 'no'.
 The 'verdict' key should STRICTLY be either 'yes' or 'no', and states whether the statement is relevant to the input.
 The 'statement' key should contain the statement from the context, to which the verdict applies.
+
+Please provide the verdicts in the following JSON format:
+{{
+    "verdicts": [
+        {{
+            "verdict": "<yes | no>",
+            "statement": "<statement>",
+            "reason": "<reason>" (optional, only if verdict is 'no')
+        }},
+        {{
+            "verdict": "<yes | no>",
+            "statement": "<statement>",
+            "reason": "<reason>" ()
+        }},
+        // More verdicts...
+]
+}}
 
 ====== FEW SHOT EXAMPLES ======
 

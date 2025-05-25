@@ -13,9 +13,13 @@ InputModel = TypeVar("InputModel", bound=BaseModel)
 class MyContextPrecisionPrompt(PydanticPrompt[QAC, Verification]):
     name: str = "custom_context_precision"
     instruction: str = """Given question, answer and context verify if the context was remotely useful in arriving at the given answer.
-You should return a JSON object, containing a `verdict` key and a `reason` key.
-The `verdict` key should be 1 if the context was remotely useful in arriving at the answer, and 0 if it was not useful at all.
-Furthermore, a `reason` key should be provided that explains the verdict."""
+Verdict of 1 means context remotely was useful. Verdict of 0 means context was not useful at all.
+
+Provide your verdict in the following JSON format:
+{
+    "reason": "<your reason for the verdict>",
+    "verdict": "<1 or 0>"
+}"""
     input_model = QAC
     output_model = Verification
     examples = [

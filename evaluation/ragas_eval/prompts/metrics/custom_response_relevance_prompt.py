@@ -20,11 +20,12 @@ class MyResponseRelevancePrompt(
 A noncommittal answer is one that is evasive, vague, or ambiguous. For example, "I don't know" or "I'm not sure" are noncommittal answers.
 If the response is noncommittal, return 1; otherwise, return 0.
 Additionally, provide a hypothetical question for the response, which can be inferred from the response itself.
-The output should be a JSON object containing the following keys:
-- "question": A hypothetical question for the response.
-- "noncommittal": 1 if the response is noncommittal, and 0 otherwise.
-The output should be in JSON format.
-"""
+
+Provide your output in the following JSON format:
+{
+    "question": "<hypothetical question for the response>",
+    "noncommittal": "<1 or 0>"
+}"""
     input_model = ResponseRelevanceInput
     output_model = ResponseRelevanceOutput
     examples = [
@@ -64,7 +65,9 @@ The output should be in JSON format.
         return f"""{self.instruction}
 
 ======= FEW SHOT EXAMPLES: =======
-{examples_str}
+
+{examples_str.strip()}
+
 ======= END OF EXAMPLES =======
 
 **IMPORTANT:

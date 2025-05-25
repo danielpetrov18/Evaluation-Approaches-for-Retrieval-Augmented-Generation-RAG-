@@ -88,6 +88,15 @@ Ambiguous statements and single words can also be considered as statements.
 Try not to use pronouns in the statements, and instead use the noun or name that is being referred to.
 All statements should be inferred from the text and should be presented in a JSON format, with a key "statements" mapping to a list of strings.
 
+Provide your answer in the following JSON format:
+{{
+    "statements": [
+        "<statement 1>",
+        "<statement 2>",
+        // More statements...
+]
+}}
+
 ====== FEW SHOT EXAMPLES ======
 
 {examples_str.strip()}
@@ -100,7 +109,9 @@ All statements should be inferred from the text and should be presented in a JSO
 **
 
 Extract the statements from the following text:
-"{actual_output}"
+
+TEXT:
+{actual_output}
 
 JSON:
 """
@@ -117,12 +128,25 @@ JSON:
         return f"""Your task is to determine for each statement, whether or not it is relevant to address the input.
 A relevant statement should be a direct response to the input, should stay on-topic and should fully answer the input question.
 Please generate a list of JSON with a key `verdicts` that maps to an array of verdicts.
-Each of those verdicts should have two keys: `verdict` and `reason`.
 The `verdict` key should STRICTLY be either a 'yes', 'idk' or 'no'.
 - 'yes' if the statement is relevant to addressing the original input
 - 'no' if the statement is irrelevant
 - 'idk' if it is ambiguous (eg., not directly relevant but could be used as a supporting point to address the input).
-The `reason` is the reason for the verdict and should be provided ONLY if the answer is 'no'.
+
+Please provide the verdicts in the following JSON format:
+{{
+    "verdicts": [
+        {{
+            "verdict": "<yes | idk | no>",
+            "reason": "<reason>" (optional, only if verdict is 'no')
+        }},
+        {{
+            "verdict": "<yes | idk | no>",
+            "reason": "<reason>" ()
+        }},
+        // More verdicts...
+    ]
+}}
 
 ====== FEW SHOT EXAMPLES ======
 
@@ -139,7 +163,7 @@ The `reason` is the reason for the verdict and should be provided ONLY if the an
 Evaluate the relevancy of each statement for answering this user question:
 
 QUESTION:
-"{input}"
+{input}
 
 STATEMENTS:
 {statements}

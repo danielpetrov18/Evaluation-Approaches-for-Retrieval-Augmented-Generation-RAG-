@@ -53,11 +53,17 @@ class MyContextualPrecisionTemplate(ContextualPrecisionTemplate):
             examples_str += f"JSON:\n{verdicts.model_dump_json(indent=4)}\n\n"
 
         return f"""Your task is to determine for each node in the context, whether or not it was remotely useful in arriving at the expected output with respect to the input.
-Please return a JSON object containing a key called 'verdicts' that contains an array of JSON objects that each contain a 'verdict' and a 'reason' key.
-The `verdict` key should be either 'yes' or 'no'.
-- Answer 'yes' if the context was even remotely useful in arriving at the expected output.
-- Answer 'no' otherwise.
-The `reason` key should justify the verdict. In your reason, you should aim to quote parts of the context.
+
+Provide your answer in the following JSON format:
+{{
+    "verdicts": [
+        {{
+            "verdict": "<yes or no>",
+            "reason": "<your reason for the verdict>"
+        }},
+        // More verdicts for each context...
+    ]
+}}
 
 ====== FEW SHOT EXAMPLES ======
 
@@ -75,10 +81,10 @@ IMPORTANT:
 Now generate a list of JSONs to indicate whether EACH context is remotely useful in arriving at the expected output with respect to the input:
 
 QUESTION:
-"{input}"
+{input}
 
 EXPECTED OUTPUT:
-"{expected_output}"
+{expected_output}
 
 RETRIEVED CONTEXT:
 {retrieval_context}

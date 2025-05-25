@@ -51,6 +51,17 @@ The `verdict` key should be either 'yes' or 'no'.
     - Answer 'yes' if the sentence can be attributed to any parts of the retrieval context, else answer 'no'.
 Provide a brief reason that explains your verdict.
 
+Respond in the following JSON format:
+{{
+    "verdicts": [
+        {{
+            "verdict": "<yes|no>",
+            "reason": "<reason>"
+        }},
+        ...
+    ]
+}}
+
 ====== FEW SHOT EXAMPLES ======
 
 {examples_str.strip()}

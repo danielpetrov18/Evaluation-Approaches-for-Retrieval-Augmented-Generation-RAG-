@@ -18,7 +18,17 @@ class MyStatementGeneratorPrompt(
 ):
     instruction = """Given a question and answer pair break down the answer into one or more fully understandable statements.
 Each statement should be a complete, standalone claim without pronouns and factually consistent with the answer.
-The statements should be clear and concise, and they should not contain any unnecessary information."""
+The statements should be clear and concise, and they should not contain any unnecessary information.
+
+Return the decomposed statements in the following JSON format:
+{
+    "statements": [
+        "<statement 1>",
+        "<statement 2>",
+        ...
+        "<statement n>"
+    ]
+}"""
     input_model = StatementGeneratorInput
     output_model = StatementGeneratorOutput
     examples = [
@@ -65,7 +75,9 @@ The statements should be clear and concise, and they should not contain any unne
         return f"""{self.instruction}
 
 ======= FEW SHOT EXAMPLES: =======
-{examples_str}
+
+{examples_str.strip()}
+
 ======= END OF EXAMPLES =======
 
 **IMPORTANT:

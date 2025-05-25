@@ -17,17 +17,28 @@ InputModel = TypeVar("InputModel", bound=BaseModel)
 class MyNLIStatementPrompt(
     PydanticPrompt[NLIStatementInput, NLIStatementOutput]
 ):
-    instruction = """Your task is to judge the faithfulness of a series of statements based on a given context.
-Verify for each statement, whether or not it can be inferred from a context.
-If a statement cannot be directly inferred from the context, it is considered unfaithful, and you should assign it a verdict of 0.
-If a statement can be remotely inferred from the context, it is considered faithful, and you should assign it a verdict of 1.
-Return a JSON object containing the following fields:
-- `statements`: A list of objects, each containing:
-    - `statement`: The statement being classified.
-    - `verdict`: 1 if the statement can be inferred from the context, 0 otherwise.
-    - `reason`: A reason for the verdict.
-The output should be in JSON format.
-"""
+    instruction = """Your task is to evaluate the faithfulness of each statement with respect to a given context.
+A statement is unfaithful if it:
+1. **Contradicts** any part of the context.
+2. **Introduces information** that is not present in the context.
+
+For each statement:
+- If it is fully supported by the context, mark it as **faithful** with a `verdict` of 1.
+- If it contradicts or adds new, unsupported information, mark it as **unfaithful** with a `verdict` of 0.
+
+Return your answer as a JSON object with this format:
+{
+    "statements": [
+        {
+            "statement": "<original statement>",
+            "verdict": 0 or 1,
+            "reason": "<clear explanation for the verdict>"
+        },
+        // additional statements
+        ...
+    ]
+}"""
+
     input_model = NLIStatementInput
     output_model = NLIStatementOutput
     examples = [
@@ -44,12 +55,12 @@ The output should be in JSON format.
                 statements=[
                     StatementFaithfulnessAnswer(
                         statement="John is majoring in Biology.",
-                        reason="John's major is explicitly mentioned as Computer Science. There is no information suggesting he is majoring in Biology.",
+                        reason="This statement contradicts the context, which explicitly states that John is majoring in Computer Science.",
                         verdict=0,
                     ),
                     StatementFaithfulnessAnswer(
                         statement="John is taking a course on Artificial Intelligence.",
-                        reason="The context mentions the courses John is currently enrolled in, and Artificial Intelligence is not mentioned. Therefore, it cannot be deduced that John is taking a course on AI.",
+                        reason="The statement introduces a course not present in the context (Artificial Intelligence), making it unsupported.",
                         verdict=0,
                     ),
                     StatementFaithfulnessAnswer(
@@ -78,7 +89,9 @@ The output should be in JSON format.
         return f"""{self.instruction}
 
 ======= FEW SHOT EXAMPLES: =======
-{examples_str}
+
+{examples_str.strip()}
+
 ======= END OF EXAMPLES =======
 
 **IMPORTANT:

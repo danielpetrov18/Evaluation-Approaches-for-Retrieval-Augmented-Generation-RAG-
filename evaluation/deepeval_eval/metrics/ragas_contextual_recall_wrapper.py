@@ -77,7 +77,7 @@ class CustomRAGASContextualRecallMetric(BaseMetric):
 
     def measure(self, test_case: LLMTestCase):
         if isinstance(test_case, ConversationalTestCase):
-            test_case = test_case.turns[-1]
+            raise ValueError("ConversationalTestCase is not supported!")
 
         check_llm_test_case_params(
             test_case, self._required_params, self

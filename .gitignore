@@ -96,9 +96,6 @@ Modelfile
 
 .pytest_cache
 
-# Any json files. Reason is that I save datasets and other files locally, which I don't want to be in the repository.
-*.json
-
 # The name of the folder where documents will be saved for each evaluation framework
 data
 

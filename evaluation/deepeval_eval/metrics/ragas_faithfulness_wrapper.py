@@ -55,12 +55,12 @@ class CustomRAGASFaithfulnessMetric(BaseMetric):
         model: BaseRagasLLM,
         run_config: Optional[RunConfig] = None,
         threshold: float = 0.3,
-        nli_statements_prompt: Type[
-            PydanticPrompt[NLIStatementInput, NLIStatementOutput]
+        nli_statements_prompt: PydanticPrompt[
+            NLIStatementInput, NLIStatementOutput
         ] = NLIStatementPrompt(),
-        statement_generator_prompt: Type[
-            PydanticPrompt[StatementGeneratorInput, StatementGeneratorOutput]
-        ] = StatementGeneratorPrompt(),
+        statement_generator_prompt: PydanticPrompt[
+            StatementGeneratorInput, StatementGeneratorOutput
+        ]= StatementGeneratorPrompt(),
         max_retries: int = 1,
         experiment_name: Optional[str] = None,
         _track: bool = True,
@@ -86,7 +86,7 @@ class CustomRAGASFaithfulnessMetric(BaseMetric):
 
     def measure(self, test_case: LLMTestCase):
         if isinstance(test_case, ConversationalTestCase):
-            test_case = test_case.turns[-1]
+            raise ValueError("ConversationalTestCase is not supported!")
 
         check_llm_test_case_params(
             test_case, self._required_params, self

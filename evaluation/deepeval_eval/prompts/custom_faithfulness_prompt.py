@@ -63,26 +63,43 @@ class Verdicts(BaseModel):
 
 FEW_SHOT_EXAMPLES_VERDICTS: Final[List[Tuple[List[str], str, Verdicts]]] = [
     (
-        # CLAIMS
         [
             "The Eiffel Tower is located in Berlin.",
             "The Eiffel Tower was completed in 1889.",
             "The Eiffel Tower may have been a gift from the United States.",
             "The Eiffel Tower stands approximately 250 meters tall."
         ],
-        # RETRIEVAL CONTEXT
         "The Eiffel Tower is located in Paris and was completed in 1889.\n\nIt stands approximately 300 meters tall.",
-        # EXPECTED VERDICTS
         Verdicts(
             verdicts=[
-                Verdict(verdict="no", reason="The claim states the Eiffel Tower is located in Berlin, but the context states it is located in Paris."),
+                Verdict(verdict="no", reason="The claim states the Eiffel Tower is located in Berlin, but the context states it is located in Paris. (CONTRADICTION)"),
                 Verdict(verdict="yes"),
                 Verdict(verdict="idk"),
-                Verdict(verdict="no", reason="The claim states the Eiffel Tower is 250 meters tall, but the context states it is approximately 300 meters tall.")
+                Verdict(verdict="no", reason="The claim states the Eiffel Tower is 250 meters tall, but the context says it is approximately 300 meters. (CONTRADICTION)")
+            ]
+        )
+    ),
+    (
+        [
+            "Apple was founded in 1976.",
+            "Apple's first product was the Apple I.",
+            "Apple is headquartered in Texas.",
+            "Steve Jobs designed the iPhone in 1980."
+        ],
+        """Apple Inc. was founded in 1976 by Steve Jobs, Steve Wozniak, and Ronald Wayne.\n
+The company's first product was the Apple I computer, which was hand-built by Wozniak.\n
+Apple went public in 1980 and has since become one of the most valuable companies in the world.""",
+        Verdicts(
+            verdicts=[
+                Verdict(verdict="yes"),
+                Verdict(verdict="yes"),
+                Verdict(verdict="no", reason="The context does not mention Apple's headquarters or Texas. This is made-up information. (MADE-UP)"),
+                Verdict(verdict="no", reason="The context states Apple went public in 1980, but says nothing about the iPhone or its design. This is made-up information. (MADE-UP)")
             ]
         )
     ),
 ]
+
 
 class MyFaithfulnessTemplate(FaithfulnessTemplate):
 
@@ -96,7 +113,16 @@ class MyFaithfulnessTemplate(FaithfulnessTemplate):
 
         return f"""Your task is to extract FACTUAL and UNDISPUTED truths from a provided text.
 The truths that you are to extract musn't be taken out of context and should not contradict any of the data in the provided text.
-You should return a JSON object with a "claims" key containing an array of strings.
+
+Provide your answer in the following JSON format:
+{{
+    "claims": [
+        "<claim 1>",
+        "<claim 2>",
+        // More claims...
+    ]
+}}
+
 
 ====== FEW SHOT EXAMPLES ======
 
@@ -112,7 +138,7 @@ IMPORTANT:
 **
 
 INPUT TEXT:
-"{actual_output}"
+{actual_output}
 
 JSON:
 """
@@ -128,6 +154,15 @@ JSON:
             examples_str += f"JSON:\n{example_output.model_dump_json(indent=4)}\n\n"
 
         return f"""Your task is to extract {limit_text} from the text. They all must be COHERENT and inferred from the provided text.
+
+Provide your answer in the following JSON format:
+{{
+    "truths": [
+        "<truth 1>",
+        "<truth 2>",
+        // More truths...
+    ]
+}}
 
 ====== FEW SHOT EXAMPLES ======
 
@@ -147,7 +182,7 @@ IMPORTANT:
 Now extract {limit_text} from the text.
 
 INPUT TEXT:
-"{retrieval_context}"
+{retrieval_context}
 
 JSON:
 """
@@ -162,13 +197,19 @@ JSON:
             examples_str += f"JSON:\n{MyFaithfulnessTemplate._clean_verdict_json(example_verdicts)}\n\n"
 
         return f"""Your task is to determine if EACH claim is factually consistent with the context.
-Factually consistent claims are those that do not explicitly contradict the context.
+Factually consistent claims are those that do not explicitly contradict the context AND do not introduce any information that is not present in the context.
 Return a JSON object with a `verdicts` key containing an array of objects.
-Claims need to be classified as either 'yes', 'no', or 'idk', depending on whether the claim is consistent with facts from the retrieval context.
-If a claim contradicts the context, it should be classified as 'no'.
-If a claim doesn't contradict the context, it should be classified as 'yes'.
-If the claim cannot be determined, it should be classified as 'idk'.
-If the answer is no, a `reason` is to be provided, otherwise NO `reason` is to be provided.
+
+Each verdict object MUST follow this format:
+{{
+    "verdict": "<yes | no | idk>",
+    "reason": "<reason if verdict is 'no'> // optional and should only appear if verdict is 'no'"
+}}
+
+Claims need to be classified as:
+- "yes" if fully supported by the context,
+- "no" if contradicted or not found in the context (and a reason MUST be included),
+- "idk" if it is unclear whether the context supports the claim (no reason should be included).
 
 ====== FEW SHOT EXAMPLES ======
 
@@ -187,7 +228,7 @@ If the answer is no, a `reason` is to be provided, otherwise NO `reason` is to b
 Please classify the claims as 'yes', 'no', or 'idk':
 
 CONTEXT:
-"{retrieval_context}"
+{retrieval_context}
 
 CLAIMS:
 {claims}

@@ -50,8 +50,8 @@ class CustomRAGASContextualPrecisionMetric(BaseMetric):
         model: BaseRagasLLM,
         run_config: Optional[RunConfig] = None,
         threshold: float = 0.3,
-        context_precision_prompt: Type[
-            PydanticPrompt[QAC, Verification]
+        context_precision_prompt: PydanticPrompt[
+            QAC, Verification
         ] = ContextPrecisionPrompt(),
         max_retries: int = 1,
         experiment_name: Optional[str] = None,
@@ -77,7 +77,7 @@ class CustomRAGASContextualPrecisionMetric(BaseMetric):
 
     def measure(self, test_case: LLMTestCase):
         if isinstance(test_case, ConversationalTestCase):
-            test_case = test_case.turns[-1]
+            raise ValueError("ConversationalTestCase is not supported!")
 
         check_llm_test_case_params(
             test_case, self._required_params, self
