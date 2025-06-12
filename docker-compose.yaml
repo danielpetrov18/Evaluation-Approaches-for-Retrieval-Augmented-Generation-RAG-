@@ -32,7 +32,7 @@ services:
     container_name: hf-reranker
     env_file:
       - ./env/reranker.env
-    runtime: nvidia
+    #runtime: nvidia
     pull_policy: always
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/health"]

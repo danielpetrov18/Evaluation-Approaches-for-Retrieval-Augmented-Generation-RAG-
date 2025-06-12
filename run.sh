@@ -45,21 +45,21 @@ fi
 # https://huggingface.co/docs/text-embeddings-inference/quick_tour
 # https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
 # This section would be relevant for the re-ranker component in the RAG pipeline
-if ! command -v nvidia-ctk >/dev/null 2>&1; then
-  echo "[+] NVIDIA CONTAINER TOOLKIT NOT INSTALLED. INSTALLING... [+]"
+# if ! command -v nvidia-ctk >/dev/null 2>&1; then
+#   echo "[+] NVIDIA CONTAINER TOOLKIT NOT INSTALLED. INSTALLING... [+]"
 
-  curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
-    && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-      sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-      sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+#   curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+#     && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+#       sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+#       sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
 
-  sudo apt-get update
-  sudo apt-get install -y nvidia-container-toolkit
-  sudo nvidia-ctk runtime configure --runtime=docker
-  sudo systemctl restart docker
-else
-  echo "[+] NVIDIA CONTAINER TOOLKIT ALREADY INSTALLED. SKIPPING... [+]"
-fi
+#   sudo apt-get update
+#   sudo apt-get install -y nvidia-container-toolkit
+#   sudo nvidia-ctk runtime configure --runtime=docker
+#   sudo systemctl restart docker
+# else
+#   echo "[+] NVIDIA CONTAINER TOOLKIT ALREADY INSTALLED. SKIPPING... [+]"
+# fi
 
 # Check if Docker is running
 if ! docker info > /dev/null 2>&1
