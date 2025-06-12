@@ -5,6 +5,7 @@
 - [About The Project](#about-the-project)
 - [Built With](#built-with)
 - [Prerequisites](#prerequisites)
+- [Running inside a VM](#running-inside-a-vm)
 - [Docker services](#docker-services)
 - [Project structure](#project-structure)
 - [Usage](#usage)
@@ -20,24 +21,26 @@ This is my bachelor’s thesis project at the University of Vienna, where I expl
 
 The primary goal is to assess different evaluation frameworks, including **RAGAs**, to analyze how efficient a RAG application is. A variety of **evaluation metrics** are to be used to achieve that.
 
-The application is a **vanilla RAG** - no Knowledge Graphs, no hybrid search, no AI-agents or tools, just submitting a query, retrieving context, augmenting a prompt and submitting it to get the response from the LLM. During context retrieval **cosine distance** is used as measure.
+The application is a **vanilla RAG** - no Knowledge Graphs, no hybrid search, no AI-agents or tools, just submitting a query, retrieving context, augmenting a prompt and submitting it to get the response from the LLM. A re-ranker model is used, however fully optional. During context retrieval **cosine distance** is used as measure.
 
 #### Introduction to Simple RAG
 
 [Paper](https://arxiv.org/abs/2005.11401)
-[Example](https://github.com/FareedKhan-dev/all-rag-techniques/blob/main/1_simple_rag.ipynb)
+[Examples](https://github.com/FareedKhan-dev/all-rag-techniques/tree/main)
 
 Retrieval-Augmented Generation (RAG) is a hybrid approach that combines information retrieval with generative models. It enhances the performance of language models by incorporating external knowledge, which improves accuracy and factual correctness.
 
 In a Simple RAG setup, we follow these steps:
 
-1. **Data Ingestion**: Load and preprocess the text data.
+1. **Data Ingestion**: Load and preprocess data from various source like files, APIs, databases, etc.
 2. **Chunking**: Break the data into smaller chunks to improve retrieval performance.
 3. **Embedding Creation**: Convert the text chunks into numerical representations using an embedding model.
 4. **Semantic Search**: Retrieve relevant chunks based on a user query.
 5. **Response Generation**: Use a language model to generate a response based on retrieved text.
 
 ![RAG application structure](img/app/rag-app.png "RAG application")
+
+*Figure 1: High-level architecture of the RAG application, showing retrieval, reranking, and generation components.*
 
 ---
 
@@ -90,21 +93,66 @@ python3 --version
 
 ```sh
 pip3 --version
+# If not run:
+sudo apt install python3-pip
 ```
 
 - Check if `git` is locally available.
 
 ```bash
 git version
+# If not run:
+sudo apt install git
 ```
 
-- Ollama also needs to be locally available. If not run:
+- `Ollama` also needs to be locally available.
 
 ```sh
+ollama --version
+# If not available
 curl -fsSL https://ollama.com/install.sh | sh
 ```
 
-- Finally, you will need to have docker. If not go to [Docker](https://www.docker.com/) and install the version appropriate for your OS.
+- Finally, you will need to have `docker`. If not go to [Docker](https://www.docker.com/) and install the version appropriate for your OS.
+
+```bash
+docker version
+
+# If not available and assuming you are using Ubuntu 24.04:
+
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# If you wish to use docker without sudo follow this guide:
+# https://docs.docker.com/engine/install/linux-postinstall/
+```
+
+---
+
+### Running inside a VM (Optional)
+
+You need a virtualization technology. I used VirtualBox, however you are free to pick whichever you like.
+
+- `sudo apt install virtualbox`
+
+The particular [OS](https://ubuntu.com/download/desktop?version=24.04&architecture=amd64&lts=true) (Ubuntu 24.04.2 LTS) I used.
+
+After installing VirtualBox and the ISO image create a virtual machine, launch the instance and follow the instructions.
+
+If at any point in time you face problems with running the applicaion run: `docker compose logs -f`. If there's not enough memory to host a model, use a smaller model. By default my project uses `llama3.1:8b`. However, smaller models like [llama3.2](https://ollama.com/library/llama3.2) are available. Be sure to modify the `CHAT_MODEL` environment variable under: `env/rag.env` and modify the `document_summary_model` under `project/backend/config.toml` (the bottom section).
 
 ---
 
@@ -169,12 +217,11 @@ curl -fsSL https://ollama.com/install.sh | sh
    # This will make sure that:
    #  1. All environment variables are exported.
    #  2. Ollama is running and has the proper models installed.
-   #  3. Nvidia container toolkit is available, if not download it
-   #  4. Docker is running and start all containers.
+   #  3. Docker is running and start all containers.
    ./run.sh   
    ```
 
-4. You can then open a browser and enter `http://localhost:8501` in the search bar. That will enable you to interact with the RAG service using a GUI. There's a **python SDK** and a **RESTful API** as well. For that you can use `http://localhost:7272`. For further details refer to [R2R](https://r2r-docs.sciphi.ai/api-and-sdks/introduction).
+4. You can then open a browser and enter `http://localhost:8501` in the search bar. That will enable you to interact with the RAG service using a GUI. There's a **python SDK** and a **RESTful API** as well. For that you can use `http://localhost:7272`. For further details refer to [R2R](https://r2r-docs.sciphi.ai/api-and-sdks/introduction). If you want to check out the logs run the following inside the root of the project: `docker compose logs -f`.
 
 ---
 
@@ -242,6 +289,8 @@ To play around with different values one could modify the environment variables 
 
 Do have in mind that the `chunk size` and `chunk overlap` values are **NOT** in **tokens**, but in **characters**, since [R2R](https://r2r-docs.sciphi.ai/introduction) makes use of `unstructured` and `RecursiveCharacterTextSplitter` for data ingestion.
 
+The reason why I use 1536 tokens when generating with `deepseek-r1:7b` is because of its `thinking` stage. It generates redundant information so one needs to ensure the model has enough tokens available to generate the full response.
+
 #### Experiments
 
 | Test ID | Top-K | Max Tokens | Chunk Size | Chunk Overlap | Chat Model                 | Temp. | Description                                                    |
@@ -278,7 +327,7 @@ Do have in mind that the `chunk size` and `chunk overlap` values are **NOT** in 
 
 The `evaluation` folder contains 3 sub-directories. Depending on the framework one might want to try out, one could switch into the respective folder and use the `evaluate` notebook. The notebooks contain both code and explanation in markdown to simplify the process as much as possible. In each notebook I have a short description of each metric I've used and the corresponding code required for evaluation.
 
-Do note that for evaluation with different metrics, different parameters might be required. Some metrics rely only on `user_input` and `response`, others might require other ones. So if you are using a custom dataset, some metrics might not work, due to missing parameters or invalid names. Make sure you map out the parameters as needed.
+Do note that for evaluation with different metrics, different parameters might be required. Some metrics rely only on `user_input` and `response`, others might require other ones. So if you are using a custom dataset, some metrics might not work, due to missing parameters or invalid names. Make sure you map out the parameters as needed and extend your dataset accordingly.
 
 Do also note that different frameworks use varying names for describing parameters. For example **RAGAs** uses `response` and **DeepEval** - `actual_output`.
 
