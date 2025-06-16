@@ -20,6 +20,7 @@ done
 
 # You can modify the environment variables on your device as needed.
 # For example if you have a powerful GPU you can use `OLLAMA_NUM_PARALLEL` to increase parallelism.
+# https://github.com/ollama/ollama/blob/05a01fdecbf9077613c57874b3f8eb7919f76527/envconfig/config.go#L258
 OLLAMA_MODELS="${HOME}/.ollama/models" \
 OLLAMA_HOST="0.0.0.0:11434" \
 OLLAMA_KEEP_ALIVE="1h" \
@@ -41,7 +42,8 @@ then
     ollama pull "$EMBEDDING_MODEL"
 fi
 
-# Add NVIDIA container toolkit only if not already installed
+# Uncomment the following lines if you want to use the re-ranker with a GPU.
+# Add NVIDIA container toolkit only if not already installed.
 # https://huggingface.co/docs/text-embeddings-inference/quick_tour
 # https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
 # This section would be relevant for the re-ranker component in the RAG pipeline

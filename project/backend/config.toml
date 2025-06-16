@@ -26,7 +26,7 @@ concurrent_request_limit = 1
 
 [completion_embedding]
 provider = "litellm"
-base_model = "ollama/mxbai-embed-large"
+base_model = "ollama/mxbai-embed-large" # https://www.mixedbread.com/blog/mxbai-embed-large-v1
 base_dimension = 1024
 batch_size = 32
 add_title_as_prefix = true
@@ -43,20 +43,23 @@ provider = "postgres"
 
 [embedding]
 provider = "litellm"
-base_model = "ollama/mxbai-embed-large"
+base_model = "ollama/mxbai-embed-large" # https://www.mixedbread.com/blog/mxbai-embed-large-v1
 base_dimension = 1024
 batch_size = 32
 add_title_as_prefix = true
 concurrent_request_limit = 2
 
+# https://unstructured.io/blog/chunking-for-rag-best-practices
 [ingestion]
-provider = "unstructured_local"
-strategy = "auto"
-chunking_strategy = "by_title"
-new_after_n_chars = 512 # chunk size
-max_characters = 1_024
-combine_under_n_chars = 128
-overlap = 0 # chunk overlap
+provider = "unstructured_local"  # Use the local instance that is running in a container
+strategy = "auto"                # https://docs.unstructured.io/open-source/concepts/partitioning-strategies
+chunking_strategy = "basic"      # https://docs.unstructured.io/api-reference/partition/chunking
+new_after_n_chars = 512          # Soft limit for chunk size
+max_characters = 1_024           # Hard limit for chunk size (it can never exceed this value)
+combine_text_under_n_chars = 256 # If chunks are smaller than this value, they will be combined
+overlap = 64                     # chunk overlap 
+chunk_size = 1024                # This is used for the RecursiveCharacterTextSplitter in case unstructured doesn't work (fallback)
+chunk_overlap = 128              # This is used for the RecursiveCharacterTextSplitter in case unstructured doesn't work (fallback) 
 chunks_for_document_summary = 16
 document_summary_model = "ollama_chat/llama3.1:8b"
 automatic_extraction = false

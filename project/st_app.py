@@ -162,7 +162,11 @@ if __name__ == "__main__":
         # Since the config is a snapshot not an actual instance of the config
         new_ingestion_config = st.session_state['ingestion_config']
         # Look at: /core/providers/ingestion/unstructured (assuming you have "r2r[core]==3.5.11" installed)
-        new_ingestion_config['new_after_n_chars'] = st.session_state['chunk_size']
+        # During ingestion, we need to extract the text from the documents.
+        # Then they are chunked. If unstructured cannot handle it, a fallback is used.
+        # RecursiveCharacterTextSplitter is the fallback.
+        # https://docs.unstructured.io/api-reference/partition/chunking
+        new_ingestion_config['max_characters'] = st.session_state['chunk_size']
         new_ingestion_config['overlap'] = st.session_state['chunk_overlap']
 
         st.session_state['ingestion_config'] = new_ingestion_config

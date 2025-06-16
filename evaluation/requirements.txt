@@ -2,6 +2,5 @@ ragas==0.2.15
 deepeval==2.8.2
 opik==1.7.13
 rapidfuzz==3.13.0 # Used by some RAGAs metrics (non-LLM based ones)
-unstructured[md]==0.17.2
 langchain-ollama==0.3.2
 ipykernel
