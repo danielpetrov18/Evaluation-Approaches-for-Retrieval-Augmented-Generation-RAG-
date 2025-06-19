@@ -144,15 +144,15 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 
 ### Running inside a VM (Optional)
 
-You need a virtualization technology. I used VirtualBox, however you are free to pick whichever you like.
+If you want to test in a safe environment you will need a virtualization technology. I recommend VirtualBox, however you are free to pick whichever you like.
 
 - `sudo apt install virtualbox`
 
-The particular [OS](https://ubuntu.com/download/desktop?version=24.04&architecture=amd64&lts=true) (Ubuntu 24.04.2 LTS) I used.
+The particular [OS](https://ubuntu.com/download/desktop?version=24.04&architecture=amd64&lts=true) (Ubuntu 24.04.2 LTS) I recommend.
 
 After installing VirtualBox and the ISO image create a virtual machine, launch the instance and follow the instructions.
 
-If at any point in time you face problems with running the applicaion run: `docker compose logs -f`. If there's not enough memory to host a model, use a smaller model. By default my project uses `llama3.1:8b`. However, smaller models like [llama3.2](https://ollama.com/library/llama3.2) are available. Be sure to modify the `CHAT_MODEL` environment variable under: `env/rag.env` and modify the `document_summary_model` under `project/backend/config.toml` (the bottom section).
+If at any point in time you face problems with running the applicaion run: `docker compose logs -f`. If there's not enough memory to host a model, use a smaller model. By default my project uses `llama3.1:8b`. However, smaller models like [llama3.2](https://ollama.com/library/llama3.2) are available. Be sure to modify the `CHAT_MODEL` environment variable under: `env/rag.env` and modify the `document_summary_model` under `project/backend/config.toml` (the ingestion section).
 
 ---
 
@@ -164,13 +164,13 @@ If at any point in time you face problems with running the applicaion run: `dock
 
 - The `frontend` service is also **optional**, one could run: `streamlit run st_app.py` on `localhost`.
 
-1. `pgvector` - an extension for `postgresql` enabling the storage of vector embeddings and performing **semantic similarity search**
+1. [pgvector](https://github.com/pgvector/pgvector) - an extension for [postgresql](https://www.postgresql.org/docs/) enabling the storage of vector embeddings and performing **semantic similarity search**
 
-2. `reranker` - a **re-ranking model** used after context retrieval for additional re-ordering of documents based on **relevance**
+2. [reranker](https://github.com/huggingface/text-embeddings-inference) - a **re-ranking model** used after context retrieval for additional re-ordering of documents based on **relevance**
 
-3. `unstructured` - a service used for enhanced **data ingestion**. It supports various file types like `pdf`, `md` and so on.
+3. [unstructured](https://github.com/Unstructured-IO/unstructured) - a service used for enhanced **data ingestion**. It supports various file types like `pdf`, `md` and more advanced partitioning strategies.
 
-4. `r2r` - the **RAG** frameworks server. It provides a `python` SDK and a `RESTful API`. It supports file ingestion, index creation, using more advanced versions of RAG like **HyDE** or **RAG-fusion** and so on.
+4. [r2r](https://github.com/SciPhi-AI/R2R) - the **RAG** frameworks server. It provides a `python` SDK and a `RESTful API`. It supports file ingestion, index creation, using more advanced versions of RAG like **HyDE** or **RAG-fusion** and so on.
 
 5. `frontend` - the UI of the application, which provides a GUI in the browser at `localhost:8501`, where a user can interact with the chatbot and ingest data.
 
@@ -198,6 +198,10 @@ If at any point in time you face problems with running the applicaion run: `dock
 
 0. Make sure that `ufw - uncomplicated firewall` is turned off, if available on the system. You can run `sudo systemctl status ufw` to check its status. Otherwise there might be some connectivity issues between the docker containers and `Ollama`.
 
+   ```bash
+   sudo ufw disable
+   ```
+
 1. Clone the repo
 
    ```sh
@@ -221,11 +225,65 @@ If at any point in time you face problems with running the applicaion run: `dock
    ./run.sh   
    ```
 
-4. You can then open a browser and enter `http://localhost:8501` in the search bar. That will enable you to interact with the RAG service using a GUI. There's a **python SDK** and a **RESTful API** as well. For that you can use `http://localhost:7272`. For further details refer to [R2R](https://r2r-docs.sciphi.ai/api-and-sdks/introduction). If you want to check out the logs run the following inside the root of the project: `docker compose logs -f`.
+4. To check if all containers are running:
+
+   ```bash
+   docker ps
+   ```
+
+5. To view the docker logs:
+
+   ```bash
+   # Execute in the root of the project
+   docker compose logs -f
+   ```
+
+6. To perform a health check to see if r2r server is available:
+
+   ```bash
+   # Expected output: {"results":{"message":"ok"}}
+   curl http://localhost:7272/v3/health
+   ```
+
+7. You can then open a browser and enter `http://localhost:8501` in the search bar. That will enable you to interact with the RAG service using a GUI. There's a **python SDK** and a **RESTful API** as well. For that you can use `http://localhost:7272`. For further details refer to [R2R](https://r2r-docs.sciphi.ai/api-and-sdks/introduction).
+
+8. Data Generation:
+
+   ```bash
+   # Use the notebook at evaluation/ragas_eval/generate.ipynb
+   # The datasets will be saved at evaluation/ragas_eval/datasets
+   # The 10 unique datasets will be used across the three frameworks
+   ```
+
+9. Evaluation:
+
+   ```bash
+   # RAGAs -> evaluation/ragas_eval/evaluation.ipynb
+   # DeepEval -> evaluation/deepeval_eval/evaluation.ipynb
+   # Opik -> evaluation/opik_eval/evaluation.ipynb
+   ```
+
+10. Clean-up:
+
+   ```bash
+   # Stop the containers (from the root of the project)
+   docker compose down 
+
+   # Kill the ollama process in the background
+   ps aux | grep ollama
+   kill <ollama_process_id> (the one with this command: ollama serve)
+
+   # Re-enable the firewall (if available on the system)
+   sudo ufw enable
+   ```
 
 ---
 
 ### Data Generation
+
+**NOTE:**
+
+Make sure the ingestion section under `project/backend/config.toml` has corresponding values with `env/rag.env` - chunk size from `env/rag.env` should match the `max_characters` in the config file and the chunk overlap - the overlap field in the config file. Before re-running the notebook to generate a new dataset make sure you restart the docker containers so that the changes take place. This ensures that both the context used during knowledge graph creation and query synthesis matches the retrieved contexts size and overlap to get the closest possible values.
 
 - Evaluating a **RAG** application requires a collection of data that is:
 
@@ -267,7 +325,7 @@ If at any point in time you face problems with running the applicaion run: `dock
 
 - With all of that in mind, one could generate various of datasets and test various configurations. Each dataset will be saved locally under `evaluation/ragas_eval/datasets` by default.
 
-- If you already have a dataset of your own, ensure that you properly match fields to the ones expected by **RAGAs** metrics or the other frameworks during evaluation.
+- If you already have a dataset of your own, ensure that you properly match fields to the ones expected by **RAGAs** metrics or the other frameworks during evaluation. Check out the evaluation notebooks for further explanation.
 
 - Alternatively, one could make use of the `generate` notebook under `evaluation/deepeval_eval`, however I suggest the **RAGAs** approach since it's more customizable.
 
@@ -287,7 +345,7 @@ For example different values for the `chunk size`, `chunk overlap` and `top-K` c
 
 To play around with different values one could modify the environment variables under `env/rag.env`.
 
-Do have in mind that the `chunk size` and `chunk overlap` values are **NOT** in **tokens**, but in **characters**, since [R2R](https://r2r-docs.sciphi.ai/introduction) makes use of `unstructured` and `RecursiveCharacterTextSplitter` for data ingestion.
+Do have in mind that the `chunk size` and `chunk overlap` values are **NOT** in **tokens**, but in **characters**, since [R2R](https://r2r-docs.sciphi.ai/introduction) makes use of `unstructured` and `RecursiveCharacterTextSplitter` (as a fallback) for data ingestion.
 
 The reason why I use 1536 tokens when generating with `deepseek-r1:7b` is because of its `thinking` stage. It generates redundant information so one needs to ensure the model has enough tokens available to generate the full response.
 

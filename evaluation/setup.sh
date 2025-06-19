@@ -19,4 +19,7 @@ echo "[+] INSTALLING DEPENDENCIES... [+]"
 pip3 install --upgrade pip
 pip3 install --upgrade -r requirements.txt
 
-echo "[+] DEPENDENCIES INSTALLED. SELECT `eval` AS KERNEL. [+]"
+# Since the notebooks access images from the root directory
+cd ..
+
+python3 -m jupyterlab

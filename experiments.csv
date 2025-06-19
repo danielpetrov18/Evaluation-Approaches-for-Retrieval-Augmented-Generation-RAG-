@@ -1,11 +1,11 @@
-test_id,top_k,max_tokens_to_sample,chunk_size,chunk_overlap,chat_model,temperature,description
-1,3,512,512,0,llama3.1:8b,0,Baseline with minimal values
-2,3,512,512,0,llama3.1:8b-instruct-q4_1,0,Testing instruction tuning effect on baseline
-3,3,1536,512,0,deepseek-r1:7b,0,Testing alternative model (reasoning) on baseline
-4,5,512,768,64,llama3.1:8b,0.5,Mid-range balanced configuration with some creativity
-5,5,512,768,64,llama3.1:8b-instruct-q4_1,0.5,Mid-range balanced creative instruction-tuned approach
-6,5,512,1024,128,llama3.1:8b,0,Maximum retrieval quality
-7,5,512,1024,128,llama3.1:8b,0,Maximum retrieval quality advanced-RAG (RAG-Fusion)
-8,5,512,1024,128,llama3.1:8b,1,Testing high temperature creativity on max retrieval quality
-9,5,512,1024,128,llama3.1:8b-instruct-q4_1,0,Alternative model with high retrieval settings
-10,5,1536,1024,128,deepseek-r1:7b,0,Reasoning model with high retrieval settings
+test_id,top_k,chunk_size,chunk_overlap,chat_model,description
+1,3,512,0,llama3.1:8b,Baseline with minimal values
+2,3,512,0,llama3.1:8b-instruct-q4_1,Testing instruction tuning effect on baseline
+3,3,512,0,deepseek-r1:7b,Testing alternative model (reasoning) on baseline
+4,5,768,64,llama3.1:8b,Mid-range balanced configuration
+5,5,768,64,llama3.1:8b-instruct-q4_1,Mid-range balanced instruction-tuned approach
+6,5,1024,128,llama3.1:8b,Upper-end retrieval quality
+7,5,1024,128,llama3.1:8b,Upper-end retrieval quality advanced-RAG (RAG-Fusion)
+8,5,1024,128,llama3.1:8b-instruct-q4_1,Alternative model with upper-end retrieval settings
+9,5,1024,128,deepseek-r1:7b,Reasoning model with upper-end retrieval settings
+10,10,2048,256,llama3.1:8b,Maximum  retrieval settings

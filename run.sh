@@ -21,6 +21,10 @@ done
 # You can modify the environment variables on your device as needed.
 # For example if you have a powerful GPU you can use `OLLAMA_NUM_PARALLEL` to increase parallelism.
 # https://github.com/ollama/ollama/blob/05a01fdecbf9077613c57874b3f8eb7919f76527/envconfig/config.go#L258
+# 
+# Do note that the service will be started in the background.
+# To stop it run: `ps aux | grep ollama`
+# Identify the process ID (PID) and run `kill <PID>` to stop it.
 OLLAMA_MODELS="${HOME}/.ollama/models" \
 OLLAMA_HOST="0.0.0.0:11434" \
 OLLAMA_KEEP_ALIVE="1h" \
@@ -28,14 +32,14 @@ OLLAMA_CONTEXT_LENGTH="${LLM_CONTEXT_WINDOW_TOKENS:-16000}" \
 ollama serve &
 echo "[+] OLLAMA SERVER STARTED. [+]"
 
-# Check if chat model is available
+# Check if chat model is available, if not, download it
 if ! ollama list | grep -q "$CHAT_MODEL"
 then
     echo "    [+] DOWNLOADING CHAT MODEL \"$CHAT_MODEL\" [+]"
     ollama pull "$CHAT_MODEL"
 fi
 
-# Check if embedding model is available
+# Check if embedding model is available, if not, download it
 if ! ollama list | grep -q "$EMBEDDING_MODEL"
 then
     echo "    [+] DOWNLOADING EMBEDDING MODEL \"$EMBEDDING_MODEL\" [+]"
@@ -64,6 +68,7 @@ fi
 # fi
 
 # Check if Docker is running
+# This will start the containers in the background
 if ! docker info > /dev/null 2>&1
 then
     echo "[-] DOCKER IS NOT RUNNING. EXITING... [-]"

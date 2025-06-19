@@ -24,20 +24,23 @@ services:
       - r2r_network
 
   # https://github.com/huggingface/text-embeddings-inference
+  #
   # This container will hold a Sequence Classification cross-encoders model.
   # After context retrieval the re-ranker will re-order the nodes position based
   # on their relevance relative to the user input.
+  #
   # If you want to use a different model, change the `RE_RANKER_MODEL` in the `reranker.env` file.
+  # 
   # If you want to use a GPU, make sure to uncomment the `runtime: nvidia` line.
-  #     Additionally, uncomment the NVIDIA_VISIBLE_DEVICES line in the `reranker.env` file.
-  #     Change the image to: 'ghcr.io/huggingface/text-embeddings-inference:1.7'
-  #     Finally, download the nvidia container toolkit (uncomment the section in the run.sh).
+  # Additionally, uncomment the NVIDIA_VISIBLE_DEVICES line in the `reranker.env` file.
+  # Change the image to: 'ghcr.io/huggingface/text-embeddings-inference:1.7'
+  # Finally, download the nvidia container toolkit (uncomment the section in the run.sh).
   reranker:
     image: 'ghcr.io/huggingface/text-embeddings-inference:cpu-1.7'
     container_name: hf-reranker
     env_file:
       - ./env/reranker.env
-    # runtime: nvidia
+    # runtime: nvidia # Uncomment if you want to use a GPU
     pull_policy: always
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/health"]
@@ -55,6 +58,8 @@ services:
 
   # `R2R` will use this service to ingest documents into the vector store.
   # The service will receive requests containing the document to be ingested.
+  # Thereafter, using configurable parameters from project/backend/config.toml,
+  # under the `ingestion` section, it will parse the document and chunk it.
   unstructured:
     image: ragtoriches/unst-prod:latest
     container_name: unstructured
@@ -73,8 +78,8 @@ services:
   
   # The `RAG` application server.
   r2r:
-    # Make sure the tag of the image matches the version of `r2r` specified in the `requirements.txt`.
-    # Otherwise, there might be unexpected errors, due to changes in the code.
+    # Make sure the tag of the image matches the version of `r2r` in `project/requirements.txt`.
+    # Otherwise, there might be unexpected errors, due to changes in the source code.
     image: sciphiai/r2r:3.5.11
     container_name: r2r
     pull_policy: always
@@ -96,7 +101,8 @@ services:
       # Custom configuration file will be mapped inside the container.
       - ./project/backend/config.toml:/app/custom_config_ollama.toml
     extra_hosts:
-      # This makes sure the container can communicate with `ollama` running on localhost
+      # This makes sure the container can communicate with `ollama` running on localhost.
+      # The server hosted in a docker container will be able to access the host machine's `ollama` service.
       - host.docker.internal:host-gateway
     depends_on:
       pgvector:
