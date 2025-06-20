@@ -75,7 +75,7 @@ then
     exit 1
 else
     echo "[+] DOCKER IS RUNNING. STARTING DOCKER COMPOSE... [+]"
-    docker compose up --detach
+    docker compose up --detach --build
 fi
 
 echo "[+] INITIALIZATION SCRIPT COMPLETED. [+]"

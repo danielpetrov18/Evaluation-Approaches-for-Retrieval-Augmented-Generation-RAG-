@@ -374,6 +374,8 @@ For all three frameworks one could overwrite the default `prompts` of metrics th
 
 For the evaluation of all experiments across the different frameworks I use the same `model` and `temperature` - `llama3.1:8b-instruct-q4_1` and `0.0` respectively.
 
+For each framework the results will be stored in `res` in the corresponding folder.
+
 ---
 
 ### Contact
