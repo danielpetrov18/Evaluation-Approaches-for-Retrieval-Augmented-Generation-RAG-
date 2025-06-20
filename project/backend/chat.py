@@ -1,217 +1,197 @@
 # pylint: disable=C0114
+# pylint: disable=C0116
 # pylint: disable=C0301
 # pylint: disable=W0718
 # pylint: disable=W0719
 # pylint: disable=R0903
 
-import json
-from typing import Generator, Union, List, Dict
+from typing import Union, List, Dict, Final, Any
 
+import requests
 import streamlit as st
-from streamlit.errors import Error
-from r2r import R2RClient, R2RException
-from shared.api.models.retrieval.responses import SSEEventBase, MessageEvent
-from shared.api.models.management.responses import MessageResponse, PromptResponse
 
-from .message import Message
-from .helper import (
-    compute_embedding,
-    get_enhanced_query
-)
+# https://r2r-docs.sciphi.ai/api-and-sdks/retrieval/search-app
+SEARCH_SETTINGS: Final[Dict[str, Any]] = {
+    "use_semantic_search": True,
+    "limit": st.session_state['top_k'],
+    "offset": 0,
+    "include_metadatas": False,
+    "include_scores": True,
+    "search_strategy": "vanilla",
+    "chunk_settings": {
+        "index_measure": "cosine_distance",
+        "enabled": True,
+        "ef_search": 80
+    }
+}
 
-@st.cache_data(ttl=60)  # Cache for 60 seconds
-def retrieve_messages(_client: R2RClient, conversation_id: str) -> Union[List[Message],None]:
-    """
-    When using an underscore the client won't be part of the arguments passed to the function
-    which are of importance for the caching behaviour. Since client cannot be pickled/serialized.
-    https://docs.streamlit.io/develop/api-reference/caching-and-state/st.cache_data
-    
-    Make sure that the conversation exists and return it.
-    This method also makes sure that R2R messages are converted into my own Message class.
-    """
-    try:
-        conversation: List[MessageResponse] = _client.conversations.retrieve(conversation_id).results
-        msgs: List[Message] = [
-            Message(
-                id = str(msg.id),
-                role = msg.message.role,
-                content = msg.message.content,
-                # Make sure you convert it back to an embedding -> check add_message()
-                embedding = json.loads(msg.metadata['embedding']),
-            )
-            for msg in conversation
-        ]
-        return msgs
-    except R2RException as r2re:
-        st.error(f"Invalid conversation: {r2re.message}")
-        return None
-    except Error as e:
-        st.error(f"Unexpected streamlit error: {str(e)}")
-        return None
-    except Exception as exc:
-        st.error(f"Unexpected error: {str(exc)}")
+# https://r2r-docs.sciphi.ai/api-and-sdks/retrieval/rag-app
+RAG_GENERATION_CONFIG: Final[Dict[str, Any]] = {
+    "model": f"ollama_chat/{st.session_state['chat_model']}",
+    "temperature": st.session_state['temperature'],
+    "top_p": st.session_state['top_p'],
+    "max_tokens_to_sample": st.session_state['max_tokens'],
+    "stream": False
+}
+
+def retrieve_messages(conversation_id: str) -> Union[List[Dict[str, str]], None]:
+    response: requests.Response = requests.get(
+        url=f"http://r2r:7272/v3/conversations/{conversation_id}",
+        headers={
+            "Authorization": f"Bearer {st.session_state['bearer_token']}"
+        },
+        timeout=5
+    )
+
+    if response.status_code != 200:
+        st.error(f"Failed to fetch messages: {response.status_code} - {response.text}")
         return None
 
-def check_conversation_exists(client: R2RClient):
-    """
-    Making sure that a conversation exists. If not we create one.
-    
-    If the id is empty -> create a new one and use it.
-    This is the case when the user starts a new conversation.
-    """
-    try:
-        if not st.session_state['conversation_id']:
-            st.session_state['conversation_id'] = client.conversations.create().results.id
-            st.session_state.messages = []
-            st.session_state['parent_id'] = None
-        else:
-            # If the provided id is not related to a conversation raise error
-            if not client.conversations.list(ids = [st.session_state['conversation_id']]).results:
-                raise R2RException(
-                    message=f"Conversation: {st.session_state['conversation_id']} doesn't exist!",
-                    status_code=404
-                )
-    except R2RException as r2re:
-        st.error(r2re.message)
-    except Error as e:
-        st.error(str(e))
-    except Exception as exc:
-        st.error(str(exc))
-
-def set_new_prompt(client: R2RClient, prompt_name: str) -> bool:
-    """After making sure the prompt exists we select it for future RAG completions"""
-    try:
-        prompt_obj: PromptResponse = client.prompts.retrieve(prompt_name).results
-        st.session_state['selected_prompt'] = prompt_name
-        st.session_state['prompt_template'] = prompt_obj.template
-        return True
-    except R2RException as r2re:
-        st.error(r2re.message)
-        return False
-    except Exception as e:
-        st.error(str(e))
-        return False
-
-def add_message(client: R2RClient, msg: Dict[str, str]):
-    """
-    Adding a new message to a conversation.
-    
-    For each added message an embedding is computed.
-    It is then used when quering for relevant messages from previous interactions.
-    """
-    try:
-        embedding: List[float] = compute_embedding(msg['content'])
-
-        msg_response: MessageResponse = client.conversations.add_message(
-            id = st.session_state['conversation_id'],
-            content = msg['content'],
-            role = msg['role'],
-            metadata = {
-                # Needs to be converted to a string, since R2R cannot accept a list[float]
-                "embedding": json.dumps(embedding)
-            },
-            # If this is the first message in the conversation => None/Null
-            parent_id = st.session_state['parent_id']
-        ).results
-
-        # Set the parent id for next message to equal the id of the newly added one
-        st.session_state['parent_id'] = str(msg_response.id)
-
-        new_msg = Message(
-            id = st.session_state['parent_id'],
-            content = msg['content'],
-            role = msg['role'],
-            embedding = embedding
-        )
-
-        # Finally, add to session state to be displayed
-        if not st.session_state.messages:
-            st.session_state.messages = [new_msg]
-        else:
-            st.session_state.messages.append(new_msg)
-
-    except R2RException as r2re:
-        st.error(r2re.message)
-        raise R2RException(str(r2re), r2re.status_code) from r2re
-    except Exception as e:
-        st.error(str(e))
-        raise Exception from e
-
-def submit_query(client: R2RClient) -> Generator[SSEEventBase, None, None]:
-    """
-    * This method is first going to select relevant messages as a history.
-    * Those will be used to augment the query and then the `LLM` will be asked to generate a response.
-    * R2R will then retrieve relevant chunks using semantic similarity.
-    * The retrieved chunks will be re-ranked.
-    * Finally all the chunks will be used to generate the final response.
-
-    Args:
-        client (R2RClient): The client used to interact with the LLM.
-
-    Returns:
-        Generator: Response from the LLM as a generator.
-    
-    Raises:
-        R2RException: If there's an error related to the R2R system.
-        Error: For unexpected Streamlit errors.
-        Exception: For any other unexpected errors.
-    """
-    try:
-        # https://r2r-docs.sciphi.ai/api-and-sdks/retrieval/search-app
-        search_settings: Dict[str, Union[bool, int, str]] = {
-            "use_semantic_search": True,
-            "limit": st.session_state['top_k'],
-            "offset": 0,
-            "include_metadatas": False,
-            "include_scores": True,
-            "search_strategy": "vanilla",
-            "chunk_settings": {
-                "index_measure": "cosine_distance",
-                "enabled": True,
-                "ef_search": 80
-            }
+    conversation: List[Dict] = response.json()['results']
+    messages: List[Dict[str, str]] = [
+        {
+            "id": obj["id"],
+            "role": obj["message"]["role"],
+            "content": obj["message"]["content"]
         }
+        for obj in conversation
+    ]
+    return messages
 
-        # Augmented query which should include additional data if any is found
-        enhanced_query: str = get_enhanced_query(st.session_state.messages[-1].content)
+def check_conversation_exists() -> bool:
+    response: requests.Response = requests.get(
+        url=f"http://r2r:7272/v3/conversations/{st.session_state['conversation_id']}",
+        headers={
+            "Authorization": f"Bearer {st.session_state['bearer_token']}"
+        },
+        params={
+            "limit": 1000
+        },
+        timeout=5
+    )
 
-        generator: Generator[SSEEventBase, None, None] = client.retrieval.rag(
-            query = enhanced_query,
-            rag_generation_config = {
-                "model": f"ollama_chat/{st.session_state['chat_model']}",
-                "temperature": st.session_state['temperature'],
-                "top_p": st.session_state['top_p'],
-                "max_tokens_to_sample": st.session_state['max_tokens'],
-                "stream": True # You must specify this explicitly. In config file it doesn't run.
-            },
-            search_mode = "custom",
-            search_settings = search_settings,
-            task_prompt=st.session_state['prompt_template'],
-        )
+    if response.status_code != 200:
+        return False
 
-        return generator
-    except R2RException as r2re:
-        st.error(f"An error while querying LLM: {str(r2re)}")
-        raise r2re
-    except Error as e:
-        st.error(f"An error occurred: {str(e)}")
-        raise e
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
-        raise e
+    return True
 
-def extract_completion(generator: Generator[SSEEventBase, None, None]) -> Generator:
-    """
-    Extracts and yields only the text inside <completion>...</completion> tags from a generator
-    while preserving original formatting.
-    
-    Args:
-        generator (Generator[SSEEventBase, None, None]): 
-            A generator yielding various events.
-        
-    Yields:
-        str: Only data that is generated on the fly relevant for the final answer.
-    """
-    for event in generator:
-        if isinstance(event, MessageEvent):
-            yield event.data.delta.content[0].payload.value
+def create_conversation():
+    response: requests.Response = requests.post(
+        url="http://r2r:7272/v3/conversations",
+        headers={
+            "Authorization": f"Bearer {st.session_state['bearer_token']}"
+        },
+        timeout=5
+    )
+
+    if response.status_code != 200:
+        st.error(f"Failed to create conversation: {response.status_code} - {response.text}")
+        return
+
+    st.session_state['conversation_id'] = response.json()['results']['id']
+    st.session_state['messages'] = []
+    st.session_state['parent_id'] = None
+
+def set_new_prompt(prompt_name: str) -> bool:
+    response: requests.Response = requests.post(
+        url=f"http://r2r:7272/v3/prompts/{prompt_name}",
+        headers={
+            "Authorization": f"Bearer {st.session_state['bearer_token']}"
+        },
+        timeout=5
+    )
+
+    if response.status_code != 200:
+        return False
+
+    st.session_state['selected_prompt'] = prompt_name
+    st.session_state['prompt_template'] = response.json()['results']['template']
+    return True
+
+def add_message(msg: Dict[str, str]):
+    response: requests.Response = requests.post(
+        url=f"http://r2r:7272/v3/conversations/{st.session_state['conversation_id']}/messages",
+        headers={
+            "Authorization": f"Bearer {st.session_state['bearer_token']}"
+        },
+        json={
+            "content": msg['content'],
+            "role": msg['role'],
+            # If this is the first message in the conversation => None/Null
+            "parent_id": st.session_state['parent_id'] 
+        },
+        timeout=5
+    )
+
+    if response.status_code != 200:
+        st.error(f"Failed to add message: {response.status_code} - {response.text}")
+        return
+
+    # Set the parent id for next message to equal the id of the newly added one
+    st.session_state['parent_id'] = response.json()['results']['id']
+
+    # Finally, add to session state to be displayed
+    if not st.session_state['messages']:
+        st.session_state['messages'] = [msg]
+    else:
+        st.session_state['messages'].append(msg)
+
+def submit_query() -> str:
+    query: str = st.session_state['messages'][-1]['content']
+
+    # 1. Request and retrieve the context
+    response: requests.Response = requests.post(
+        url="http://r2r:7272/v3/retrieval/search",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {st.session_state['bearer_token']}"
+        },
+        json={
+            "query": query,
+            "search_settings": SEARCH_SETTINGS,
+            "search_mode": "custom"
+        },
+        timeout=60
+    )
+
+    if response.status_code != 200:
+        st.error(f"Failed to retrieve context: {response.status_code} - {response.text}")
+        return None
+
+    # Extract the relevant context (if any)
+    # Currently this is very naive - no context filtering and no notion of - is the source relevant
+    # One could use a LLM call to classify them
+    retrieved_chunks = []
+    for chunk in response.json()['results']['chunk_search_results']:
+        if chunk['text']:
+            retrieved_chunks.append(chunk['text'])
+
+    # 2. Augment the user query with the context
+    user_msg: str = st.session_state['prompt_template'].format(
+        context="\n".join(retrieved_chunks),
+        query=query
+    )
+
+    messages: List[Dict] = st.session_state['messages'][:-1] # Exclude the query
+    messages.append({'role': 'user', 'content': user_msg})   # This will be the augmented prompt (query + context)
+
+    # 3. Send a RAG request
+    response: requests.Response = requests.post(
+        url="http://r2r:7272/v3/retrieval/completion",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {st.session_state['bearer_token']}"
+        },
+        json={
+            "messages": messages,
+            "generation_config": RAG_GENERATION_CONFIG,
+            "response_model": "MessageEvent",
+        },
+        timeout=600 # 10 minutes
+    )
+
+    if response.status_code != 200:
+        st.error(f"Failed to stream response: {response.status_code} - {response.text}")
+        return None
+
+    return response.json()['results']['choices'][0]['message']['content']

@@ -1,5 +1,7 @@
 # pylint: disable=C0114
 # pylint: disable=C0115
+# pylint: disable=C0116
+# pylint: disable=C0303
 # pylint: disable=W0718
 # pylint: disable=R1732
 
@@ -9,13 +11,9 @@ from pathlib import Path
 from typing import Dict, Union, List, Any
 
 import yaml
-from r2r import R2RException, R2RClient
-
+import requests
 import streamlit as st
-from streamlit.errors import Error
 from streamlit.runtime.uploaded_file_manager import UploadedFile
-
-from shared.api.models.ingestion.responses import VectorIndexResponse
 
 @dataclasses.dataclass
 class Index:
@@ -24,30 +22,66 @@ class Index:
     measure: str
     arguments: Dict[str, Union[str, Dict]]
 
-def list_indices(client: R2RClient):
-    """Fetch all available indices"""
-    try:
-        indices: List[VectorIndexResponse] = client.indices.list().results.indices
-        if indices:
-            for obj in indices:
-                with st.expander(
-                    label=f"Index: {obj.index['name']}",
-                    expanded=False
-                ):
-                    st.json(obj)
-            st.info("You've reached the end of the indices.")
-        else:
-            st.info("No indices found.")
-    except R2RException as r2re:
-        st.error(f"Error listing indices: {r2re.message}")
-    except Error as e:
-        st.error(f"Unexpected streamlit error: {str(e)}")
-    except Exception as exc:
-        st.error(f"Unexpected error: {str(exc)}")
+def list_indices():
+    response: requests.Response = requests.get(
+        url="http://r2r:7272/v3/indices",
+        headers={
+            "Authorization": f"Bearer {st.session_state['bearer_token']}"
+        },
+        timeout=5
+    )
 
-def create_idx(client: R2RClient, file: UploadedFile):
-    """Create an index from an uploaded YAML file."""
+    if response.status_code != 200:
+        st.error(f"Failed to fetch indices: {response.status_code} - {response.text}")
+        return
 
+    indices: List[Dict[str, Any]] = response.json()['results'].get('indices', [])
+
+    if not indices:
+        st.info("No indices found.")
+        return
+
+    for obj in indices:
+        index = obj['index']
+
+        with st.expander(label=f"🧠 Index: `{index['name']}`", expanded=False):
+            st.markdown(f"""
+**Table Name**: `{index['table_name']}`  
+**Size**: `{index['size_in_bytes']:,} bytes`  
+**Row Estimate**: `{index['row_estimate']}`  
+**Scans**: `{index['number_of_scans']}`  
+**Tuples Read**: `{index['tuples_read']}`  
+**Tuples Fetched**: `{index['tuples_fetched']}`  
+            """, unsafe_allow_html=False)
+
+            st.markdown("**Definition:**")
+            st.code(index["definition"], language="sql")
+
+            delete_doc_btn = st.button(
+                label="❌ Delete Index",
+                key=f"delete_{index['name']}",
+                on_click=delete_index,
+                args=(index['name'], )
+            )
+
+    st.info("You've reached the end of the indices.")
+
+def delete_index(name: str):
+    response: requests.Response = requests.delete(
+        url=f"http://r2r:7272/v3/indices/chunks/{name}",
+        headers={
+            "Authorization": f"Bearer {st.session_state['bearer_token']}"
+        },
+        timeout=5
+    )
+
+    if response.status_code != 200:
+        st.error(f"Failed to delete index: {response.status_code} - {response.text}")
+        return
+
+    st.success(response.json()['results']['message'])
+
+def create_index(file: UploadedFile):
     # Save uploaded file temporarily so as to read the data into dict
     temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".yaml")
     temp_file.write(file.getbuffer())
@@ -63,37 +97,28 @@ def create_idx(client: R2RClient, file: UploadedFile):
             index_arguments=index.arguments
         )
 
-        idx_creation_resp: str = client.indices.create(
-            config=idx_config,
-            run_with_orchestration=True
-        ).results.message
-        st.success(idx_creation_resp)
+        response: requests.Response = requests.post(
+            url="http://r2r:7272/v3/indices",
+            headers={
+                "Authorization": f"Bearer {st.session_state['bearer_token']}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "config": idx_config
+            },
+            timeout=5
+        )
+        
+        if response.status_code != 200:
+            st.error(response.json()['detail']['message'])
+            return
+        
+        st.success(response.json()['results']['message'])
     except ValueError as ve:
         st.error(f"Error in YAML file structure: {str(ve)}")
-    except R2RException as r2re:
-        st.error(f"Error creating index: {r2re.message}")
-    except Error as e:
-        st.error(f"Unexpected streamlit error: {str(e)}")
-    except Exception as exc:
-        st.error(f"Unexpected error: {str(exc)}")
     finally:
         temp_file.close()
 
-def delete_idx(client: R2RClient, name: str):
-    """Delete index if available."""
-    try:
-        result: str = client.indices.delete(
-            index_name=name,
-            table_name="chunks"
-        ).results.message
-
-        st.success(result)
-    except R2RException as r2re:
-        st.error(f"Error deleting index: {r2re.message}")
-    except Error as e:
-        st.error(f"Unexpected streamlit error: {str(e)}")
-    except Exception as exc:
-        st.error(f"Unexpected error: {str(exc)}")
 
 def _load_index_config_from_yaml(filepath: Union[str,Path]) -> Index:
     """
@@ -139,10 +164,6 @@ def _construct_index_config(
     index_measure: str,
     index_arguments: dict
 ) -> Dict[str, Union[str, bool]]:
-    """Helper function to construct index configuration."""
-    # https://medium.com/@emreks/comparing-ivfflat-and-hnsw-with-pgvector-performance-analysis-on-diverse-datasets-e1626505bc9a
-    # https://towardsdatascience.com/similarity-search-part-4-hierarchical-navigable-small-world-hnsw-2aad4fe87d37/
-
     if index_method not in ('hnsw', 'ivf_flat'):
         raise ValueError('Invalid index method, only hnsw and ivf_flat are supported!')
 
@@ -150,7 +171,8 @@ def _construct_index_config(
         raise ValueError('Only ip_distance, l2_distance and cosine_distance are supported!')
 
     config: Dict[str, Union[str, bool]] = {
-        # According to the documentation it should be vectors. However, it doesn't work.
+        # According to the documentation the table name should be vectors.
+        # However, it actually needs to be on chunks.
         'table_name': 'chunks',
         'index_method': index_method,
         'index_measure': index_measure,

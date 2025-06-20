@@ -1,21 +1,19 @@
 # pylint: disable=C0114
 # pylint: disable=C0115
+# pylint: disable=C0116
 # pylint: disable=R1732
 # pylint: disable=W0718
 
 import tempfile
 import dataclasses
+from datetime import datetime
 from typing import Union, Dict, List, Any
 
 import yaml
-from r2r import R2RException, R2RClient
-
+import requests
 import streamlit as st
 from streamlit.errors import Error
 from streamlit.runtime.uploaded_file_manager import UploadedFile
-
-from shared.api.models.base import GenericBooleanResponse
-from shared.api.models.management.responses import PromptResponse
 
 @dataclasses.dataclass
 class MyPrompt:
@@ -23,28 +21,53 @@ class MyPrompt:
     template: str
     input_types: Dict[str, Union[str, Dict]]
 
-def list_prompts(client: R2RClient):
-    """List all available prompts"""
-    try:
-        prompts: List[PromptResponse] = client.prompts.list().results
-        if prompts:
-            st.write(f"Found {len(prompts)} prompts:")
-            for prompt in prompts:
-                with st.expander(label=f"Prompt: {prompt.name}", expanded=False):
-                    st.json(prompt)
-            st.info("You've reached the end of the prompts.")
-        else:
-            st.info("No prompts found.")
-    except R2RException as r2re:
-        st.error(f"Error listing prompts: {r2re.message}")
-    except Error as e:
-        st.error(f"Unexpected streamlit error: {str(e)}")
-    except Exception as exc:
-        st.error(f"Unexpected error: {str(exc)}")
+def list_prompts():
+    response: requests.Response = requests.get(
+        url="http://r2r:7272/v3/prompts",
+        headers={
+            "Authorization": f"Bearer {st.session_state['bearer_token']}",
+        },
+        timeout=5
+    )
 
-def create_prompt(client: R2RClient, file: UploadedFile):
-    """Create a custom prompt and save into database"""
+    if response.status_code != 200:
+        st.error(f"Failed to retrieve prompts: {response.status_code} - {response.text}")
+        return
 
+    prompts: List[Dict] = response.json().get("results", [])
+
+    if not prompts:
+        st.info("No prompts found.")
+        return
+
+    st.subheader("Available Prompts")
+
+    for prompt in prompts:
+        with st.expander(label=f"📝 {prompt['name']}", expanded=False):
+            st.markdown(f"**ID**: `{prompt['id']}`")
+            input_types_str: str = ', '.join(f'{k}: {v}' for k, v in prompt['input_types'].items())
+            st.markdown(f"**Input Types**: `{input_types_str if input_types_str else 'None'}`")
+
+            # Format timestamps
+            created = datetime.fromisoformat(prompt['created_at'].replace("Z", "+00:00"))
+            updated = datetime.fromisoformat(prompt['updated_at'].replace("Z", "+00:00"))
+
+            st.markdown(f"**Created**: {created.strftime('%Y-%m-%d %H:%M:%S')} UTC")
+            st.markdown(f"**Updated**: {updated.strftime('%Y-%m-%d %H:%M:%S')} UTC")
+
+            st.markdown("**Template:**")
+            st.code(prompt['template'], language="jinja2", line_numbers=True)
+
+            delete_doc_btn = st.button(
+                label="❌ Delete Prompt",
+                key=f"delete_{prompt['id']}",
+                on_click=delete_prompt,
+                args=(prompt['name'], )
+            )
+
+    st.info("You've reached the end of the prompts.")
+
+def create_prompt(file: UploadedFile):
     temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".yaml")
     temp_file.write(file.getbuffer())
     temp_file.flush()
@@ -54,20 +77,33 @@ def create_prompt(client: R2RClient, file: UploadedFile):
 
         if not prompt_obj:
             st.error("Error loading prompt from YAML file.")
-        else:
-            if _check_prompt_exists(client, prompt_obj.name):
-                st.error(f"Prompt with name {prompt_obj.name} already exists.")
-            else:
-                result: str = client.prompts.create(
-                    name = prompt_obj.name,
-                    template = prompt_obj.template,
-                    input_types = prompt_obj.input_types
-                ).results.message
-                st.success(result)
+            return
+
+        if _check_prompt_exists(prompt_obj.name):
+            st.error(f"Prompt with name {prompt_obj.name} already exists!")
+            return
+
+        response: requests.Response = requests.post(
+            url="http://r2r:7272/v3/prompts",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {st.session_state['bearer_token']}"
+            },
+            json={
+                "name": prompt_obj.name,
+                "template": prompt_obj.template,
+                "input_types": prompt_obj.input_types
+            },
+            timeout=5
+        )
+
+        if response.status_code != 200:
+            st.error(f"Failed to retrieve prompts: {response.status_code} - {response.text}")
+            return
+
+        st.success(response.json()['results']['message'])
     except ValueError as ve:
         st.error(f"Error creating prompt: {str(ve)}")
-    except R2RException as r2re:
-        st.error(f"Error creating prompt: {r2re.message}")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
@@ -75,13 +111,21 @@ def create_prompt(client: R2RClient, file: UploadedFile):
     finally:
         temp_file.close()
 
-def delete_prompt(client:R2RClient, name: str):
-    """Delete specific prompt by name"""
+def delete_prompt(name: str):
     try:
-        result: GenericBooleanResponse = client.prompts.delete(name).results
-        st.success(f"Prompt deletion result: {result}")
-    except R2RException as r2re:
-        st.error(f"Error deleting prompt: {r2re.message}")
+        response: requests.Response = requests.delete(
+            url=f"http://r2r:7272/v3/prompts/{name}",
+            headers={
+                "Authorization": f"Bearer {st.session_state['bearer_token']}",
+            },
+            timeout=5
+        )
+
+        if response.status_code != 200:
+            st.error(f"Failed to delete prompt: {response.status_code} - {response.text}")
+            return
+
+        st.success(f"Prompt '{name}' deleted successfully.")
     except Error as e:
         st.error(f"Unexpected streamlit error: {str(e)}")
     except Exception as exc:
@@ -135,9 +179,16 @@ def _load_prompt_from_yaml(filepath: str) -> Union[MyPrompt,None]:
         st.error(f"Unexpected error: {str(exc)}")
         return None
 
-def _check_prompt_exists(client: R2RClient, name: str) -> bool:
-    try:
-        prompt: PromptResponse = client.prompts.retrieve(name).results
-        return prompt is not None
-    except R2RException:
-        return False
+def _check_prompt_exists(name: str) -> bool:
+    response: requests.Response = requests.post(
+        url=f"http://r2r:7272/v3/prompts/{name}",
+        headers={
+            "Authorization": f"Bearer {st.session_state['bearer_token']}"
+        },
+        timeout=5
+    )
+
+    if response.status_code == 200:
+        return True
+
+    return False

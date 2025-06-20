@@ -1,4 +1,3 @@
-r2r[core]==3.5.11 # This version has to match the tag of the `r2r` image in the compose file.
 streamlit==1.43.2
 unstructured[pdf]==0.17.2
 langchain==0.3.23

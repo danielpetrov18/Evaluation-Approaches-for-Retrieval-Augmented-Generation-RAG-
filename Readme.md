@@ -152,7 +152,7 @@ The particular [OS](https://ubuntu.com/download/desktop?version=24.04&architectu
 
 After installing VirtualBox and the ISO image create a virtual machine, launch the instance and follow the instructions.
 
-If at any point in time you face problems with running the applicaion run: `docker compose logs -f`. If there's not enough memory to host a model, use a smaller model. By default my project uses `llama3.1:8b`. However, smaller models like [llama3.2](https://ollama.com/library/llama3.2) are available. Be sure to modify the `CHAT_MODEL` environment variable under: `env/rag.env` and modify the `document_summary_model` under `project/backend/config.toml` (the ingestion section).
+If at any point in time you face problems with running the applicaion run: `docker compose logs -f`. If there's not enough memory to host a model, use a smaller model. By default my project uses `llama3.1:8b`. However, smaller models like [llama3.2](https://ollama.com/library/llama3.2) are available. Be sure to modify the `CHAT_MODEL` environment variable under `env/rag.env`.
 
 ---
 
@@ -245,22 +245,23 @@ If at any point in time you face problems with running the applicaion run: `dock
    curl http://localhost:7272/v3/health
    ```
 
-7. You can then open a browser and enter `http://localhost:8501` in the search bar. That will enable you to interact with the RAG service using a GUI. There's a **python SDK** and a **RESTful API** as well. For that you can use `http://localhost:7272`. For further details refer to [R2R](https://r2r-docs.sciphi.ai/api-and-sdks/introduction).
+7. You can then open a browser and enter `http://localhost:8501` in the search bar. That will enable you to interact with the RAG service using a GUI. There's a **python SDK** and a **RESTful API** as well. For that you can use `http://localhost:7272` (base url). For further details refer to [R2R](https://r2r-docs.sciphi.ai/api-and-sdks/introduction).
 
-8. Data Generation:
+8. Data Generation and Evaluation:
 
    ```bash
-   # Use the notebook at evaluation/ragas_eval/generate.ipynb
+   cd evaluation
+   chmod u+x setup.sh
+   ./setup.sh
+   
+   # It will open a jupyterlab instance in your browser
+   # Use the generate notebook inside of ragas_eval to generate datasets
    # The datasets will be saved at evaluation/ragas_eval/datasets
-   # The 10 unique datasets will be used across the three frameworks
-   ```
-
-9. Evaluation:
-
-   ```bash
-   # RAGAs -> evaluation/ragas_eval/evaluation.ipynb
-   # DeepEval -> evaluation/deepeval_eval/evaluation.ipynb
-   # Opik -> evaluation/opik_eval/evaluation.ipynb
+   
+   # For evaluation each folder has their own evaluate notebook:
+      # ragas_eval
+      # deepeval_eval
+      # opik_eval
    ```
 
 10. Clean-up:
@@ -283,51 +284,40 @@ If at any point in time you face problems with running the applicaion run: `dock
 
 **NOTE:**
 
-Make sure the ingestion section under `project/backend/config.toml` has corresponding values with `env/rag.env` - chunk size from `env/rag.env` should match the `max_characters` in the config file and the chunk overlap - the overlap field in the config file. Before re-running the notebook to generate a new dataset make sure you restart the docker containers so that the changes take place. This ensures that both the context used during knowledge graph creation and query synthesis matches the retrieved contexts size and overlap to get the closest possible values.
+For proper dataset generation the environment variables from `env/rag.env` need to match the ones in the corresponding experiment in `experiments.csv`.
 
-- Evaluating a **RAG** application requires a collection of data that is:
+```bash
+TOP_K
+CHUNK_SIZE
+CHUNK_OVERLAP
+CHAT_MODEL
+VANILLA_RAG
+```
 
-   1. **diverse** enough to resemble real-world user interactions
-
-   2. **include edge-cases** like short or long queries, the use of improper grammar or more scientific lingo, etc
-
-   3. contain **enough samples** to draw statistically significant conclusions
-
-- **RAGAs** provides a solution that covers all the aformentioned criteria of a **well-defined** dataset.
-
-- It's based on the concept of **knowledge graph** that consists of **node**s holding some kind of information and metadata.
-
-- One can apply various pre-defined or custom transformations to **enrich** the **knowledge graph** and establish **relationship**s between **node**s.
-
-- Finally, using the **enriched graph** one can generate **samples**.
-
-- To make use of this:
+Before re-running the notebook to generate a new dataset make sure you set the proper values and restart the jupyter kernel so that the changes take place. This ensures that both the context used during knowledge graph creation and query synthesis matches the retrieved contexts size and overlap to get the closest possible values.
 
    ```bash
    cd evaluation
    
    chmod u+x setup.sh
    
-   ./setup.sh #<= will create a virtual environment (eval) 
+   ./setup.sh
    
    cd ragas_eval
 
    # Open the `generate` notebook
-   # Select the kernel (eval)
    # Follow along the instructions, documentation and code
    ```
 
-- Do have in mind that **RAGAs DOESN'T** generate the **full** dataset. It will generate **goldens** - entries consisting of `user_input`, `reference` (expected output) and `reference_contexts`. The rest needs to be filled out by you, either using [R2R](https://r2r-docs.sciphi.ai/introduction) or your own **RAG** pipeline with any framework you like.
+- Do have in mind that **RAGAs DOESN'T** generate the **full** dataset. It will generate **goldens** - entries consisting of `user_input`, `reference` (expected output) and `reference_contexts`. The rest needs to be filled out by you, either using [R2R](https://r2r-docs.sciphi.ai/introduction) or your own **RAG** pipeline with any framework you like (see step 12 in the `generate` notebook).
 
 - For the generation of goldens for all experiments I've used the same `model` and `temperature` values: **llama3.1:8b-instruct-q4_1** and **0.0** respectively. The reason is to try to create synthetic datasets that are as uniform as possible and try to avoid noise.
 
 - For completing the synthetic dataset, i.e. adding the `response` (LLM response) and `retrieved_contexts` the `model` and `temperature` will depend on the corresponding experiment.
 
-- With all of that in mind, one could generate various of datasets and test various configurations. Each dataset will be saved locally under `evaluation/ragas_eval/datasets` by default.
+- With all of that in mind, one could generate various of datasets and test various configurations. Each dataset will be saved locally under `evaluatio/datasets` by default.
 
 - If you already have a dataset of your own, ensure that you properly match fields to the ones expected by **RAGAs** metrics or the other frameworks during evaluation. Check out the evaluation notebooks for further explanation.
-
-- Alternatively, one could make use of the `generate` notebook under `evaluation/deepeval_eval`, however I suggest the **RAGAs** approach since it's more customizable.
 
 ---
 
@@ -356,13 +346,13 @@ The reason why I use 1536 tokens when generating with `deepseek-r1:7b` is becaus
 | 1       | 3     | 512        | 512        | 0             | llama3.1:8b                | 0     | Baseline with minimal values                                   |
 | 2       | 3     | 512        | 512        | 0             | llama3.1:8b-instruct-q4_1  | 0     | Testing instruction tuning effect on baseline                  |
 | 3       | 3     | 1536       | 512        | 0             | deepseek-r1:7b             | 0     | Testing alternative model (reasoning) on baseline              |
-| 4       | 5     | 512        | 768        | 64            | llama3.1:8b                | 0.5   | Mid-range balanced configuration with some creativity          |
-| 5       | 5     | 512        | 768        | 64            | llama3.1:8b-instruct-q4_1  | 0.5   | Mid-range balanced creative instruction-tuned approach         |
-| 6       | 5     | 512        | 1024       | 128           | llama3.1:8b                | 0     | Maximum retrieval quality                                      |
-| 7       | 5     | 512        | 1024       | 128           | llama3.1:8b                | 0     | Maximum retrieval quality advanced-RAG (RAG-Fusion)                  |
-| 8       | 5     | 512        | 1024       | 128           | llama3.1:8b                | 1     | Testing high temperature creativity on max retrieval quality   |
-| 9       | 5     | 512        | 1024       | 128           | llama3.1:8b-instruct-q4_1  | 0     | Alternative model with high retrieval settings                 |
-| 10      | 5     | 1536       | 1024       | 128           | deepseek-r1:7b             | 0     | Reasoning model with high retrieval settings                   |
+| 4       | 5     | 512        | 768        | 64            | llama3.1:8b                | 0   | Mid-range balanced configuration         |
+| 5       | 5     | 512        | 768        | 64            | llama3.1:8b-instruct-q4_1  | 0   | Mid-range balanced instruction-tuned approach         |
+| 6       | 5     | 512        | 1024       | 128           | llama3.1:8b                | 0     | Upper-end retrieval quality                                      |
+| 7       | 5     | 512        | 1024       | 128           | llama3.1:8b                | 0     | Upper-end retrieval quality advanced-RAG (RAG-Fusion)                  |
+| 8       | 5     | 512        | 1024       | 128           | llama3.1:8b-instruct-q4_1                | 0     | Alternative model with upper-end retrieval settings   |
+| 9       | 5     | 1536        | 1024       | 128           | deepseek-r1:7b | 0     | Reasoning model with upper-end retrieval settings                 |
+| 10      | 10     | 512       | 2048       | 256           | llama3.1:8b           | 0     | Maximum  retrieval settings                   |
 
 ---
 
@@ -370,16 +360,7 @@ The reason why I use 1536 tokens when generating with `deepseek-r1:7b` is becaus
 
 **NOTE**: all experiments, with exception of the 7th use a **vanilla RAG approach**. The 7th experiment tests if the usage of a more advanced approach like [RAG-Fusion](https://r2r-docs.sciphi.ai/documentation/advanced-rag#rag-fusion) could yield significantly better results. The idea of `RAG-Fusion` is to generate `N` hypothetical questions based on the original one, as to capture a broader perspective and to fetch more relevant context. It uses `RRF` or Reciprocal Rank Fusion to fuse all the documents for the individual queries.
 
-- **Experiment 1**: Baseline
-- **Experiment 2**: Seeing how a `fine-tuned` model performs on baseline
-- **Experiment 3**: Seein how a `reasoning` model performs on baseline
-- **Experiment 4**: Increasing the nodes retrieved, chunk size and overlap to see how that affects **faithfulness**, **recall**, **precision**, etc. Also using a higher temperature.
-- **Experiment 5**: Same as experiment 4, but with `fine-tuned` model.
-- **Experiment 6**: Maximum retrieval with higher chunk sizes and overlap
-- **Experiment 7**: Maximum retrieval with the same model, but using an advanced approach - **RAG-Fusion**
-- **Experiment 8**: High retrieval with very high creativity
-- **Experiment 9**: `Fine-tuned` model on max retrieval quality
-- **Experiment 10**: `Reasoning` model on max retrieval quality
+The experiments employ an increasing size of `chunk size`, `overlap` and `top-k` to find out the sweet spot between just enough context and not a lot of noise. Alternative generative models are also compared.
 
 #### How to
 

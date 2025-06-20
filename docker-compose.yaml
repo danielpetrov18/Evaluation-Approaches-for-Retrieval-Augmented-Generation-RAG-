@@ -126,9 +126,6 @@ services:
     restart: on-failure
     networks:
       - r2r_network
-    volumes:
-      # Make sure that exported files in container are reflected on local device
-      - ./project/exports:/frontend/exports
     extra_hosts:
       - host.docker.internal:host-gateway
     depends_on:

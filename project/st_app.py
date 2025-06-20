@@ -1,64 +1,15 @@
-"""
-This module holds all the available pages of the RAG application.
-Every resource defined in the main page can be accessed by all other pages.
-
-The caching mechanism provided by `streamlit` is being used for efficiency.
-"""
+# pylint: disable=C0114
+# pylint: disable=C0116
+# pylint: disable=C0301
 
 import os
 from typing import List
 
-from r2r import R2RClient
-from ollama import Client, Options
+import requests
 import streamlit as st
 from streamlit.navigation.page import StreamlitPage
 
-# pylint: disable=C0301
-
-@st.cache_resource(ttl=None) # ttl of None signifies that it doesn't expire
-def r2r_client():
-    """
-    `R2R` works by starting a server at specified host and port.
-    After starting the server a RESTful API is exposed.
-    One can interact with it either using raw HTTP requests or the `r2r` client.
-    
-    Since the `R2R` service is going to run in a docker container, one can specify
-    the name of the container as a hostname.
-    """
-    port: int = int(os.getenv('R2R_PORT'))
-    return R2RClient(
-        base_url=f'http://r2r:{port}',
-        timeout=1800 # 30 minutes
-    )
-
-@st.cache_resource
-def ollama_client():
-    """
-    This client will be required when interacting with the Ollama server.
-
-    In this project I use the Ollama-client in two different modules:
-        - In the `chat` for creating embeddings
-        - In the `storage` for invoking a tool
-
-    If running the project locally the hostname would be `localhost`.
-    Since this is a containerized application, the hostname should be `host.docker.internal`.
-    To modify that behaviour, modify the variable `OLLAMA_API_BASE` in the `env/rag.env` file.
-    """
-    return Client(host=st.session_state['ollama_api_base'])
-
-@st.cache_resource
-def ollama_options():
-    """Options that are going to be used by the Ollama client."""
-    return Options(
-        temperature=st.session_state['temperature'],
-        top_p=st.session_state['top_p'],
-        top_k=st.session_state['top_k'],
-        num_ctx=st.session_state["context_window_size"],
-        format="json", # This should be json to enforce proper output if required
-    )
-
 def get_pages() -> List[StreamlitPage]:
-    """Defines main pages of the application."""
     return [
         st.Page(
             page="st_chat.py",
@@ -78,12 +29,6 @@ def get_pages() -> List[StreamlitPage]:
             title="Conversations",
             url_path="conversations",
             icon=":material/forum:"
-        ),
-        st.Page(
-            page="st_settings.py",
-            title="Settings",
-            url_path="settings",
-            icon=":material/settings:"
         ),
         st.Page(
             page="st_prompt.py",
@@ -134,14 +79,11 @@ if __name__ == "__main__":
 
     # ====== TWEAK VALUES ABOVE TO ACHIEVE BEST PERFORMANCE ======
 
-    if "exports_dir" not in st.session_state:
-        st.session_state['exports_dir'] = "./exports"
-
     if "conversation_id" not in st.session_state:
         st.session_state['conversation_id'] = None
 
     if "messages" not in st.session_state:
-        st.session_state.messages = []
+        st.session_state['messages'] = []
 
     # The id of the last message in a given conversation
     if "parent_id" not in st.session_state:
@@ -150,35 +92,57 @@ if __name__ == "__main__":
     if "context_window_size" not in st.session_state:
         st.session_state["context_window_size"] = int(os.getenv("LLM_CONTEXT_WINDOW_TOKENS"))
 
-    if "max_relevant_messages" not in st.session_state:
-        st.session_state["max_relevant_messages"] = int(os.getenv("MAX_RELEVANT_MESSAGES"))
-
-    if "similarity_threshold" not in st.session_state:
-        st.session_state["similarity_threshold"] = float(os.getenv("SIMILARITY_THRESHOLD"))
-
     if 'ingestion_config' not in st.session_state:
-        st.session_state['ingestion_config'] = r2r_client().system.settings().results.config['ingestion']
-
-        # Since the config is a snapshot not an actual instance of the config
-        new_ingestion_config = st.session_state['ingestion_config']
-
-        # Look at: /core/providers/ingestion/unstructured (assuming you have "r2r[core]==3.5.11" installed)
-        #
-        # During ingestion, we need to extract the text from the documents.
-        # Then they are chunked. If unstructured cannot handle it, a fallback is used.
-        # RecursiveCharacterTextSplitter is the fallback.
-        #
-        # https://docs.unstructured.io/api-reference/partition/chunking
-        new_ingestion_config['extra_fields']['max_characters'] = st.session_state['chunk_size']
-        new_ingestion_config['extra_fields']['overlap'] = st.session_state['chunk_overlap']
-        new_ingestion_config['extra_fields']['new_after_n_chars'] = (
-            new_ingestion_config['extra_fields']['max_characters']
-        )
-        new_ingestion_config['extra_fields']['combine_text_under_n_chars'] = int(
-            int(new_ingestion_config['extra_fields']['max_characters']) / 2
+        response: requests.Response = requests.get(
+            url="http://r2r:7272/v3/system/settings",
+            timeout=5
         )
 
-        st.session_state['ingestion_config'] = new_ingestion_config
+        if response.status_code != 200:
+            st.error(f"Failed to fetch system settings: {response.status_code} - {response.text}")
+        else:
+            st.session_state['ingestion_config'] = response.json()['results']['config']['ingestion']
+
+            # Since the config is a snapshot not an actual instance of the config
+            new_ingestion_config = st.session_state['ingestion_config']
+
+            # During ingestion, we need to extract the text from the documents.
+            # Then they are chunked. If unstructured cannot handle it, a fallback is used.
+            # RecursiveCharacterTextSplitter is the fallback.
+            #
+            # https://docs.unstructured.io/api-reference/partition/chunking
+            new_ingestion_config['extra_fields']['max_characters'] = st.session_state['chunk_size']
+            new_ingestion_config['extra_fields']['overlap'] = st.session_state['chunk_overlap']
+            new_ingestion_config['extra_fields']['new_after_n_chars'] = (
+                new_ingestion_config['extra_fields']['max_characters']
+            )
+            new_ingestion_config['extra_fields']['combine_text_under_n_chars'] = int(
+                int(new_ingestion_config['extra_fields']['max_characters']) / 2
+            )
+
+            # This will be the same ingestion config, however we could overwrite it
+            # using environment variables from `env/rag.env`.
+            st.session_state['ingestion_config'] = new_ingestion_config
+
+    # Login values are default ones. Can be modified in the config file.
+    if "bearer_token" not in st.session_state:
+        response: requests.Response = requests.post(
+            url="http://r2r:7272/v3/users/login",
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            data={
+                "username": "admin@example.com",
+                "password": "change_me_immediately"
+            },
+            timeout=5
+        )
+
+        if response.status_code != 200:
+            st.error(f"Failed to fetch system settings: {response.status_code} - {response.text}")
+            st.write("KURWA")
+        else:
+            st.session_state['bearer_token'] = response.json()['results']['access_token']['token']
 
     # Default prompt name that is used by R2R when interacting with /rag endpoint
     # You can specify a custom name in the application itself
@@ -187,22 +151,23 @@ if __name__ == "__main__":
 
     # The actual template of the prompt
     if 'prompt_template' not in st.session_state:
-        st.session_state['prompt_template'] = r2r_client().prompts.retrieve(
-            st.session_state['selected_prompt']
-        ).results.template
+        response: requests.Response = requests.post(
+            url=f"http://r2r:7272/v3/prompts/{st.session_state['selected_prompt']}",
+            headers={
+                "Authorization": f"Bearer {st.session_state['bearer_token']}"
+            },
+            timeout=5
+        )
 
-    # This is not required. It parts of a small function in the storage module
+        if response.status_code != 200:
+            st.error(f"Failed to fetch system settings: {response.status_code} - {response.text}")
+        else:
+            st.session_state['prompt_template'] = response.json()['results']['template']
+
     # It's part of a tool call, that can fetch data from the internet.
     if 'websearch_api_key' not in st.session_state:
-        st.session_state['websearch_api_key'] = None
-
-    # Some RESTful API endpoints require authentication and the `r2r` SDK doesn't work.
-    # Login values are default ones. Can be modified in the config file.
-    if "bearer_token" not in st.session_state:
-        st.session_state['bearer_token'] = r2r_client().users.login(
-            email = "admin@example.com",
-            password = "change_me_immediately"
-        ).results.access_token.token
+        # Bad practice to hardcode, I know
+        st.session_state['websearch_api_key'] = "sk-47eac60b82c844fe9dbd4f7e98de4951"
 
     if "ollama_api_base" not in st.session_state:
         st.session_state['ollama_api_base'] = os.getenv("OLLAMA_API_BASE")
