@@ -5,15 +5,15 @@
 # pylint: disable=W0622
 
 from typing import List, Final, Optional
-
 from pydantic import BaseModel
 
 from .models import Statement, ContextRecallVerdict
 
-# This will be used to decompose the `expected_output` into separate claims
+
 class FewShotExampleStatements(BaseModel):
-    expected_output: str        # Input
-    statements: List[Statement] # Output
+    expected_output: str
+    statements: List[Statement]
+
 
 FEW_SHOT_EXAMPLES_STATEMENTS: Final[List[FewShotExampleStatements]] = [
     FewShotExampleStatements(
@@ -70,19 +70,17 @@ TEXT:
 DECOMPOSED STATEMENTS:
 """
 
+def format_statements(statements: List[Statement]) -> str:
+    return ',\n        '.join([f'{{"text": "{stmt.text}"}}' for stmt in statements])
+
 def generate_decomposition_query(
     expected_output: str,
-    few_shot_examples: Optional[
-        List[FewShotExampleStatements]
-    ] = None
+    few_shot_examples: Optional[List[FewShotExampleStatements]] = None
 ) -> str:
-    examples: List[FewShotExampleStatements] = (
-        FEW_SHOT_EXAMPLES_STATEMENTS if few_shot_examples is None else few_shot_examples
-    )
+    examples = FEW_SHOT_EXAMPLES_STATEMENTS if few_shot_examples is None else few_shot_examples
 
     examples_str = "\n\n".join(
-        [
-            f"""EXAMPLE {i}:
+        f"""EXAMPLE {i}:
 
 TEXT:
 {example.expected_output}
@@ -90,11 +88,10 @@ TEXT:
 DECOMPOSED STATEMENTS::
 {{
     "statements": [
-        {',\n        '.join([f'{{"text": "{stmt.text}"}}' for stmt in example.statements])}
+        {format_statements(example.statements)}
     ]
 }}"""
-            for i, example in enumerate(examples, 1)
-        ]
+        for i, example in enumerate(examples, 1)
     )
 
     return TEXT_DECOMPOSITION_TEMPLATE.format(
@@ -102,13 +99,13 @@ DECOMPOSED STATEMENTS::
         expected_output=expected_output.strip()
     )
 
-# `input` + `contexts` + `statements` is what we submit to the model
-# `verdicts` is the output classifying each statement
+
 class FewShotExampleContextRecall(BaseModel):
     input: str
     contexts: List[str]
-    statements: List[Statement]          # The statements will be inferred from the `expected output`
-    verdicts: List[ContextRecallVerdict] # Output containing all the statements classified as `yes` or `no`
+    statements: List[Statement]
+    verdicts: List[ContextRecallVerdict]
+
 
 FEW_SHOT_EXAMPLE_CONTEXT_RECALL: Final[List[FewShotExampleContextRecall]] = [
     FewShotExampleContextRecall(
@@ -188,57 +185,52 @@ STATEMENTS:
 VERDICTS:
 """
 
+def format_contexts(contexts: List[str]) -> str:
+    return "[\n    " + ",\n    ".join(f'"{c}"' for c in contexts) + "\n]"
+
+def format_verdicts(verdicts: List[ContextRecallVerdict]) -> str:
+    return ',\n        '.join([
+        f'''{{
+        "statement": {{"text": "{v.statement.text}"}},
+        "attributed": {str(v.attributed).lower()},
+        "reason": "{v.reason}"
+    }}''' for v in verdicts
+    ])
+
 def generate_query(
     input: str,
     statements: List[Statement],
     context: List[str],
-    few_shot_examples: Optional[
-        List[FewShotExampleContextRecall]
-    ] = None,
+    few_shot_examples: Optional[List[FewShotExampleContextRecall]] = None
 ) -> str:
-    examples: List[FewShotExampleContextRecall] = (
-        FEW_SHOT_EXAMPLE_CONTEXT_RECALL if few_shot_examples is None else few_shot_examples
-    )
+    examples = FEW_SHOT_EXAMPLE_CONTEXT_RECALL if few_shot_examples is None else few_shot_examples
 
-    examples_str: str = "\n\n".join(
-        [
-            f"""EXAMPLE {i}:
+    examples_str = "\n\n".join(
+        f"""EXAMPLE {i}:
 
 INPUT:
 {example.input}
 
 CONTEXTS:
-[
-    {',\n    '.join([f'"{c}"' for c in example.contexts])}
-]
+{format_contexts(example.contexts)}
 
 STATEMENTS:
 [
-    {',\n    '.join([f'{{"text": "{s.text}"}}' for s in example.statements])}
+    {format_statements(example.statements)}
 ]
 
 VERDICTS:
 {{
     "verdicts": [
-        {',\n        '.join([
-            f'''{{
-            "statement": {{"text": "{v.statement.text}"}},
-            "attributed": {str(v.attributed).lower()},
-            "reason": "{v.reason}"
-        }}''' for v in example.verdicts])}
+        {format_verdicts(example.verdicts)}
     ]
 }}"""
-            for i, example in enumerate(examples, 1)
-        ]
+        for i, example in enumerate(examples, 1)
     )
-
-    # Format input `context` and `statements` the same way
-    formatted_contexts: str = "[\n    " + ",\n    ".join(f'"{c}"' for c in context) + "\n]"
-    formatted_statements: str = "[\n    " + ",\n    ".join(f'{{"text": "{s.text}"}}' for s in statements) + "\n]"
 
     return CONTEXT_RECALL_TEMPLATE.format(
         examples_str=examples_str.strip(),
         input=input.strip(),
-        contexts=formatted_contexts,
-        statements=formatted_statements
+        contexts=format_contexts(context),
+        statements=format_statements(statements)
     )
