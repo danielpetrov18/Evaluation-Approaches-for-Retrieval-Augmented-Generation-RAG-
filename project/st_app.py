@@ -3,11 +3,15 @@
 # pylint: disable=C0301
 
 import os
-from typing import List
+import pathlib
+from typing import List, Final
 
 import requests
 import streamlit as st
 from streamlit.navigation.page import StreamlitPage
+
+# This is where the API key will be persisted across application restarts
+KEY_FILE: Final[str] = pathlib.Path(".langsearch_key")
 
 def get_pages() -> List[StreamlitPage]:
     return [
@@ -65,7 +69,7 @@ if __name__ == "__main__":
 
     if "embedding_model" not in st.session_state:
         st.session_state["embedding_model"] = os.getenv("EMBEDDING_MODEL")
-    
+
     if "top_p" not in st.session_state:
         st.session_state['top_p'] = float(os.getenv("TOP_P"))
 
@@ -174,8 +178,14 @@ if __name__ == "__main__":
 
     # It's part of a tool call, that can fetch data from the internet.
     if 'websearch_api_key' not in st.session_state:
-        # Bad practice to hardcode - I know :). It's for ease of use.
-        st.session_state['websearch_api_key'] = "sk-47eac60b82c844fe9dbd4f7e98de4951"
+        if KEY_FILE.exists():
+            api_key: str = KEY_FILE.read_text(encoding="utf-8").strip()
+            if not api_key.startswith("sk-"):
+                st.error(f"Invalid API key: {api_key}")
+            else:
+                st.session_state['websearch_api_key'] = api_key
+        else:
+            st.session_state['websearch_api_key'] = ""
 
     if "ollama_api_base" not in st.session_state:
         st.session_state['ollama_api_base'] = os.getenv("OLLAMA_API_BASE")

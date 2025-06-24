@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 # Exit immediately on error, undefined variable, or failed pipe segment
-set -euo pipefail
+set -e
 
 echo "[+] STARTING INITIALIZATION SCRIPT [+]"
 
@@ -28,7 +28,6 @@ OLLAMA_HOST="0.0.0.0:11434" \
 OLLAMA_KEEP_ALIVE="1h" \
 OLLAMA_CONTEXT_LENGTH="${LLM_CONTEXT_WINDOW_TOKENS:-16000}" \
 ollama serve &
-echo "[+] OLLAMA SERVER STARTED. [+]"
 
 # Wait for Ollama server to be ready
 echo "[*] Waiting for Ollama server to become available..."

@@ -100,3 +100,6 @@ eval
 
 # Ignore locally installed opik repository
 opik
+
+# Ignore the langsearch api key
+.langsearch_key

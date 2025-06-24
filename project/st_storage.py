@@ -8,6 +8,7 @@ from typing import Union
 import streamlit as st
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
+from st_app import KEY_FILE
 from backend.storage import (
     delete_all_documents,
     fetch_documents,
@@ -88,15 +89,35 @@ Documents in R2R are the core knowledge units used for retrieval and answering u
 
     with t_websearch:
         with st.expander("Instructions on how to use it", expanded=True, icon="📖"):
-            st.markdown("""
+            st.markdown(f"""
             * First go to this website: [langsearch](https://langsearch.com/)
             * Create a free account and login
             * Get an API key that looks like this: `sk-****************`
-            * You can use my API key in this project, which allows you to skip the previous steps.
+            * Enter your API key in the field below. It will store it under `{KEY_FILE}`.
             * Finally, submit a query and number of web pages
             * You will get a response and a list of web pages that match your query       
             * You can use the links to create a csv file to then perform a webscrape
             """)
+
+        provided_api_key: str = st.text_input(
+            label="Enter your API key",
+            key="api_key_input",
+            value=st.session_state['websearch_api_key']
+        )
+
+        if st.button("Set API key", type="primary", key="set_api_key_btn"):
+            if not provided_api_key:
+                st.error("Please enter an API key.")
+            else:
+                if not provided_api_key.startswith("sk-"):
+                    st.error("Please enter a valid API key.")
+                elif provided_api_key == st.session_state['websearch_api_key']:
+                    st.error("Please enter a different API key.")
+                else:
+                    st.session_state['websearch_api_key'] = provided_api_key.strip()
+                    # Persist the key
+                    KEY_FILE.write_text(provided_api_key.strip(), encoding="utf-8")
+                    st.success("API key updated and persisted.")
 
         query: str = st.text_input(
             label="Enter query",
