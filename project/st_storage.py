@@ -135,17 +135,20 @@ Documents in R2R are the core knowledge units used for retrieval and answering u
         )
 
         if st.button("Search", type="primary", key="websearch_btn"):
-            if not query:
-                st.error("Please enter a query.")
+            if not st.session_state['websearch_api_key']:
+                st.error("Please enter an API key.")
             else:
-                with st.spinner("Performing web search...", show_time=True):
-                    result, urls = perform_websearch(query.strip(), results_to_return)
+                if not query:
+                    st.error("Please enter a query.")
+                else:
+                    with st.spinner("Performing web search...", show_time=True):
+                        result, urls = perform_websearch(query.strip(), results_to_return)
 
-                formatted_urls: str = ""
-                for i, url in enumerate(urls, 1):
-                    formatted_urls += f"{i}. [{url}]({url})\n"
+                    formatted_urls: str = ""
+                    for i, url in enumerate(urls, 1):
+                        formatted_urls += f"{i}. [{url}]({url})\n"
 
-                st.markdown(f"""### Response
+                    st.markdown(f"""### Response
 {result}
 
 ### Relevant URLs:
