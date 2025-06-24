@@ -16,6 +16,19 @@ echo "[+] INSTALLING DEPENDENCIES... [+]"
 pip3 install --upgrade pip
 pip3 install --upgrade -r requirements.txt
 
-cd ..
+# https://www.comet.com/docs/opik/self-host/local_deployment
+if [ ! -d "opik" ]; then
+    echo "[+] DOWNLOADING OPIK REPOSITORY FOR LOCAL HOSTING. [+]"
+    git clone https://github.com/comet-ml/opik.git
+fi
+
+# Run OPIK local instance
+cd opik
+./opik.sh --debug
+
+./opik.sh --verify
+
+# Root of the project
+cd ../..
 
 python3 -m jupyterlab

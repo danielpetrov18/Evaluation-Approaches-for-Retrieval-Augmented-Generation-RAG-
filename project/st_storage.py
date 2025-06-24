@@ -35,7 +35,7 @@ if __name__ == "__page__":
         st.markdown("""
 ### About Document Storage in R2R
 
-Documents in R2R are the core knowledge units used for retrieval and answering user queries. After ingestion, each document is broken down into **semantic chunks** and indexed for similarity search.
+Documents in R2R are the core knowledge units used for retrieval and answering user queries. During ingestion, each document is broken down into **semantic chunks** and indexed for similarity search.
 
 ---
 
@@ -45,10 +45,9 @@ Documents in R2R are the core knowledge units used for retrieval and answering u
 - **List Chunks**: Inspect the individual content chunks and metadata per document.
 - **Ingest File**: Upload supported files (`.txt`, `.pdf`, `.docx`, etc.) to be chunked and stored.
 - **Web Search**: Use an LLM tool-call to fetch a response relative to query and URLs containing information (perfect for webscraping).
-- **Webscrape**: Upload a CSV of URLs, scrape content from each, and ingest it as documents.
+- **Webscrape**: Upload a csv file with URLs, scrape content from each, and ingest it as documents.
 
 """)
-
 
     t_list, t_chunks, t_file_ingest, t_websearch, t_webscrape = st.tabs([
         "List Docs",
@@ -63,19 +62,17 @@ Documents in R2R are the core knowledge units used for retrieval and answering u
             fetch_documents()
 
     with t_chunks:
-        st.markdown("List chunks associated with a document")
-
         document_id_chunks: str = st.text_input(
-            label="Document id",
+            label="Enter document id and retrieve corresponding chunks",
             placeholder="Ex. document_id",
             value=None
         )
 
         if st.button("Fetch Chunks", type="primary", key="fetch_chunks_btn"):
-            if not document_id_chunks.strip():
+            if not document_id_chunks:
                 st.error("Please provide a document id.")
             else:
-                fetch_document_chunks(document_id_chunks)
+                fetch_document_chunks(document_id_chunks.strip())
 
     with t_file_ingest:
         uploaded_file: Union[UploadedFile, None] = st.file_uploader(
@@ -117,11 +114,11 @@ Documents in R2R are the core knowledge units used for retrieval and answering u
         )
 
         if st.button("Search", type="primary", key="websearch_btn"):
-            if not query.strip():
+            if not query:
                 st.error("Please enter a query.")
             else:
                 with st.spinner("Performing web search...", show_time=True):
-                    result, urls = perform_websearch(query, results_to_return)
+                    result, urls = perform_websearch(query.strip(), results_to_return)
 
                 formatted_urls: str = ""
                 for i, url in enumerate(urls, 1):

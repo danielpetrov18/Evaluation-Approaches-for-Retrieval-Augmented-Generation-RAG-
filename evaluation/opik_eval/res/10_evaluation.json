@@ -1,0 +1,1052 @@
+{
+    "hallucination_metric": [
+        {
+            "value": 0.5,
+            "reason": "['The output correctly states that there is no information about modification fees on the Ragas Airlines website.', \"However, it introduces new information not present in the context by mentioning baggage fees, which is a separate topic discussed in the context under 'Baggage Policies'. This constitutes partial hallucination as it's not directly related to the question about modification fees.\"]"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It accurately summarizes the trade-offs between customer service over the phone and online booking, highlighting individual preferences and needs as key factors in making a choice.']"
+        },
+        {
+            "value": 0.2,
+            "reason": "['The output correctly describes the steps to request a full refund if the flight is cancelled and the ticket is refundable, but it does not mention that refunds typically take 7 business days for credit/debit card payments.', 'It also does not provide information about potential issues and resolutions for managing reservations or passenger-initiated cancellations, which are present in the context.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only the URL of the Ragas Airlines website, which is directly mentioned in the context.', 'There are no contradictions or made-up information in the output.']"
+        },
+        {
+            "value": 0.2,
+            "reason": "['The output correctly summarizes the refund processing times and rebooking options for cancelled flights.', 'However, it introduces new information about fare rules that is not present in the context, specifically the details about Refundable Tickets (Flexible Fares), Non-Refundable Tickets (Standard Fares), and Basic Economy & Promotional Fares. This constitutes partial hallucination as some of this information may be factually correct but is not supported by the provided context.', 'Additionally, the output does not contradict any information given in the context.']"
+        },
+        {
+            "value": 0.8,
+            "reason": "['The output introduces new information not present in the context, specifically that the airline will notify you through various channels (not specified), which is not detailed in the provided context.', 'It also mentions rebooking options such as changing to a higher travel class, which is not mentioned in the context.', \"Additionally, it states that refund eligibility depends on the airline's policies and fare conditions, but the context provides specific details about refund processing times for different payment methods.\"]"
+        },
+        {
+            "value": 0.5,
+            "reason": "['The output correctly states that the context does not provide information about which airlines have better procedures for passenger-initiated flight cancellations.', \"However, it introduces a new piece of information by stating 'It only provides specific steps and policies for Ragas Airlines in case of flight cancellations due to passenger-initiated reasons.'\", 'This constitutes partial hallucination as the output correctly identifies that the context does not provide such information but then makes an inference about what is present in the context, which is not entirely accurate.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It directly addresses the issue of a non-working seat by suggesting visiting the customer service desk at the airport, which is a relevant and accurate solution based on the provided context.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It accurately describes the refund eligibility for different types of tickets as mentioned in the context.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It accurately describes Refundable Ticket (Flexible Fares) as allowing free modifications, including date and time changes, before departure.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It directly addresses the input query by providing a clear instruction on where to go for assistance, which is consistent with the provided context.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It accurately directs the user to find the customer service hotline number on the official Ragas Airlines website, which is consistent with the provided context.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It accurately describes that travel credit can be received instead of a full refund for non-refundable tickets, which aligns with the provided context.', 'There is no introduction of new information not present in the context.']"
+        },
+        {
+            "value": 0.5,
+            "reason": "['The output correctly states that a partial refund or travel credit may be available for a non-refundable ticket.', 'However, it contradicts the context by stating that no full refund is available, which is not explicitly mentioned in the provided text as an absolute rule for all non-refundable tickets. The context suggests that some non-refundable tickets may allow for partial refunds or travel credits, but does not rule out the possibility of a full refund under certain circumstances.', 'Therefore, while the output contains some correct information, it also introduces a contradiction with the provided context.']"
+        },
+        {
+            "value": 0.5,
+            "reason": "['The output correctly states that the customer service hotline number can be found by visiting the website or receiving a notification via email, SMS, or mobile app.', 'However, it contradicts information provided in the context that the hotline number is explicitly mentioned as [Customer Service Hotline] and should be dialed directly.']"
+        },
+        {
+            "value": 0.2,
+            "reason": "['The output correctly states that refunds typically take 7 business days for credit/debit card payments.', \"However, it introduces new information not present in the context by stating that to initiate the refund process, one must cancel their booking online and choose 'Refund' as the option. This contradicts the provided steps in the context which state to click 'Cancel Flight' and then select 'Request Full Refund'.\", \"Additionally, the output suggests contacting Ragas Airlines Customer Support with your booking reference number if you haven't received a refund within the expected time, but this is not explicitly mentioned in the context.\"]"
+        },
+        {
+            "value": 0.8,
+            "reason": "['The output correctly states that the phone number is not specified in the provided text.', 'However, it introduces information not present in the context by suggesting to visit the Ragas Airlines website or search for a general customer service number.', \"This constitutes hallucination as it's not supported by the provided context.\"]"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It accurately directs the user to find the customer service hotline number on the official Ragas Airlines website, which is consistent with the provided context.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It accurately describes how to book a flight by calling the customer service hotline, which is consistent with the provided context.']"
+        },
+        {
+            "value": 0.5,
+            "reason": "['The output correctly directs the user to call the official Ragas Airlines customer service hotline, which is in line with the context.', 'However, it introduces new information not present in the context by mentioning that the phone number can be found on their website or in a confirmation email. This contradicts the detailed step-by-step instructions provided in the context for booking via customer service, where the focus is on calling the hotline directly without referencing external sources for the phone number.', \"Additionally, it suggests contacting Ragas Airlines through their website's 'Contact Us' page or visiting an airport office, which are not mentioned in the context as valid options for resolving booking issues.\"]"
+        },
+        {
+            "value": 0.5,
+            "reason": "['The output suggests going to the Ragas Airlines customer service desk at the airport, which is a valid step in resolving booking issues as mentioned in the context.', 'However, it contradicts the detailed steps provided in the context for resolving payment failure and other specific scenarios, indicating that the output may not be entirely faithful to the context.', 'Additionally, the output does not provide any information about checking bank statements or contacting banks, which are also mentioned in the context as potential solutions.']"
+        },
+        {
+            "value": 0.5,
+            "reason": "['The output correctly directs the user to contact Ragas Airlines for booking issues by calling their customer service hotline, which is a faithful representation of information present in the context.', \"However, it introduces new information not present in the context: suggesting that the number can be found on the airline's official website or in your confirmation email. While this may be true, it contradicts the detailed step-by-step instructions provided in the context for finding the customer service hotline.\", 'Additionally, the output suggests searching online for \"Ragas Airlines customer service\" along with your country code as an alternative method to find the number, which is not mentioned in the context and could potentially lead to incorrect or outdated information.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It correctly directs the user to call the official Ragas Airlines booking hotline, which is a relevant and accurate piece of information based on the provided context.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It directly addresses a potential issue related to system issues when rebooking or requesting a refund, which is one of the topics covered in the context.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', \"It accurately summarizes the steps to modify a flight, including checking fare rules and following the modification process through 'Manage My Booking'.\", 'There is no introduction of new information not present in the context.']"
+        },
+        {
+            "value": 0.5,
+            "reason": "[\"The output correctly describes the steps to modify a flight booking through Ragas Airlines' customer service hotline, but it does not provide all the necessary details present in the context.\", 'Specifically, the output omits the step of selecting an available flight and providing passenger information, which are crucial parts of modifying a booking as described in the context.']"
+        },
+        {
+            "value": 0.2,
+            "reason": "['The output correctly describes the characteristics of refundable tickets but partially contradicts information provided in the context regarding non-refundable tickets.', 'Specifically, it states that non-refundable tickets offer partial refunds or travel credits upon cancellation, which is not entirely accurate according to the context. The context mentions that non-refundable tickets may receive a partial refund or travel credit, but it does not guarantee this outcome.', 'Additionally, the output introduces some minor inaccuracies regarding the specifics of fare types and their conditions, such as mentioning additional fees for seat selection or checked baggage without explicitly stating that these are only applicable to non-refundable tickets.']"
+        },
+        {
+            "value": 0.8,
+            "reason": "['The output correctly mentions three main options for managing a flight reservation: viewing or modifying booking online, calling customer service to book a new flight, make changes, or cancel a booking.', 'However, it does not provide detailed steps as the context does and instead offers a general overview of the available options.', 'Moreover, the output introduces information about contacting customer support via phone or online, which is partially correct but also partially incorrect since the context provides more specific details on how to contact customer service for various issues.', 'The output does not contradict any information given in the context, but it lacks specificity and detail compared to the provided context.']"
+        },
+        {
+            "value": 0.5,
+            "reason": "['The output correctly describes step 1 of resolving Wi-Fi not working after purchase on an in-flight service, which is to try reconnecting to the network and ensure you entered the correct Wi-Fi access code.', \"However, it introduces a partial hallucination by stating that if the issue persists, one should go to Step 3 of the resolution process for Wi-Fi issues. This contradicts information provided in the context, where Step 2 is clearly stated as 'If the issue persists, inform a flight attendant.'\", 'Additionally, the output does not provide any further guidance on what to do if the issue persists after informing a flight attendant, which could be considered another partial hallucination.']"
+        },
+        {
+            "value": 0.2,
+            "reason": "['The output contains only information present in the context with no contradictions.', 'However, it does not fully capture the nuances of fare rules as described in the context, such as refund eligibility and travel credit options.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context about pre-ordering vegetarian meals on long-haul flights.', 'It does not introduce any new information or contradict any details provided in the context.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It accurately describes the compensation process for delayed baggage as outlined in the provided context.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', \"It accurately describes Ragas Airlines' compensation policy for extended delays, which is mentioned in the provided context.\"]"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It accurately describes how Ragas Airlines notifies passengers about flight delays via email, specifically mentioning that the notification includes updated departure time, reason for the delay, and compensation details (if applicable).', \"This is consistent with the provided context, which outlines the airline's responsibilities in case of delays, including notifying passengers via email.\"]"
+        },
+        {
+            "value": 0.8,
+            "reason": "[\"The output introduces new information not present in the context, including 'loyalty programs or rewards' and 'user-friendly website and mobile app'. While these are plausible characteristics of effective customer service, they are not directly supported by the provided context.\", \"The output also indirectly contradicts some information given in the context. For example, it mentions providing clear and accessible information about flight schedules, fares, and services, but the context already outlines various aspects of Ragas Airlines' customer service policies, including booking procedures, ticket fare conditions, and complaint resolution processes.\"]"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', \"It accurately describes the process for passengers requiring medical assistance or special accommodations, including the need to notify the airline at least 48 hours before departure and obtain a doctor's approval if necessary.\"]"
+        },
+        {
+            "value": 0.5,
+            "reason": "['The output correctly describes the steps to manage a booking with Ragas Airlines, including logging into the website, accessing booking details, and making modifications.', 'However, it introduces new information not present in the context, such as the availability of a mobile app for managing bookings (although this may be true, it is not mentioned in the provided context).', 'Additionally, the output does not contradict any information given in the context.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', \"It accurately describes Ragas Airlines' special assistance services and provides a correct method for requesting assistance, which is consistent with the provided context.\"]"
+        },
+        {
+            "value": 0.5,
+            "reason": "[\"The output correctly describes the general steps to book a flight on Raga's Airlines website using Chrome, but it introduces new information not present in the context.\", 'Specifically, the output mentions \\'Click on \"Book a Flight\" or \"Search Flights\"\\', which is not mentioned in the provided context. This could be considered as a partial hallucination where some information is correct but other parts are not.']"
+        },
+        {
+            "value": 0.3,
+            "reason": "[\"The output correctly describes the steps to change a flight on 'Manage My Booking' but introduces new information not present in the context, specifically mentioning checking for updates and calling customer support.\", 'Additionally, the output contradicts the provided context by suggesting that rebooking options may be available if you have already received a schedule change notification from Ragas Airlines. However, this is not explicitly stated in the context.', 'The output also partially hallucinates by providing an alternative set of steps for rebooking to a different flight when receiving a schedule change notification, which is not detailed in the provided context.']"
+        },
+        {
+            "value": 0.2,
+            "reason": "['The output correctly states that the cabin crew can assist with medical emergencies and special needs, which is in line with the context.', \"However, it introduces information not present in the context by stating that the cabin crew will 'handle any problems that may arise during the flight', which could be considered a partial hallucination as it's not explicitly mentioned in the context. The context only mentions how to handle passenger complaints or issues after they have arisen.\", \"Additionally, the output states that if needed, the cabin crew will contact the airline's ground staff for further assistance, which is not mentioned in the context.\"]"
+        },
+        {
+            "value": 0.5,
+            "reason": "['The output correctly states that to report damaged baggage, one should visit the Baggage Service Office at the airport where they arrived.', \"However, it contradicts the context by suggesting that if you're unable to find the office, you can ask an airline staff member for assistance. The context actually provides a more detailed procedure for reporting damage, including providing photos of the damage and baggage tags.\", \"Additionally, the output introduces new information not present in the context, such as contacting the airline's customer service department for more information on their procedures.\"]"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It accurately describes how passengers can pre-order special meals, including vegan options, by logging into \"Manage My Booking\" at least 24 hours before departure and selecting the vegan option.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It accurately describes how Ragas Airlines will notify passengers about flight delays, including the types of notifications and the information they will receive.', 'It also correctly outlines the potential assistance that passengers may receive based on the length of the delay, without introducing any new information not present in the context.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It accurately describes the carry-on baggage allowance, including the maximum size and weight of a single bag, as well as the allowance for one personal item.', 'Additionally, it correctly states that the specific allowance may vary based on fare type and destination, which is consistent with the context.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It accurately describes the steps to take when checked baggage arrives damaged, as outlined in the provided context.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', \"It directly addresses the input question 'whr is my depature gate?' by providing a relevant instruction from the context.\"]"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', \"It accurately summarizes the steps to modify a flight date through 'Manage My Booking' as described in the context.\", 'There is no introduction of new information not present in the context, and it does not contradict any information given in the context.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', \"It accurately describes how to contact Ragas Airlines' customer service, which is a key piece of information related to the input 'customer service contact'.\", 'There are no hallucinations or unfaithful information in this output.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It accurately states that service animals are allowed on board, but requires advance notification and documentation, which is consistent with the provided context.']"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', \"It accurately directs the user to log into 'Manage My Booking' to access their flight details, which is a key step outlined in the provided context.\"]"
+        },
+        {
+            "value": 0.0,
+            "reason": "['The output contains only information present in the context with no contradictions or made up information.', 'It accurately summarizes the requirements for passengers with medical conditions when booking a flight with an airline, including notification deadlines and specific procedures for carrying medications and obtaining medical clearance.']"
+        }
+    ],
+    "answer_relevance_metric": [
+        {
+            "value": 0.8,
+            "reason": "The answer directly addresses the question by stating there is no information about modification fees on the Ragas Airlines website, and provides additional relevant context about baggage fees."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant and on-topic as it directly addresses the question about which service is better between customer service over the phone or online booking. However, it could be considered slightly incomplete as it doesn't provide a definitive answer but rather presents a nuanced comparison of the two services."
+        },
+        {
+            "value": 1.0,
+            "reason": "The answer directly addresses the question with accurate and complete information without any irrelevant content. It provides step-by-step instructions on how to request a refund, specifically mentioning that it will be returned to the original payment method (credit/debit card), which is exactly what was asked for."
+        },
+        {
+            "value": 1.0,
+            "reason": "The answer directly addresses the question with accurate and complete information without any irrelevant content."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is mostly relevant to the input as it provides information on rebooking and refund policies after flight cancellations for different types of tickets. However, it includes a specific airline's (Ragas Airlines) policy which may not be applicable to all users, making it slightly less relevant."
+        },
+        {
+            "value": 0.9,
+            "reason": "The answer is entirely relevant to the input, providing a clear step-by-step guide on how to handle flight cancellations initiated by Ragas Airlines, including notification process, rebooking options, and refund eligibility. The only minor deviation from complete relevance is that it mentions 'not specified' regarding the channels through which the airline will notify passengers, but this does not detract significantly from the overall completeness of the answer."
+        },
+        {
+            "value": 0.5,
+            "reason": "The answer is on-topic as it addresses the question about airline procedures, but it's incomplete because it doesn't provide a comparison or recommendation of airlines with good procedures for passenger-initiated flight cancellations."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer directly addresses the question with accurate and complete information, but it assumes that the context of 'the airport' is already known to the user. A more ideal response would be one that takes into account a broader range of possible locations where the user might be seeking assistance."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant to the input as it directly addresses the question about fare rules when a flight is cancelled, providing accurate information on refund eligibility for different types of tickets. However, the answer could be considered slightly incomplete as it does not provide any additional context or details beyond the basic refund policies."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant to the input as it directly addresses the question about changing a ticket's date for free. However, it could be considered slightly incomplete as it only mentions one type of ticket that allows free modifications, whereas there might be other types of tickets with similar flexibility."
+        },
+        {
+            "value": 1.0,
+            "reason": "The answer directly addresses the question with accurate and complete information without any irrelevant content."
+        },
+        {
+            "value": 0.5,
+            "reason": "The answer is relevant and addresses the question, but it does not provide a direct response to the input. Instead of giving the phone number directly, it suggests where to find it on the airline's website."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant and on-topic as it directly addresses the concept of travel credit, but it includes a specific airline's policy (Ragas Airlines) which may not be applicable to all users."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer directly addresses the question with accurate and complete information regarding refunds on non-refundable tickets. However, it does not provide a detailed explanation of the process or any specific conditions that may apply to receiving a partial refund or travel credit."
+        },
+        {
+            "value": 0.3,
+            "reason": "The answer contains some relevant information about contacting customer service (dialing a number or visiting the website), but it is incomplete as it does not provide the actual contact number, and also includes irrelevant details such as receiving notifications via email, SMS, mobile app notification, which are not directly related to the question."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant and on-topic as it directly addresses the question of how to get a refund on a credit card. However, it includes an unnecessary mention of contacting Ragas Airlines Customer Support, which seems unrelated to the general process of getting a refund on a credit card."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant to the input as it directly addresses the question about the phone number for help with booking on Ragas Airlines, but it includes an unnecessary suggestion to visit the website or search engine, which could be considered a minor deviation from being concise."
+        },
+        {
+            "value": 0.5,
+            "reason": "The answer is partially relevant as it addresses the request for a customer service hotline number, but it does not provide the actual phone number and instead directs the user to find it on the official website, which may or may not be available."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant to the input as it provides information about how to contact customer service, but it's not entirely complete as it doesn't provide the actual phone number or any additional details that might be useful for a customer seeking assistance."
+        },
+        {
+            "value": 0.9,
+            "reason": "The answer directly addresses the question by providing multiple ways to contact Ragas Airlines customer service for booking issues, which is complete and on-topic."
+        },
+        {
+            "value": 1.0,
+            "reason": "The answer directly addresses the question by providing specific steps to get help with a booking issue on Ragas Airlines, including multiple contact options that are relevant and complete."
+        },
+        {
+            "value": 0.9,
+            "reason": "The answer directly addresses the question by providing a clear and concise solution to contact Ragas Airlines' customer service hotline, which is relevant to the input about booking issues. The only minor deviation from perfection is that it suggests searching online for the number, but this is still a reasonable step in case the number cannot be found on the airline's website or confirmation email."
+        },
+        {
+            "value": 0.5,
+            "reason": "The answer is relevant and addresses the question about customer service contact information, but it does not provide a specific phone number to call for customer service as requested."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer provides relevant troubleshooting steps for a browser not working issue, but it includes an unrelated suggestion to call customer support and provide a booking reference number, which is likely specific to a different context (e.g., a travel or service-related issue). The advice to take a screenshot of the error message is also somewhat tangential to the primary issue at hand."
+        },
+        {
+            "value": 0.9,
+            "reason": "The answer directly addresses the question with accurate and complete information about modifying a flight. The only minor deviation from perfection is that it assumes the user has already booked their flight, whereas the input could be interpreted as asking if modification of any flight is possible (not necessarily one's own). However, given the context, this is a reasonable assumption."
+        },
+        {
+            "value": 1.0,
+            "reason": "The answer directly addresses the question with accurate and complete information without any irrelevant content. It provides a clear step-by-step guide on how to modify a flight booking through Ragas Airlines' customer service hotline, making it concise, relevant, and complete."
+        },
+        {
+            "value": 1.0,
+            "reason": "The answer directly addresses the question with accurate and complete information about the key differences between refundable and non-refundable tickets in terms of customer service support and potential issues that may arise during travel, without any irrelevant content."
+        },
+        {
+            "value": 0.9,
+            "reason": "The answer is entirely relevant to the input, providing accurate and complete information about managing flight reservations and customer service options. The only minor deviation from relevance is that it doesn't explicitly list all possible contact methods (phone or online), but this is a minor detail and does not detract significantly from the overall completeness of the response."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer directly addresses the question with accurate and complete information about steps to resolve Wi-Fi not working after purchase on an in-flight service, but it is incomplete because it does not provide a clear step-by-step guide for Step 3 of the resolution process."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant to the input (on-topic) as it directly addresses the concept of fare rules, but it's not entirely complete as it doesn't provide a comprehensive list of all possible fare rules."
+        },
+        {
+            "value": 1.0,
+            "reason": "The answer directly addresses the question with accurate and complete information without any irrelevant content, providing a clear step-by-step guide on how to request a vegetarian meal for long-haul flights."
+        },
+        {
+            "value": 0.5,
+            "reason": "The answer addresses the question of compensation but only partially answers it by mentioning a specific scenario (delay over 24 hours) and providing information about essential items that can be reimbursed, without fully addressing other possible scenarios or providing more comprehensive information."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant and on-topic as it addresses the question about Ragas Airlines flight delay compensation, providing accurate information about the type of delays that qualify for compensation (more than 6 hours). However, the answer could be considered slightly incomplete as it mentions that 'compensation details will be included in the initial notification of the delay', which implies that there is more to the process but doesn't provide those details directly. The answer does not include any irrelevant information."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer directly addresses the question about how Ragas Airlines notifies passengers about flight delays via email and provides specific details about the content of the notification, although it also includes a reference to a condition (Short Delays) that is not explicitly mentioned in the input."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant to the input as it indirectly addresses the question about effective customer service in the context of frequent travel by providing characteristics that can contribute to a positive customer experience. However, the answer does not directly address the question and includes information about Ragas Airlines' policies, which seems to be an unrelated topic."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant to the input as it directly addresses special assistance for medical conditions, providing specific details about notification requirements and medical clearance processes. However, it does not fully address all possible aspects of special assistance for medical conditions, such as emergency situations or passengers with disabilities."
+        },
+        {
+            "value": 0.9,
+            "reason": "The answer is entirely relevant to the input, providing step-by-step instructions on how to manage a booking with Ragas Airlines. The only minor deviation from complete relevance is that it mentions alternative methods of managing bookings (calling customer service, using the mobile app, or visiting a ticket office), which could be considered slightly off-topic. However, these alternatives are still related to managing bookings and do not detract significantly from the overall relevance of the answer."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant to the input as it directly addresses the question about special assistance services provided by Ragas Airlines while on board. However, it could be considered slightly incomplete as it doesn't provide information on how to request assistance once on board or any specific details about the services offered."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer directly addresses the question with accurate and complete information on how to book a flight on Raga's Airlines website using Chrome, but includes an unnecessary note about browser settings that isn't relevant to the task at hand."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant and complete as it directly addresses the question of how to change a flight on 'Manage My Booking'. However, it includes some additional steps that are not strictly necessary for changing a flight, such as checking for updates or calling customer support, which slightly reduces its relevance score. The answer also assumes that the user has already received a schedule change notification from Ragas Airlines, which may not be the case for all users."
+        },
+        {
+            "value": 0.9,
+            "reason": "The answer directly addresses the question with accurate and complete information about the types of assistance that can be expected from the cabin crew during a flight, without any irrelevant content."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant and complete as it directly addresses the input by providing contact information and procedures for reporting damaged baggage, but it could be considered slightly incomplete because it doesn't provide a phone number or email address to contact the Baggage Service Office."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant to the input as it directly addresses the question about vegan meal options in flight, providing a specific process for ordering them. However, it could be considered slightly incomplete as it doesn't mention any additional details such as the availability of vegan meals on all flights or the types of vegan options that are offered."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant to the input as it directly addresses the question about what happens if a flight is late. However, it includes some additional details about compensation and refreshments that are not explicitly mentioned in the input, which slightly reduces its completeness."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is mostly relevant to the input as it provides information about carry-on baggage allowances, but it also includes a note that the specific allowance may vary based on fare type and destination, which is already mentioned in the input. The answer could be more complete by providing a clear table or list of baggage allowances for different fare types and destinations."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer directly addresses the issue of damaged checked baggage on a flight, providing relevant information on how to report and resolve the issue with the airline. However, it does not fully address the question as it only provides information for checked baggage, whereas the input also mentions 'my bag' which could imply carry-on luggage or other types of bags that may be affected by flight damage."
+        },
+        {
+            "value": 0.5,
+            "reason": "The answer is on-topic as it addresses the question about the departure gate, but it's incomplete as it doesn't provide any specific information about where the departure gate is located or what to expect during the wait."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant to the input as it directly addresses how to modify a flight date through 'Manage My Booking'. However, the response includes an additional option to refer to a detailed guide for more information, which is not strictly necessary to answer the question and slightly detracts from its conciseness."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant to the input as it provides specific contact information for customer service, but it appears to be tailored towards a specific airline (Ragas Airlines) which may not be the intended context for the input 'customer service contact'. The answer is also concise and complete in its response."
+        },
+        {
+            "value": 1.0,
+            "reason": "The answer directly addresses the question with accurate and complete information without any irrelevant content, providing a clear explanation of service animals' requirements for flights."
+        },
+        {
+            "value": 0.8,
+            "reason": "The answer is relevant to the input as it directly addresses the question about accessing flight details on Ragas Airlines' website. However, I would have liked to see a more detailed step-by-step guide or a link to the specific webpage where users can access their flight information."
+        },
+        {
+            "value": 1.0,
+            "reason": "The answer directly addresses the question with accurate and complete information about the specific requirements and procedures for passengers with medical conditions when booking a flight with an airline, without any irrelevant content."
+        }
+    ],
+    "context_precision_metric": [
+        {
+            "value": 0.5,
+            "reason": null
+        },
+        {
+            "value": 0.5,
+            "reason": null
+        },
+        {
+            "value": 0.6263625263625263,
+            "reason": null
+        },
+        {
+            "value": 0.5,
+            "reason": null
+        },
+        {
+            "value": 0.7416666666666666,
+            "reason": null
+        },
+        {
+            "value": 0.7483164983164983,
+            "reason": null
+        },
+        {
+            "value": 0.6787301587301586,
+            "reason": null
+        },
+        {
+            "value": 0.6,
+            "reason": null
+        },
+        {
+            "value": 0.6,
+            "reason": null
+        },
+        {
+            "value": 0.7222222222222222,
+            "reason": null
+        },
+        {
+            "value": 0.6565175565175564,
+            "reason": null
+        },
+        {
+            "value": 0.625,
+            "reason": null
+        },
+        {
+            "value": 0.475,
+            "reason": null
+        },
+        {
+            "value": 0.6396524110809825,
+            "reason": null
+        },
+        {
+            "value": 0.611111111111111,
+            "reason": null
+        },
+        {
+            "value": 0.5625,
+            "reason": null
+        },
+        {
+            "value": 0.6787301587301586,
+            "reason": null
+        },
+        {
+            "value": 0.4938011236883417,
+            "reason": null
+        },
+        {
+            "value": 0.5146978021978023,
+            "reason": null
+        },
+        {
+            "value": 0.6396524110809825,
+            "reason": null
+        },
+        {
+            "value": 0.6,
+            "reason": null
+        },
+        {
+            "value": 0.6565175565175564,
+            "reason": null
+        },
+        {
+            "value": 0.6428571428571429,
+            "reason": null
+        },
+        {
+            "value": 0.37777777777777777,
+            "reason": null
+        },
+        {
+            "value": 0.6527777777777777,
+            "reason": null
+        },
+        {
+            "value": 0.5655122655122655,
+            "reason": null
+        },
+        {
+            "value": 0.5991306626263001,
+            "reason": null
+        },
+        {
+            "value": 0.7095238095238094,
+            "reason": null
+        },
+        {
+            "value": 0.5932539682539683,
+            "reason": null
+        },
+        {
+            "value": 0.7095238095238094,
+            "reason": null
+        },
+        {
+            "value": 0.6787301587301586,
+            "reason": null
+        },
+        {
+            "value": 0.6565175565175564,
+            "reason": null
+        },
+        {
+            "value": 0.6066627765079777,
+            "reason": null
+        },
+        {
+            "value": 0.56875,
+            "reason": null
+        },
+        {
+            "value": 0.615590219511788,
+            "reason": null
+        },
+        {
+            "value": 0.7736111111111109,
+            "reason": null
+        },
+        {
+            "value": 0.5821428571428572,
+            "reason": null
+        },
+        {
+            "value": 0.611111111111111,
+            "reason": null
+        },
+        {
+            "value": 0.56875,
+            "reason": null
+        },
+        {
+            "value": 0.6565175565175564,
+            "reason": null
+        },
+        {
+            "value": 0.6263625263625263,
+            "reason": null
+        },
+        {
+            "value": 0.6263625263625263,
+            "reason": null
+        },
+        {
+            "value": 0.6242424242424243,
+            "reason": null
+        },
+        {
+            "value": 0.8333333333333333,
+            "reason": null
+        },
+        {
+            "value": 0.5655122655122655,
+            "reason": null
+        },
+        {
+            "value": 0.5222265446207656,
+            "reason": null
+        },
+        {
+            "value": 0.6787301587301586,
+            "reason": null
+        },
+        {
+            "value": 0.6263625263625263,
+            "reason": null
+        },
+        {
+            "value": 0.39929325420682105,
+            "reason": null
+        },
+        {
+            "value": 0.6787301587301586,
+            "reason": null
+        },
+        {
+            "value": 0.5146978021978023,
+            "reason": null
+        },
+        {
+            "value": 0.8083333333333332,
+            "reason": null
+        }
+    ],
+    "context_recall_metric": [
+        {
+            "value": 0.7,
+            "reason": null
+        },
+        {
+            "value": 0.8947368421052632,
+            "reason": null
+        },
+        {
+            "value": 0.6666666666666666,
+            "reason": null
+        },
+        {
+            "value": 0.9230769230769231,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.7857142857142857,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.8571428571428571,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.8571428571428571,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.8461538461538461,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.6666666666666666,
+            "reason": null
+        },
+        {
+            "value": 0.75,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.75,
+            "reason": null
+        },
+        {
+            "value": 0.75,
+            "reason": null
+        },
+        {
+            "value": 0.6666666666666666,
+            "reason": null
+        },
+        {
+            "value": 0.8,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.9285714285714286,
+            "reason": null
+        },
+        {
+            "value": 0.625,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.42857142857142855,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.5714285714285714,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.5,
+            "reason": null
+        },
+        {
+            "value": 0.8,
+            "reason": null
+        },
+        {
+            "value": 0.9,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.6666666666666666,
+            "reason": null
+        },
+        {
+            "value": 0.8,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.75,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.75,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.75,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        }
+    ],
+    "mean_reciprocal_rank": [
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.5,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.5,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.33333333333333326,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.0,
+            "reason": null
+        },
+        {
+            "value": 0.0,
+            "reason": null
+        },
+        {
+            "value": 0.5,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.25,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 0.0,
+            "reason": null
+        },
+        {
+            "value": 0.5,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        },
+        {
+            "value": 1.0,
+            "reason": null
+        }
+    ]
+}

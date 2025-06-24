@@ -52,15 +52,10 @@ if __name__ == "__main__":
     page: StreamlitPage = st.navigation(pages)
 
     # ====== TWEAK VALUES BELOW TO ACHIEVE BEST PERFORMANCE ======
+    # Check out `env/rag.env` for more details.
 
     if "top_k" not in st.session_state:
         st.session_state['top_k'] = int(os.getenv("TOP_K"))
-
-    if "top_p" not in st.session_state:
-        st.session_state['top_p'] = float(os.getenv("TOP_P"))
-
-    if "max_tokens" not in st.session_state:
-        st.session_state['max_tokens'] = int(os.getenv("MAX_TOKENS"))
 
     if "chunk_size" not in st.session_state:
         st.session_state['chunk_size'] = int(os.getenv("CHUNK_SIZE"))
@@ -68,20 +63,28 @@ if __name__ == "__main__":
     if "chunk_overlap" not in st.session_state:
         st.session_state['chunk_overlap'] = int(os.getenv("CHUNK_OVERLAP"))
 
+    if "embedding_model" not in st.session_state:
+        st.session_state["embedding_model"] = os.getenv("EMBEDDING_MODEL")
+    
+    if "top_p" not in st.session_state:
+        st.session_state['top_p'] = float(os.getenv("TOP_P"))
+
+    if "max_tokens" not in st.session_state:
+        st.session_state['max_tokens'] = int(os.getenv("MAX_TOKENS"))
+
     if "temperature" not in st.session_state:
         st.session_state['temperature'] = float(os.getenv("TEMPERATURE"))
 
     if "chat_model" not in st.session_state:
         st.session_state["chat_model"] = os.getenv("CHAT_MODEL")
 
-    if "embedding_model" not in st.session_state:
-        st.session_state["embedding_model"] = os.getenv("EMBEDDING_MODEL")
-
     # ====== TWEAK VALUES ABOVE TO ACHIEVE BEST PERFORMANCE ======
 
+    # The id of the current conversation
     if "conversation_id" not in st.session_state:
         st.session_state['conversation_id'] = None
-
+    
+    # The messages of the current conversation 
     if "messages" not in st.session_state:
         st.session_state['messages'] = []
 
@@ -89,6 +92,8 @@ if __name__ == "__main__":
     if "parent_id" not in st.session_state:
         st.session_state["parent_id"] = None
 
+    # The context window size for a model
+    # Due to some ollama having a small context window by default we can expand it
     if "context_window_size" not in st.session_state:
         st.session_state["context_window_size"] = int(os.getenv("LLM_CONTEXT_WINDOW_TOKENS"))
 
@@ -103,12 +108,15 @@ if __name__ == "__main__":
         else:
             st.session_state['ingestion_config'] = response.json()['results']['config']['ingestion']
 
-            # Since the config is a snapshot not an actual instance of the config
+            # Since the config is a snapshot not an actual instance of configuration
+            # in the application we can save a slighty modified version in the session state.
+            # Upon refresh in the browser all the values will be reset.
             new_ingestion_config = st.session_state['ingestion_config']
 
             # During ingestion, we need to extract the text from the documents.
-            # Then they are chunked. If unstructured cannot handle it, a fallback is used.
-            # RecursiveCharacterTextSplitter is the fallback.
+            # Then they are to be chunked - divided into pieces.
+            # If unstructured cannot handle it due to a non-supported file type, a fallback
+            # will be automatically used by `r2r` - RecursiveCharacterTextSplitter.
             #
             # https://docs.unstructured.io/api-reference/partition/chunking
             new_ingestion_config['extra_fields']['max_characters'] = st.session_state['chunk_size']
@@ -124,7 +132,8 @@ if __name__ == "__main__":
             # using environment variables from `env/rag.env`.
             st.session_state['ingestion_config'] = new_ingestion_config
 
-    # Login values are default ones. Can be modified in the config file.
+    # Login values are default ones. Can be modified in the config file at `project/backend/config.toml`.
+    # This token is used for authorization when interacting with the endpoints of `r2r`.
     if "bearer_token" not in st.session_state:
         response: requests.Response = requests.post(
             url="http://r2r:7272/v3/users/login",
@@ -140,11 +149,10 @@ if __name__ == "__main__":
 
         if response.status_code != 200:
             st.error(f"Failed to fetch system settings: {response.status_code} - {response.text}")
-            st.write("KURWA")
         else:
             st.session_state['bearer_token'] = response.json()['results']['access_token']['token']
 
-    # Default prompt name that is used by R2R when interacting with /rag endpoint
+    # Default prompt name that is used by r2r when interacting with /rag endpoint
     # You can specify a custom name in the application itself
     if 'selected_prompt' not in st.session_state:
         st.session_state['selected_prompt'] = "rag"
@@ -166,7 +174,7 @@ if __name__ == "__main__":
 
     # It's part of a tool call, that can fetch data from the internet.
     if 'websearch_api_key' not in st.session_state:
-        # Bad practice to hardcode, I know
+        # Bad practice to hardcode - I know :). It's for ease of use.
         st.session_state['websearch_api_key'] = "sk-47eac60b82c844fe9dbd4f7e98de4951"
 
     if "ollama_api_base" not in st.session_state:

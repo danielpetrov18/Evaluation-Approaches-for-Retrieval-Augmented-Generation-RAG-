@@ -97,3 +97,6 @@ eval
 
 # Caches produced by RAGAs
 .cache*
+
+# Ignore locally installed opik repository
+opik

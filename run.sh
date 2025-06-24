@@ -1,18 +1,16 @@
 #!/usr/bin/bash
 
-# Exit immediately if a command exits with a non-zero status
-set -e
+# Exit immediately on error, undefined variable, or failed pipe segment
+set -euo pipefail
 
 echo "[+] STARTING INITIALIZATION SCRIPT [+]"
 
-# Export environment variables
+# Load all .env files from env directory
 echo "[+] SETTING ENVIRONMENT VARIABLES [+]"
-for env_file in env/*.env
-do
-    if [ -f "$env_file" ]
-    then
-        echo "    [+] LOADING ENVIRONMENT VARIABLES FROM $env_file [+]"
-        set -a # automatically export all variables
+for env_file in env/*.env; do
+    if [ -f "$env_file" ]; then
+        echo "    [+] LOADING ENV FILE: $env_file"
+        set -a
         source "$env_file"
         set +a
     fi
@@ -32,19 +30,34 @@ OLLAMA_CONTEXT_LENGTH="${LLM_CONTEXT_WINDOW_TOKENS:-16000}" \
 ollama serve &
 echo "[+] OLLAMA SERVER STARTED. [+]"
 
-# Check if chat model is available, if not, download it
-if ! ollama list | grep -q "$CHAT_MODEL"
-then
-    echo "    [+] DOWNLOADING CHAT MODEL \"$CHAT_MODEL\" [+]"
-    ollama pull "$CHAT_MODEL"
-fi
+# Wait for Ollama server to be ready
+echo "[*] Waiting for Ollama server to become available..."
+until curl -s http://localhost:11434/api/tags >/dev/null; do
+    sleep 1
+done
+echo "[✓] Ollama server is ready."
 
-# Check if embedding model is available, if not, download it
-if ! ollama list | grep -q "$EMBEDDING_MODEL"
-then
-    echo "    [+] DOWNLOADING EMBEDDING MODEL \"$EMBEDDING_MODEL\" [+]"
-    ollama pull "$EMBEDDING_MODEL"
-fi
+# Define required models
+declare -A MODELS=(
+    ["llama3.1:8b"]="llama3.1:8b"
+    ["deepseek-r1:7b"]="deepseek-r1:7b"
+    ["llama3.1:8b-instruct-q4_1"]="llama3.1:8b-instruct-q4_1"
+)
+
+# Add dynamic models if specified
+MODELS["${CHAT_MODEL:-}"]="${CHAT_MODEL:-}"
+MODELS["${EMBEDDING_MODEL:-}"]="${EMBEDDING_MODEL:-}"
+
+# Check and pull models if missing
+echo "[*] Checking required models..."
+for MODEL in "${!MODELS[@]}"; do
+    if [[ -n "$MODEL" ]] && ! ollama list | awk '{print $1}' | grep -q "^$MODEL$"; then
+        echo "    [+] Model '$MODEL' not found. Pulling..."
+        ollama pull "${MODELS[$MODEL]}"
+    else
+        echo "    [✓] Model '$MODEL' is available."
+    fi
+done
 
 # Uncomment the following lines if you want to use the re-ranker with a GPU.
 # Add NVIDIA container toolkit only if not already installed.

@@ -40,7 +40,7 @@ if __name__ == "__page__":
             elif selected_conversation_id == st.session_state['conversation_id']:
                 st.warning("Please select a different conversation")
             else:
-                msgs: Union[List[Dict], None] = retrieve_messages(selected_conversation_id)
+                msgs: Union[List[Dict], None] = retrieve_messages(selected_conversation_id.strip())
                 # If we get None, the conversation doesn't exist
                 if msgs:
                     st.session_state['conversation_id'] = selected_conversation_id
@@ -113,7 +113,7 @@ Each conversation maintains a full history of user and assistant messages. Based
     # Load conversation messages if we have a conversation ID and no messages loaded yet
     if st.session_state['conversation_id'] and not st.session_state['messages']:
         with st.spinner("Loading conversation..."):
-            messages: Union[List[Dict], None] = retrieve_messages(
+            messages: Union[List[Dict[str, str]], None] = retrieve_messages(
                 st.session_state['conversation_id']
             )
             if messages:

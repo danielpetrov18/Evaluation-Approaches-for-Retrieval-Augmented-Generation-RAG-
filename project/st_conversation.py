@@ -41,7 +41,7 @@ To explore the message history for a specific conversation, paste its ID into th
         )
 
         if st.button("Get messages", type="primary", key="conv_msgs_btn"):
-            if not conversation_id.strip():
+            if not conversation_id:
                 st.warning("Please enter a conversation ID")
             else:
-                fetch_messages(conversation_id)
+                fetch_messages(conversation_id.strip())
