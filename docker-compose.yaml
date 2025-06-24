@@ -138,7 +138,7 @@ services:
       - r2r_network
     volumes:
       # Persist key across application restarts
-      - ./project/.lansearch_key:/frontend/.lansearch_key
+      - ./project/.langsearch_key:/frontend/.langsearch_key
     extra_hosts:
       - host.docker.internal:host-gateway
     depends_on:
