@@ -178,7 +178,7 @@ if __name__ == "__main__":
 
     # It's part of a tool call, that can fetch data from the internet.
     if 'websearch_api_key' not in st.session_state:
-        if KEY_FILE.exists():
+        if KEY_FILE.exists() and KEY_FILE.is_file():
             api_key: str = KEY_FILE.read_text(encoding="utf-8").strip()
             if not api_key.startswith("sk-"):
                 st.error(f"Invalid API key: {api_key}")
