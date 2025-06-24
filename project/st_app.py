@@ -180,7 +180,9 @@ if __name__ == "__main__":
     if 'websearch_api_key' not in st.session_state:
         if KEY_FILE.exists() and KEY_FILE.is_file():
             api_key: str = KEY_FILE.read_text(encoding="utf-8").strip()
-            if not api_key.startswith("sk-"):
+            if not api_key:
+                st.session_state['websearch_api_key'] = ""
+            elif not api_key.startswith("sk-"):
                 st.error(f"Invalid API key: {api_key}")
             else:
                 st.session_state['websearch_api_key'] = api_key
