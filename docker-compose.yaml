@@ -136,6 +136,9 @@ services:
     restart: on-failure
     networks:
       - r2r_network
+    volumes:
+      # Persist key across application restarts
+      - ./project/.lansearch_key:/frontend/.lansearch_key
     extra_hosts:
       - host.docker.internal:host-gateway
     depends_on:
