@@ -79,6 +79,11 @@ done
 #   echo "[+] NVIDIA CONTAINER TOOLKIT ALREADY INSTALLED. SKIPPING... [+]"
 # fi
 
+# Since docker takes the bindmount literally as a folder make sure you create a file if it doesn't exist
+if [ ! -f project/.langsearch_key ]; then
+    touch project/.langsearch_key
+fi
+
 # Check if Docker is running
 # This will start the containers in the background
 if ! docker info > /dev/null 2>&1
