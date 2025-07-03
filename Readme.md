@@ -5,12 +5,13 @@
 - [About The Project](#about-the-project)
 - [Built With](#built-with)
 - [Prerequisites](#prerequisites)
-- [Running inside a VM](#running-inside-a-vm)
+- [Running inside a VM](#running-inside-a-vm-optional)
 - [Docker services](#docker-services)
 - [Project structure](#project-structure)
 - [Usage](#usage)
 - [Data generation](#data-generation)
 - [Evaluation](#evaluation)
+- [Results](#evaluation-results)
 - [Contact](#contact)
 
 ---
@@ -23,7 +24,7 @@ The primary goal is to assess different evaluation frameworks, including **RAGAs
 
 The application is a **vanilla RAG** - no Knowledge Graphs, no hybrid search, no AI-agents or tools, just submitting a query, retrieving context, augmenting a prompt and submitting it to get the response from the LLM. A re-ranker model is used, however fully optional. During context retrieval **cosine distance** is used as measure.
 
-#### Code Snippet:
+#### Code Snippet
 
 Located under `project/backend/chat.py`.
 
@@ -462,6 +463,14 @@ For all three frameworks one could overwrite the default `prompts` of metrics th
 For the evaluation of all experiments across the different frameworks I use the same `model` and `temperature` - `llama3.1:8b-instruct-q4_1` and `0.0` respectively.
 
 For each framework the results will be stored in `res` in the corresponding folder.
+
+---
+
+### Evaluation Results
+
+![RAGAs](img/plots/ragas_summary_plot.png)
+![DeepEval](img/plots/deepeval_summary_plot.png)
+![Opik](img/plots/opik_summary_plot.png)
 
 ---
 
