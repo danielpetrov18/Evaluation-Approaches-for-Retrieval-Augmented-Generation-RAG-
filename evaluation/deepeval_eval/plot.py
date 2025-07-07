@@ -124,13 +124,17 @@ def plot_experiment_scores(experiment_scores: Dict[str, Dict[str, float]]) -> No
         pad=20
     )
 
-    plt.legend(
+    legend = plt.legend(
         loc="upper center",
         bbox_to_anchor=(0.5, -0.15),
         ncol=min(len(METRICS), 5),
-        fontsize=10,
-        frameon=False
+        fontsize=15,
+        frameon=True
     )
+    
+    legend.get_frame().set_facecolor("#f9f9f9")   # Light background color
+    legend.get_frame().set_edgecolor("#cccccc")   # Soft gray border
+    legend.get_frame().set_linewidth(0.8)
 
     plt.grid(axis="y", linestyle="--", alpha=0.4, linewidth=0.8)
     plt.grid(axis="x", linestyle=":", alpha=0.2)
